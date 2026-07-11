@@ -29,6 +29,11 @@ From the root directory, start the Docker containers:
 docker-compose up -d
 ```
 
+To stop the infrastructure when you're done:
+```bash
+docker-compose down
+```
+
 ### 2. Configure the Database
 The backend is configured to use a remote **Supabase PostgreSQL** instance. 
 1. Create a new project in Supabase.
