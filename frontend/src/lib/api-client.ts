@@ -7,14 +7,19 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   // In a real app, you would retrieve the token from a secure location (e.g., Zustand store, context, or HTTP-only cookie)
   // For now, we will assume a dummy token or retrieve from localStorage for simplicity during MVP scaffolding.
   let token = '';
+  let orgId = '';
   if (typeof window !== 'undefined') {
     token = localStorage.getItem('token') || '';
+    orgId = localStorage.getItem('active_org_id') || '';
   }
 
   const headers = new Headers(options.headers);
   headers.set('Content-Type', 'application/json');
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (orgId) {
+    headers.set('X-Organization-Id', orgId);
   }
 
   const response = await fetch(`${API_URL}${endpoint}`, {
@@ -30,3 +35,5 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
 
   return response.json();
 }
+
+export default fetchApi;
