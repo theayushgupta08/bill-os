@@ -10,6 +10,10 @@ import {
   LineChart,
   BookOpen,
   Receipt,
+  FolderTree,
+  Building2,
+  FileText,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -79,6 +83,20 @@ export function Sidebar() {
               Warehouses
             </Link>
             <Link
+              href="/purchases/orders"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <FileText className="h-4 w-4" />
+              Purchase Orders
+            </Link>
+            <Link
+              href="/purchases/bills"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <Receipt className="h-4 w-4" />
+              Purchase Bills
+            </Link>
+            <Link
               href="/inventory"
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
             >
@@ -105,6 +123,13 @@ export function Sidebar() {
             >
               <LineChart className="h-4 w-4" />
               Reports
+            </Link>
+            <Link
+              href="/settings/taxes"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <Settings className="h-4 w-4" />
+              Tax Rates
             </Link>
           </nav>
         </div>
