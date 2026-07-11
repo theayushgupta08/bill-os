@@ -1,0 +1,59 @@
+package com.billos.api.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.TenantId;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+@Entity
+@Table(name = "products")
+@Getter
+@Setter
+@SQLDelete(sql = "UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id=?")
+@SQLRestriction("deleted_at IS NULL")
+public class Product extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @TenantId
+    @Column(name = "organization_id", nullable = false)
+    private UUID organizationId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private ProductCategory category;
+
+    @Column(nullable = false)
+    private String name;
+
+    private String description;
+    
+    private String sku;
+    
+    @Column(name = "hsn_sac")
+    private String hsnSac;
+
+    @Column(name = "base_price", nullable = false)
+    private BigDecimal basePrice = BigDecimal.ZERO;
+
+    @Column(name = "tax_rate", nullable = false)
+    private BigDecimal taxRate = BigDecimal.ZERO;
+
+    @Column(name = "unit_of_measure")
+    private String unitOfMeasure;
+}

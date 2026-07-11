@@ -43,10 +43,31 @@ export function Sidebar() {
             </Link>
             <Link
               href="/customers"
-              className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2 text-primary transition-all hover:text-primary"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
             >
               <Users className="h-4 w-4" />
               Customers
+            </Link>
+            <Link
+              href="/suppliers"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <Users className="h-4 w-4" />
+              Suppliers
+            </Link>
+            <Link
+              href="/products"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <Package2 className="h-4 w-4" />
+              Products
+            </Link>
+            <Link
+              href="/product-categories"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <Package2 className="h-4 w-4" />
+              Categories
             </Link>
             <Link
               href="/reports"
