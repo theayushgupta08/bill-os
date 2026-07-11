@@ -1,0 +1,188 @@
+package com.billos.api.service;
+
+import com.billos.api.dto.InviteUserRequest;
+import com.billos.api.dto.TeamMemberDto;
+import com.billos.api.entity.Organization;
+import com.billos.api.entity.OrganizationInvitation;
+import com.billos.api.entity.User;
+import com.billos.api.entity.UserOrgRole;
+import com.billos.api.repository.OrganizationInvitationRepository;
+import com.billos.api.repository.OrganizationRepository;
+import com.billos.api.repository.UserOrgRoleRepository;
+import com.billos.api.repository.UserRepository;
+import com.billos.api.security.UserPrincipal;
+import com.billos.api.tenant.TenantContext;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class TeamService {
+
+    private final UserOrgRoleRepository userOrgRoleRepository;
+    private final UserRepository userRepository;
+    private final OrganizationInvitationRepository invitationRepository;
+    private final OrganizationRepository organizationRepository;
+    private final EmailService emailService;
+
+    @Transactional(readOnly = true)
+    public List<TeamMemberDto> getTeamMembers() {
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        List<TeamMemberDto> team = new ArrayList<>();
+
+        // Add active users
+        List<UserOrgRole> roles = userOrgRoleRepository.findAll(); // We should filter by orgId
+        for (UserOrgRole role : roles) {
+            if (role.getOrganizationId().equals(orgId)) {
+                User user = userRepository.findById(role.getUser().getId()).orElse(null);
+                if (user != null) {
+                    team.add(new TeamMemberDto(
+                            user.getId(),
+                            user.getEmail(),
+                            user.getFirstName(),
+                            user.getLastName(),
+                            role.getRole(),
+                            "ACTIVE"
+                    ));
+                }
+            }
+        }
+
+        // Add pending invitations
+        List<OrganizationInvitation> invitations = invitationRepository.findByOrganizationId(orgId);
+        for (OrganizationInvitation inv : invitations) {
+            if ("PENDING".equals(inv.getStatus()) && inv.getExpiresAt().isAfter(ZonedDateTime.now())) {
+                team.add(new TeamMemberDto(
+                        null,
+                        inv.getEmail(),
+                        null,
+                        null,
+                        inv.getRole(),
+                        "INVITED"
+                ));
+            }
+        }
+
+        return team;
+    }
+
+    @Transactional
+    public void inviteUser(InviteUserRequest request) {
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        
+        Organization org = organizationRepository.findById(orgId)
+                .orElseThrow(() -> new RuntimeException("Organization not found"));
+
+        // Check if user is already in the org
+        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
+        if (existingUser.isPresent()) {
+            Optional<UserOrgRole> role = userOrgRoleRepository.findByUserIdAndOrganizationId(existingUser.get().getId(), orgId);
+            if (role.isPresent()) {
+                throw new RuntimeException("User is already a member of this organization");
+            }
+        }
+
+        // Check if there's already a pending invitation
+        Optional<OrganizationInvitation> existingInvite = invitationRepository
+                .findByOrganizationIdAndEmailAndStatus(orgId, request.getEmail(), "PENDING");
+        
+        if (existingInvite.isPresent() && existingInvite.get().getExpiresAt().isAfter(ZonedDateTime.now())) {
+            throw new RuntimeException("A pending invitation already exists for this email");
+        }
+
+        // Create new invitation
+        OrganizationInvitation invitation = new OrganizationInvitation();
+        invitation.setOrganizationId(orgId);
+        invitation.setEmail(request.getEmail());
+        invitation.setRole(request.getRole());
+        invitation.setToken(UUID.randomUUID().toString());
+        invitation.setExpiresAt(ZonedDateTime.now().plusDays(7));
+        invitation.setStatus("PENDING");
+        
+        invitationRepository.save(invitation);
+
+        // Send Email
+        emailService.sendOrganizationInvitation(request.getEmail(), org.getName(), request.getRole(), invitation.getToken());
+    }
+
+    @Transactional
+    public void acceptInvitation(String token) {
+        OrganizationInvitation invitation = invitationRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid invitation token"));
+
+        if (!"PENDING".equals(invitation.getStatus()) || invitation.getExpiresAt().isBefore(ZonedDateTime.now())) {
+            invitation.setStatus("EXPIRED");
+            invitationRepository.save(invitation);
+            throw new RuntimeException("Invitation has expired or is invalid");
+        }
+
+        // Check if current user email matches invitation email
+        UserPrincipal principal = (UserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!principal.getEmail().equalsIgnoreCase(invitation.getEmail())) {
+            throw new RuntimeException("This invitation was sent to a different email address");
+        }
+
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Assign role
+        UserOrgRole role = new UserOrgRole();
+        role.setUser(user);
+        role.setOrganizationId(invitation.getOrganizationId());
+        role.setRole(invitation.getRole());
+        userOrgRoleRepository.save(role);
+
+        // Mark as accepted
+        invitation.setStatus("ACCEPTED");
+        invitationRepository.save(invitation);
+    }
+
+    @Transactional
+    public void updateUserRole(UUID userId, String newRole) {
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        
+        UserOrgRole role = userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId)
+                .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
+                
+        // Prevent changing the role of the last OWNER
+        if ("OWNER".equals(role.getRole()) && !"OWNER".equals(newRole)) {
+            long ownerCount = userOrgRoleRepository.findAll().stream()
+                    .filter(r -> r.getOrganizationId().equals(orgId) && "OWNER".equals(r.getRole()))
+                    .count();
+            if (ownerCount <= 1) {
+                throw new RuntimeException("Cannot change role of the last owner");
+            }
+        }
+
+        role.setRole(newRole);
+        userOrgRoleRepository.save(role);
+    }
+
+    @Transactional
+    public void removeUser(UUID userId) {
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        
+        UserOrgRole role = userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId)
+                .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
+
+        // Prevent removing the last OWNER
+        if ("OWNER".equals(role.getRole())) {
+            long ownerCount = userOrgRoleRepository.findAll().stream()
+                    .filter(r -> r.getOrganizationId().equals(orgId) && "OWNER".equals(r.getRole()))
+                    .count();
+            if (ownerCount <= 1) {
+                throw new RuntimeException("Cannot remove the last owner of the organization");
+            }
+        }
+
+        userOrgRoleRepository.delete(role);
+    }
+}
