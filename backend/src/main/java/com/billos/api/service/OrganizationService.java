@@ -24,6 +24,7 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final UserOrgRoleRepository userOrgRoleRepository;
     private final UserRepository userRepository;
+    private final AccountService accountService;
 
     @Transactional
     public Organization createOrganization(@NonNull Organization orgDetails) {
@@ -41,6 +42,9 @@ public class OrganizationService {
         userOrgRole.setOrganizationId(savedOrg.getId());
         userOrgRole.setRole("OWNER");
         userOrgRoleRepository.save(userOrgRole);
+
+        // Seed default Chart of Accounts for the new organization
+        accountService.seedDefaultAccounts(savedOrg.getId());
 
         return savedOrg;
     }

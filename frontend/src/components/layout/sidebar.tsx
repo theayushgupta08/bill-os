@@ -8,6 +8,8 @@ import {
   ShoppingCart,
   Users,
   LineChart,
+  BookOpen,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -68,6 +70,20 @@ export function Sidebar() {
             >
               <Package2 className="h-4 w-4" />
               Categories
+            </Link>
+            <Link
+              href="/accounts"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <BookOpen className="h-4 w-4" />
+              Chart of Accounts
+            </Link>
+            <Link
+              href="/journal-entries"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <Receipt className="h-4 w-4" />
+              Journal Entries
             </Link>
             <Link
               href="/reports"
