@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchApi } from "@/lib/api-client";
+import { fetchApi, downloadPdf } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
@@ -89,7 +89,10 @@ export default function SalesInvoicesPage() {
                 <TableCell>{inv.customerName}</TableCell>
                 <TableCell><Badge variant="default" className={inv.status === 'PAID' ? "bg-green-500" : "bg-blue-500"}>{inv.status}</Badge></TableCell>
                 <TableCell className="text-right">${inv.totalAmount.toFixed(2)}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => downloadPdf(`/sales-invoices/${inv.id}/pdf`, `Invoice-${inv.invoiceNumber}.pdf`)}>
+                    PDF
+                  </Button>
                   {inv.status !== 'PAID' && (
                     <Button variant="outline" size="sm" onClick={() => handleRecordPayment(inv)} disabled={isPaying}>
                       Record Payment

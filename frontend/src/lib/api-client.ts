@@ -36,4 +36,42 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   return response.json();
 }
 
+/**
+ * Downloads a PDF from the API.
+ */
+export async function downloadPdf(endpoint: string, filename: string) {
+  let token = '';
+  let orgId = '';
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('token') || '';
+    orgId = localStorage.getItem('active_org_id') || '';
+  }
+
+  const headers = new Headers();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (orgId) {
+    headers.set('X-Organization-Id', orgId);
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to download PDF');
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 export default fetchApi;

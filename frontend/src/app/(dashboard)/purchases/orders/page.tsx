@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchApi } from "@/lib/api-client";
+import { fetchApi, downloadPdf } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
@@ -58,6 +58,7 @@ export default function PurchaseOrdersPage() {
               <TableHead>Supplier</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -68,6 +69,11 @@ export default function PurchaseOrdersPage() {
                 <TableCell>{po.supplierName}</TableCell>
                 <TableCell>{getStatusBadge(po.status)}</TableCell>
                 <TableCell className="text-right">${po.totalAmount.toFixed(2)}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="outline" size="sm" onClick={() => downloadPdf(`/purchase-orders/${po.id}/pdf`, `PO-${po.poNumber}.pdf`)}>
+                    PDF
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

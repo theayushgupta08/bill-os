@@ -2,6 +2,7 @@ package com.billos.api.controller;
 
 import com.billos.api.dto.QuotationDto;
 import com.billos.api.service.QuotationService;
+import com.billos.api.service.DocumentGenerationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import java.util.UUID;
 public class QuotationController {
 
     private final QuotationService quotationService;
+    private final DocumentGenerationService documentGenerationService;
 
     @GetMapping
     public ResponseEntity<List<QuotationDto>> getAllQuotations() {
@@ -23,8 +25,17 @@ public class QuotationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<QuotationDto> getQuotationById(@PathVariable UUID id) {
+    public ResponseEntity<QuotationDto> getQuotation(@PathVariable UUID id) {
         return ResponseEntity.ok(quotationService.getQuotationById(id));
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> getQuotationPdf(@PathVariable UUID id) {
+        byte[] pdfBytes = documentGenerationService.generateQuotationPdf(id);
+        return ResponseEntity.ok()
+                .header("Content-Type", "application/pdf")
+                .header("Content-Disposition", "attachment; filename=\"quotation-" + id + ".pdf\"")
+                .body(pdfBytes);
     }
 
     @PostMapping

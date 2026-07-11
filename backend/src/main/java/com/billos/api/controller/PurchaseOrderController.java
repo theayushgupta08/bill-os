@@ -2,6 +2,7 @@ package com.billos.api.controller;
 
 import com.billos.api.dto.PurchaseOrderDto;
 import com.billos.api.service.PurchaseOrderService;
+import com.billos.api.service.DocumentGenerationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import java.util.UUID;
 public class PurchaseOrderController {
 
     private final PurchaseOrderService purchaseOrderService;
+    private final DocumentGenerationService documentGenerationService;
 
     @GetMapping
     public ResponseEntity<List<PurchaseOrderDto>> getAllPurchaseOrders() {
@@ -25,6 +27,15 @@ public class PurchaseOrderController {
     @GetMapping("/{id}")
     public ResponseEntity<PurchaseOrderDto> getPurchaseOrderById(@PathVariable UUID id) {
         return ResponseEntity.ok(purchaseOrderService.getPurchaseOrderById(id));
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> getPurchaseOrderPdf(@PathVariable UUID id) {
+        byte[] pdfBytes = documentGenerationService.generatePurchaseOrderPdf(id);
+        return ResponseEntity.ok()
+                .header("Content-Type", "application/pdf")
+                .header("Content-Disposition", "attachment; filename=\"po-" + id + ".pdf\"")
+                .body(pdfBytes);
     }
 
     @PostMapping

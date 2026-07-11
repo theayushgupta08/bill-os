@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Sales Invoice</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            color: #333333;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            width: 100%;
+            border-bottom: 2px solid #333333;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .header table {
+            width: 100%;
+        }
+        .header td {
+            vertical-align: top;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #111111;
+            text-transform: uppercase;
+            text-align: right;
+        }
+        .org-details {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .meta-table {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .meta-table td {
+            vertical-align: top;
+            width: 50%;
+        }
+        .box {
+            padding: 10px;
+            border: 1px solid #cccccc;
+            background-color: #f9f9f9;
+        }
+        .box-title {
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            font-size: 11px;
+            color: #666666;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .items-table th {
+            background-color: #333333;
+            color: #ffffff;
+            font-weight: bold;
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #333333;
+        }
+        .items-table td {
+            padding: 8px;
+            border: 1px solid #cccccc;
+        }
+        .text-right {
+            text-align: right !important;
+        }
+        .text-center {
+            text-align: center !important;
+        }
+        .totals-table {
+            width: 40%;
+            float: right;
+            border-collapse: collapse;
+        }
+        .totals-table td {
+            padding: 6px 8px;
+            border: 1px solid #cccccc;
+        }
+        .totals-table .total-row {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            text-align: center;
+            font-size: 10px;
+            color: #999999;
+            border-top: 1px solid #cccccc;
+            padding-top: 10px;
+        }
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <table>
+        <tr>
+            <td>
+                <div class="org-details">billOS Inc.</div>
+                <div>123 Business Avenue<br/>Tech City, 10001<br/>Email: contact@billos.com</div>
+            </td>
+            <td>
+                <div class="title">INVOICE</div>
+                <div style="text-align: right; margin-top: 10px;">
+                    <strong>Invoice #:</strong> <span th:text="${invoice.invoiceNumber}">INV-0001</span><br/>
+                    <strong>Date:</strong> <span th:text="${invoice.invoiceDate}">2023-01-01</span><br/>
+                    <strong>Due Date:</strong> <span th:text="${invoice.dueDate}">2023-01-31</span>
+                </div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<table class="meta-table">
+    <tr>
+        <td style="padding-right: 10px;">
+            <div class="box">
+                <div class="box-title">Bill To:</div>
+                <strong th:text="${invoice.customerName}">Customer Name</strong><br/>
+                <span th:text="${invoice.customerName} + ' Address'">Address Line 1</span><br/>
+                City, State, ZIP
+            </div>
+        </td>
+        <td style="padding-left: 10px;">
+            <div class="box">
+                <div class="box-title">Status:</div>
+                <strong style="font-size: 16px;" th:text="${invoice.status}">ISSUED</strong>
+            </div>
+        </td>
+    </tr>
+</table>
+
+<table class="items-table">
+    <thead>
+        <tr>
+            <th style="width: 5%;">#</th>
+            <th style="width: 45%;">Item & Description</th>
+            <th class="text-right" style="width: 15%;">Qty</th>
+            <th class="text-right" style="width: 15%;">Rate</th>
+            <th class="text-right" style="width: 20%;">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="line, iterStat : ${invoice.lines}">
+            <td class="text-center" th:text="${iterStat.count}">1</td>
+            <td>
+                <strong th:text="${line.productName}">Product Name</strong>
+            </td>
+            <td class="text-right" th:text="${line.quantity}">1</td>
+            <td class="text-right" th:text="${'$' + line.unitPrice}">$100.00</td>
+            <td class="text-right" th:text="${'$' + line.lineTotal}">$100.00</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="clearfix">
+    <div style="float: left; width: 50%; color: #666; font-size: 11px;">
+        <strong>Notes:</strong><br/>
+        <span th:text="${invoice.notes}">Thank you for your business.</span>
+    </div>
+    
+    <table class="totals-table">
+        <tr>
+            <td>Subtotal</td>
+            <td class="text-right" th:text="${'$' + invoice.totalAmount}">$100.00</td>
+        </tr>
+        <tr>
+            <td>Tax (0%)</td>
+            <td class="text-right">$0.00</td>
+        </tr>
+        <tr class="total-row">
+            <td>Total</td>
+            <td class="text-right" th:text="${'$' + invoice.totalAmount}">$100.00</td>
+        </tr>
+    </table>
+</div>
+
+<div class="footer">
+    Generated by billOS | Page 1 of 1
+</div>
+
+</body>
+</html>
