@@ -57,10 +57,10 @@ export function SiteHeader() {
           }`}
         >
           <div
-            className={`flex items-center justify-between rounded-2xl px-4 py-3 transition-all duration-300 ${
+            className={`flex items-center justify-between rounded-full px-6 py-3 transition-all duration-300 bg-background/60 backdrop-blur-xl border border-border/50 ${
               isScrolled
-                ? "bg-background/70 backdrop-blur-md shadow-lg border border-border/50"
-                : "bg-transparent"
+                ? "shadow-lg"
+                : "shadow-sm"
             }`}
           >
             <div className="flex items-center gap-8">

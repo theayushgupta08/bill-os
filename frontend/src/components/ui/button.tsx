@@ -59,6 +59,7 @@ function Button({
         className={cn(buttonVariants({ variant, size, className }))}
         render={renderChildren || children}
         disabled={isLoading || disabled}
+        nativeButton={false}
         {...rest}
       />
     )
