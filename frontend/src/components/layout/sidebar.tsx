@@ -83,6 +83,27 @@ export function Sidebar() {
               Warehouses
             </Link>
             <Link
+              href="/sales/quotes"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <FileText className="h-4 w-4" />
+              Quotations
+            </Link>
+            <Link
+              href="/sales/orders"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <FileText className="h-4 w-4" />
+              Sales Orders
+            </Link>
+            <Link
+              href="/sales/invoices"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <Receipt className="h-4 w-4" />
+              Sales Invoices
+            </Link>
+            <Link
               href="/purchases/orders"
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
             >
