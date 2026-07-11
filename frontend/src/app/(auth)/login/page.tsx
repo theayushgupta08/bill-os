@@ -1,54 +1,121 @@
+"use client";
+
+import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import apiClient from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.type === 'email' ? 'email' : 'password']: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Invalid credentials');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('token', data.accessToken);
+      
+      const orgs = await apiClient('/api/v1/organizations', { method: 'GET' });
+      
+      if (orgs && orgs.length > 0) {
+        localStorage.setItem('active_org_id', orgs[0].id);
+        router.push('/dashboard');
+      } else {
+        router.push('/setup');
+      }
+
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div>
-      <h2 className="text-2xl font-semibold mb-6 text-center text-gray-900 dark:text-white">Sign In</h2>
-      <form className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-          <input
+    <div className="w-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+      <div className="flex flex-col gap-2 text-center lg:text-left">
+        <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
+        <p className="text-sm text-muted-foreground">
+          Enter your credentials to access your dashboard.
+        </p>
+      </div>
+
+      {error && (
+        <div className="p-3 text-sm font-medium text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md text-center">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
             type="email"
-            placeholder="you@example.com"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            required
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="name@example.com"
+            className="h-10"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <input
-              id="remember-me"
-              name="remember-me"
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
-              Remember me
-            </label>
-          </div>
-          <div className="text-sm">
-            <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
-              Forgot your password?
+        
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Link 
+              href="/forgot-password" 
+              className="text-sm font-medium text-primary hover:underline underline-offset-4"
+            >
+              Forgot password?
             </Link>
           </div>
+          <Input
+            id="password"
+            type="password"
+            required
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="••••••••"
+            className="h-10"
+          />
         </div>
-        <button
-          type="submit"
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
+
+        <Button type="submit" className="w-full h-10 mt-2" isLoading={loading}>
           Sign In
-        </button>
+        </Button>
       </form>
-      <div className="mt-6 text-center text-sm">
-        <span className="text-gray-500 dark:text-gray-400">Don&apos;t have an account? </span>
-        <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+
+      <div className="text-center text-sm text-muted-foreground mt-2">
+        Don&apos;t have an account?{" "}
+        <Link href="/register" className="font-semibold text-primary hover:underline underline-offset-4 transition-all">
           Sign up
         </Link>
       </div>

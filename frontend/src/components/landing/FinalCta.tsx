@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export function FinalCta() {
   return (
@@ -18,8 +19,8 @@ export function FinalCta() {
           Join thousands of modern businesses running on BillOS. Get started in minutes, no credit card required.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button size="lg" className="rounded-full h-14 px-10 text-lg bg-white text-black hover:bg-zinc-200 w-full sm:w-auto">
-            Start 14-Day Free Trial
+          <Button asChild size="lg" className="rounded-full h-14 px-10 text-lg bg-white text-black hover:bg-zinc-200 w-full sm:w-auto">
+            <Link href="/register">Start 14-Day Free Trial</Link>
           </Button>
           <Button size="lg" variant="outline" className="rounded-full h-14 px-10 text-lg border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white w-full sm:w-auto bg-transparent">
             Talk to Sales <ArrowRight className="ml-2 h-5 w-5" />

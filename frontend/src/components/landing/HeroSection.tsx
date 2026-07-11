@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Search, CheckCircle2 } from "lucide-react";
 
@@ -40,9 +41,11 @@ export function HeroSection() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start"
             >
-              <Button size="lg" className="rounded-full h-14 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all w-full sm:w-auto group">
-                Start your free trial
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              <Button asChild size="lg" className="rounded-full h-14 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all w-full sm:w-auto group">
+                <Link href="/register">
+                  Start your free trial
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </Button>
               <Button size="lg" variant="outline" className="rounded-full h-14 px-8 text-base w-full sm:w-auto bg-background/50 backdrop-blur-sm hidden sm:flex items-center gap-2">
                 <Search className="h-4 w-4 text-muted-foreground" />

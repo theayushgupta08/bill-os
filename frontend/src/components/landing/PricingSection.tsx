@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
@@ -47,7 +48,9 @@ export function PricingSection() {
               <span className="text-4xl font-bold">₹{isYearly ? "999" : "1,299"}</span>
               <span className="text-muted-foreground">/month</span>
             </div>
-            <Button variant="outline" className="w-full mb-8 rounded-full h-12">Start Free Trial</Button>
+            <Button asChild variant="outline" className="w-full mb-8 rounded-full h-12">
+              <Link href="/register">Start Free Trial</Link>
+            </Button>
             <ul className="space-y-3 mt-auto">
               <li className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-4 h-4 text-primary" /> Up to 500 invoices/mo</li>
               <li className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-4 h-4 text-primary" /> 1 User</li>
@@ -67,7 +70,9 @@ export function PricingSection() {
               <span className="text-4xl font-bold">₹{isYearly ? "2,499" : "2,999"}</span>
               <span className="text-muted-foreground">/month</span>
             </div>
-            <Button className="w-full mb-8 rounded-full h-12 shadow-lg shadow-primary/25 hover:shadow-primary/40">Get Started</Button>
+            <Button asChild className="w-full mb-8 rounded-full h-12 shadow-lg shadow-primary/25 hover:shadow-primary/40">
+              <Link href="/register">Get Started</Link>
+            </Button>
             <ul className="space-y-3 mt-auto">
               <li className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-4 h-4 text-primary" /> Unlimited invoices</li>
               <li className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-4 h-4 text-primary" /> 5 Users</li>

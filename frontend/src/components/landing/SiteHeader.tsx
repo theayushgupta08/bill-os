@@ -100,8 +100,8 @@ export function SiteHeader() {
               <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Log in
               </Link>
-              <Button className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
-                Start Free Trial
+              <Button asChild className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
+                <Link href="/register">Start Free Trial</Link>
               </Button>
             </div>
 
@@ -131,8 +131,8 @@ export function SiteHeader() {
               <Link href="/login" className="text-muted-foreground" onClick={() => setIsMobileMenuOpen(false)}>Log in</Link>
             </nav>
             <div className="pt-6 border-t border-border">
-              <Button className="w-full rounded-full text-lg h-14" onClick={() => setIsMobileMenuOpen(false)}>
-                Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
+              <Button asChild className="w-full rounded-full text-lg h-14" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link href="/register">Start Free Trial <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
             </div>
           </motion.div>

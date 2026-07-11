@@ -69,7 +69,7 @@ export function SecurityFAQ() {
           {/* FAQs */}
           <div>
             <h2 className="text-3xl font-bold tracking-tight mb-8">Frequently Asked Questions</h2>
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion className="w-full">
               {faqs.map((faq, index) => (
                 <AccordionItem key={index} value={`item-${index}`}>
                   <AccordionTrigger className="text-left text-lg hover:text-primary">{faq.question}</AccordionTrigger>

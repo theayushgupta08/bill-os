@@ -1,54 +1,149 @@
+"use client";
+
+import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    phone: ''
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Registration failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('token', data.accessToken);
+      router.push('/setup');
+
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div>
-      <h2 className="text-2xl font-semibold mb-6 text-center text-gray-900 dark:text-white">Create an Account</h2>
-      <form className="space-y-4">
+    <div className="w-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+      <div className="flex flex-col gap-2 text-center lg:text-left">
+        <h1 className="text-3xl font-bold tracking-tight">Create an account</h1>
+        <p className="text-sm text-muted-foreground">
+          Enter your details below to get started.
+        </p>
+      </div>
+
+      {error && (
+        <div className="p-3 text-sm font-medium text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md text-center">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
-            <input
-              type="text"
+          <div className="grid gap-2">
+            <Label htmlFor="firstName">First Name</Label>
+            <Input
+              id="firstName"
+              name="firstName"
+              required
+              value={formData.firstName}
+              onChange={handleChange}
               placeholder="John"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              className="h-10"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-            <input
-              type="text"
+          <div className="grid gap-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              name="lastName"
+              required
+              value={formData.lastName}
+              onChange={handleChange}
               placeholder="Doe"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              className="h-10"
             />
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-          <input
+
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
             type="email"
-            placeholder="you@example.com"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            required
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="name@example.com"
+            className="h-10"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-          <input
+
+        <div className="grid gap-2">
+          <Label htmlFor="phone">Phone Number (Optional)</Label>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="+91 9876543210"
+            className="h-10"
+          />
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            name="password"
             type="password"
+            required
+            value={formData.password}
+            onChange={handleChange}
             placeholder="••••••••"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            className="h-10"
           />
         </div>
-        <button
-          type="submit"
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
+
+        <Button type="submit" className="w-full h-10 mt-2" isLoading={loading}>
           Sign Up
-        </button>
+        </Button>
       </form>
-      <div className="mt-6 text-center text-sm">
-        <span className="text-gray-500 dark:text-gray-400">Already have an account? </span>
-        <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+
+      <div className="text-center text-sm text-muted-foreground mt-2">
+        Already have an account?{" "}
+        <Link href="/login" className="font-semibold text-primary hover:underline underline-offset-4 transition-all">
           Sign in
         </Link>
       </div>
