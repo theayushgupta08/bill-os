@@ -4,7 +4,7 @@ import com.billos.api.dto.PurchaseOrderDto;
 import com.billos.api.dto.PurchaseOrderLineDto;
 import com.billos.api.entity.*;
 import com.billos.api.mapper.PurchaseOrderMapper;
-import com.billos.api.repository.CustomerRepository;
+import com.billos.api.repository.SupplierRepository;
 import com.billos.api.repository.ProductRepository;
 import com.billos.api.repository.PurchaseOrderRepository;
 import com.billos.api.repository.TaxRateRepository;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 public class PurchaseOrderService {
 
     private final PurchaseOrderRepository purchaseOrderRepository;
-    private final CustomerRepository customerRepository;
+    private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
     private final TaxRateRepository taxRateRepository;
     private final PurchaseOrderMapper purchaseOrderMapper;
@@ -46,7 +46,7 @@ public class PurchaseOrderService {
     public PurchaseOrderDto createPurchaseOrder(PurchaseOrderDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
         
-        Customer supplier = customerRepository.findById(dto.getSupplierId())
+        Supplier supplier = supplierRepository.findById(dto.getSupplierId())
                 .orElseThrow(() -> new RuntimeException("Supplier not found"));
 
         PurchaseOrder po = new PurchaseOrder();

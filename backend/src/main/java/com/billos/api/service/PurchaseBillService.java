@@ -21,7 +21,7 @@ public class PurchaseBillService {
 
     private final PurchaseBillRepository purchaseBillRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
-    private final CustomerRepository customerRepository;
+    private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
     private final TaxRateRepository taxRateRepository;
@@ -48,7 +48,7 @@ public class PurchaseBillService {
     public PurchaseBillDto createPurchaseBill(PurchaseBillDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
         
-        Customer supplier = customerRepository.findById(dto.getSupplierId())
+        Supplier supplier = supplierRepository.findById(dto.getSupplierId())
                 .orElseThrow(() -> new RuntimeException("Supplier not found"));
 
         PurchaseBill bill = new PurchaseBill();

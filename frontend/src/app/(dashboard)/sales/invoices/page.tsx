@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 export default function SalesInvoicesPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPaying, setIsPaying] = useState(false);
 
   useEffect(() => {
     loadInvoices();
@@ -24,6 +25,34 @@ export default function SalesInvoicesPage() {
       console.error("Failed to load invoices", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecordPayment = async (inv: any) => {
+    setIsPaying(true);
+    try {
+      const payload = {
+        paymentDate: new Date().toISOString().split('T')[0],
+        amount: inv.totalAmount,
+        notes: "Auto-recorded full payment",
+        allocations: [
+          {
+            salesInvoiceId: inv.id,
+            allocatedAmount: inv.totalAmount
+          }
+        ]
+      };
+
+      await fetchApi("/api/v1/payments/receipts", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      await loadInvoices();
+    } catch (error) {
+      console.error("Failed to record payment", error);
+      alert("Failed to record payment");
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -49,6 +78,7 @@ export default function SalesInvoicesPage() {
               <TableHead>Customer</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -57,8 +87,15 @@ export default function SalesInvoicesPage() {
                 <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                 <TableCell>{inv.invoiceDate}</TableCell>
                 <TableCell>{inv.customerName}</TableCell>
-                <TableCell><Badge variant="default" className="bg-green-500">{inv.status}</Badge></TableCell>
+                <TableCell><Badge variant="default" className={inv.status === 'PAID' ? "bg-green-500" : "bg-blue-500"}>{inv.status}</Badge></TableCell>
                 <TableCell className="text-right">${inv.totalAmount.toFixed(2)}</TableCell>
+                <TableCell className="text-right">
+                  {inv.status !== 'PAID' && (
+                    <Button variant="outline" size="sm" onClick={() => handleRecordPayment(inv)} disabled={isPaying}>
+                      Record Payment
+                    </Button>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

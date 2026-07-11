@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { fetchApi } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 export default function PurchaseBillsPage() {
   const [bills, setBills] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPaying, setIsPaying] = useState(false);
 
   useEffect(() => {
     loadBills();
@@ -36,6 +37,34 @@ export default function PurchaseBillsPage() {
     }
   }
 
+  const handleRecordPayment = async (bill: any) => {
+    setIsPaying(true);
+    try {
+      const payload = {
+        paymentDate: new Date().toISOString().split('T')[0],
+        amount: bill.totalAmount,
+        notes: "Auto-recorded full payment to supplier",
+        allocations: [
+          {
+            purchaseBillId: bill.id,
+            allocatedAmount: bill.totalAmount
+          }
+        ]
+      };
+
+      await fetchApi("/api/v1/payments/vouchers", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      await loadBills();
+    } catch (error) {
+      console.error("Failed to record payment", error);
+      alert("Failed to record payment");
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
@@ -58,6 +87,7 @@ export default function PurchaseBillsPage() {
               <TableHead>Supplier</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -68,6 +98,13 @@ export default function PurchaseBillsPage() {
                 <TableCell>{bill.supplierName}</TableCell>
                 <TableCell>{getStatusBadge(bill.status)}</TableCell>
                 <TableCell className="text-right">${bill.totalAmount.toFixed(2)}</TableCell>
+                <TableCell className="text-right">
+                  {bill.status !== 'PAID' && (
+                    <Button variant="outline" size="sm" onClick={() => handleRecordPayment(bill)} disabled={isPaying}>
+                      Record Payment
+                    </Button>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

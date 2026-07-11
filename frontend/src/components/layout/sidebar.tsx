@@ -138,12 +138,15 @@ export function Sidebar() {
               <Receipt className="h-4 w-4" />
               Journal Entries
             </Link>
+            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
+              Reports
+            </div>
             <Link
-              href="/reports"
+              href="/reports/gst"
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
             >
               <LineChart className="h-4 w-4" />
-              Reports
+              GST Reports
             </Link>
             <Link
               href="/settings/taxes"

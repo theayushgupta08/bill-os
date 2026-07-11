@@ -6,5 +6,7 @@ public enum DocumentType {
     INVOICE,
     PURCHASE_ORDER,
     PURCHASE_BILL,
-    JOURNAL_ENTRY
+    JOURNAL_ENTRY,
+    PAYMENT_RECEIPT,
+    PAYMENT_VOUCHER
 }

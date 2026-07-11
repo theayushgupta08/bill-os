@@ -12,6 +12,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.TenantId;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -72,4 +73,7 @@ public class Customer extends BaseEntity {
 
     @Column(name = "shipping_country")
     private String shippingCountry;
+
+    @Column(name = "outstanding_balance", nullable = false)
+    private BigDecimal outstandingBalance = BigDecimal.ZERO;
 }
