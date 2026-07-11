@@ -8,12 +8,13 @@ import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,7 +26,7 @@ public class OrganizationService {
     private final UserRepository userRepository;
 
     @Transactional
-    public Organization createOrganization(Organization orgDetails) {
+    public Organization createOrganization(@NonNull Organization orgDetails) {
         // Get current user
         UserPrincipal principal = (UserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User currentUser = userRepository.findById(principal.getId())

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.billos.api.tenant.TenantFilterTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.317 s -- in com.billos.api.tenant.TenantFilterTest
