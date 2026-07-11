@@ -68,8 +68,22 @@ export function Sidebar() {
               href="/product-categories"
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
             >
-              <Package2 className="h-4 w-4" />
+              <FolderTree className="h-4 w-4" />
               Categories
+            </Link>
+            <Link
+              href="/warehouses"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <Building2 className="h-4 w-4" />
+              Warehouses
+            </Link>
+            <Link
+              href="/inventory"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+            >
+              <Package2 className="h-4 w-4" />
+              Inventory
             </Link>
             <Link
               href="/accounts"

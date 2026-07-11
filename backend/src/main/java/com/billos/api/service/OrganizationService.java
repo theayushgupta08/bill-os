@@ -25,6 +25,7 @@ public class OrganizationService {
     private final UserOrgRoleRepository userOrgRoleRepository;
     private final UserRepository userRepository;
     private final AccountService accountService;
+    private final WarehouseService warehouseService;
 
     @Transactional
     public Organization createOrganization(@NonNull Organization orgDetails) {
@@ -45,6 +46,9 @@ public class OrganizationService {
 
         // Seed default Chart of Accounts for the new organization
         accountService.seedDefaultAccounts(savedOrg.getId());
+
+        // Seed default Main Warehouse
+        warehouseService.seedDefaultWarehouse(savedOrg.getId());
 
         return savedOrg;
     }
