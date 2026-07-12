@@ -25,6 +25,7 @@ public class PurchaseBillService {
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
     private final TaxRateRepository taxRateRepository;
+    private final OrganizationRepository organizationRepository;
     private final PurchaseBillMapper purchaseBillMapper;
 
     private final InventoryService inventoryService;
@@ -51,6 +52,14 @@ public class PurchaseBillService {
         Supplier supplier = supplierRepository
                 .findById(dto.getSupplierId())
                 .orElseThrow(() -> new RuntimeException("Supplier not found"));
+
+        Organization org = organizationRepository
+                .findById(orgId)
+                .orElseThrow(() -> new RuntimeException("Organization not found"));
+
+        boolean isInterState = org.getState() != null
+                && supplier.getState() != null
+                && !org.getState().equalsIgnoreCase(supplier.getState());
 
         PurchaseBill bill = new PurchaseBill();
         bill.setOrganizationId(orgId);
@@ -103,6 +112,15 @@ public class PurchaseBillService {
             if (taxRate != null) {
                 BigDecimal lineTax = lineBase.multiply(taxRate.getRate()).divide(new BigDecimal("100"));
                 line.setTaxAmount(lineTax);
+
+                if (isInterState) {
+                    line.setIgstAmount(lineTax);
+                } else {
+                    BigDecimal halfTax = lineTax.divide(new BigDecimal("2"));
+                    line.setCgstAmount(halfTax);
+                    line.setSgstAmount(halfTax);
+                }
+
                 taxTotal = taxTotal.add(lineTax);
                 line.setLineTotal(lineBase.add(lineTax));
             } else {
@@ -133,6 +151,10 @@ public class PurchaseBillService {
         bill.setTotalAmount(totalAmount);
 
         PurchaseBill savedBill = purchaseBillRepository.save(bill);
+
+        // Update supplier outstanding balance
+        supplier.setOutstandingBalance(supplier.getOutstandingBalance().add(savedBill.getTotalAmount()));
+        supplierRepository.save(supplier);
 
         // CREATE JOURNAL ENTRY FOR ACCOUNTS PAYABLE
         // We will mock this logic slightly since we don't have the exact Account IDs in the DTO,

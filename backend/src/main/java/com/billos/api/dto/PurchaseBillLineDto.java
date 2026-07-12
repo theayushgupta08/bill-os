@@ -17,5 +17,8 @@ public class PurchaseBillLineDto {
     private BigDecimal quantity;
     private BigDecimal unitPrice;
     private BigDecimal taxAmount;
+    private BigDecimal cgstAmount;
+    private BigDecimal sgstAmount;
+    private BigDecimal igstAmount;
     private BigDecimal lineTotal;
 }

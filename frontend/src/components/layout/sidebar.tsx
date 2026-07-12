@@ -130,6 +130,13 @@ export function Sidebar() {
               Purchase Bills
             </Link>
             <Link
+              href="/payments"
+              className={getLinkClass("/payments")}
+            >
+              <Receipt className="h-4 w-4" />
+              Payments
+            </Link>
+            <Link
               href="/inventory"
               className={getLinkClass("/inventory")}
             >

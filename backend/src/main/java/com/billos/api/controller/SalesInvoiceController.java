@@ -4,6 +4,7 @@ import com.billos.api.dto.SalesInvoiceDto;
 import com.billos.api.service.DocumentGenerationService;
 import com.billos.api.service.SalesInvoiceService;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -45,5 +46,10 @@ public class SalesInvoiceController {
     @PostMapping("/{id}/issue")
     public ResponseEntity<SalesInvoiceDto> issueInvoice(@PathVariable UUID id) {
         return ResponseEntity.ok(salesInvoiceService.issueInvoice(id));
+    }
+
+    @GetMapping("/{id}/e-invoice")
+    public ResponseEntity<Map<String, Object>> getEInvoiceJson(@PathVariable UUID id) {
+        return ResponseEntity.ok(salesInvoiceService.generateEInvoiceJson(id));
     }
 }

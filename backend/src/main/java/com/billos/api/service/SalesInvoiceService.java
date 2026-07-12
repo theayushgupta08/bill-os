@@ -6,7 +6,9 @@ import com.billos.api.mapper.SalesInvoiceMapper;
 import com.billos.api.repository.*;
 import com.billos.api.tenant.TenantContext;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ public class SalesInvoiceService {
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
     private final TaxRateRepository taxRateRepository;
+    private final OrganizationRepository organizationRepository;
     private final SalesInvoiceMapper salesInvoiceMapper;
     private final SequenceGeneratorService sequenceGeneratorService;
 
@@ -51,6 +54,14 @@ public class SalesInvoiceService {
         Customer customer = customerRepository
                 .findById(dto.getCustomerId())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        Organization org = organizationRepository
+                .findById(orgId)
+                .orElseThrow(() -> new RuntimeException("Organization not found"));
+
+        boolean isInterState = org.getState() != null
+                && customer.getBillingState() != null
+                && !org.getState().equalsIgnoreCase(customer.getBillingState());
 
         SalesInvoice invoice = new SalesInvoice();
         invoice.setOrganizationId(orgId);
@@ -104,6 +115,15 @@ public class SalesInvoiceService {
             if (taxRate != null) {
                 BigDecimal lineTax = lineBase.multiply(taxRate.getRate()).divide(new BigDecimal("100"));
                 line.setTaxAmount(lineTax);
+
+                if (isInterState) {
+                    line.setIgstAmount(lineTax);
+                } else {
+                    BigDecimal halfTax = lineTax.divide(new BigDecimal("2"));
+                    line.setCgstAmount(halfTax);
+                    line.setSgstAmount(halfTax);
+                }
+
                 taxTotal = taxTotal.add(lineTax);
                 line.setLineTotal(lineBase.add(lineTax));
             } else {
@@ -162,6 +182,101 @@ public class SalesInvoiceService {
         }
 
         SalesInvoice savedInvoice = salesInvoiceRepository.save(invoice);
+
+        // Update customer outstanding balance
+        Customer customer = invoice.getCustomer();
+        customer.setOutstandingBalance(customer.getOutstandingBalance().add(invoice.getTotalAmount()));
+        customerRepository.save(customer);
+
         return salesInvoiceMapper.toDto(savedInvoice);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> generateEInvoiceJson(UUID id) {
+        SalesInvoice invoice =
+                salesInvoiceRepository.findById(id).orElseThrow(() -> new RuntimeException("Invoice not found"));
+
+        Organization org = organizationRepository
+                .findById(invoice.getOrganizationId())
+                .orElseThrow(() -> new RuntimeException("Organization not found"));
+
+        Customer customer = invoice.getCustomer();
+
+        Map<String, Object> eInvoice = new HashMap<>();
+
+        // Document Details
+        Map<String, Object> docDtls = new HashMap<>();
+        docDtls.put("Typ", "INV");
+        docDtls.put("No", invoice.getInvoiceNumber());
+        docDtls.put("Dt", invoice.getInvoiceDate().toString());
+        eInvoice.put("DocDtls", docDtls);
+
+        // Seller Details
+        Map<String, Object> sellerDtls = new HashMap<>();
+        sellerDtls.put("Gstin", org.getGstin());
+        sellerDtls.put("LglNm", org.getLegalName() != null ? org.getLegalName() : org.getName());
+        sellerDtls.put("Addr1", org.getAddressLine1());
+        sellerDtls.put("Loc", org.getCity());
+        sellerDtls.put("Pin", org.getPincode());
+        sellerDtls.put("Stcd", org.getState()); // Needs to be state code in real life
+        eInvoice.put("SellerDtls", sellerDtls);
+
+        // Buyer Details
+        Map<String, Object> buyerDtls = new HashMap<>();
+        buyerDtls.put("Gstin", customer.getGstin() != null ? customer.getGstin() : "URP");
+        buyerDtls.put("LglNm", customer.getName());
+        buyerDtls.put("Addr1", customer.getBillingAddressLine1());
+        buyerDtls.put("Loc", customer.getBillingCity());
+        buyerDtls.put("Pin", customer.getBillingPincode());
+        buyerDtls.put("Stcd", customer.getBillingState());
+        eInvoice.put("BuyerDtls", buyerDtls);
+
+        // Item List & HSN Summary
+        List<Map<String, Object>> itemList = invoice.getLines().stream()
+                .map(line -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("SlNo", line.getId().toString());
+                    item.put("PrdDesc", line.getProduct().getName());
+                    item.put("IsServc", "N");
+                    item.put("HsnCd", line.getProduct().getHsnSac());
+                    item.put("Qty", line.getQuantity());
+                    item.put("Unit", "NOS");
+                    item.put("UnitPrice", line.getUnitPrice());
+                    item.put("TotAmt", line.getQuantity().multiply(line.getUnitPrice()));
+                    item.put(
+                            "GstRt",
+                            line.getTaxRate() != null ? line.getTaxRate().getRate() : 0);
+                    item.put("IgstAmt", line.getIgstAmount());
+                    item.put("CgstAmt", line.getCgstAmount());
+                    item.put("SgstAmt", line.getSgstAmount());
+                    item.put("TotItemVal", line.getLineTotal());
+                    return item;
+                })
+                .collect(Collectors.toList());
+
+        eInvoice.put("ItemList", itemList);
+
+        // Value Details
+        Map<String, Object> valDtls = new HashMap<>();
+        valDtls.put("AssVal", invoice.getSubtotal());
+        valDtls.put(
+                "CgstVal",
+                invoice.getLines().stream()
+                        .map(SalesInvoiceLine::getCgstAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add));
+        valDtls.put(
+                "SgstVal",
+                invoice.getLines().stream()
+                        .map(SalesInvoiceLine::getSgstAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add));
+        valDtls.put(
+                "IgstVal",
+                invoice.getLines().stream()
+                        .map(SalesInvoiceLine::getIgstAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add));
+        valDtls.put("TotInvVal", invoice.getTotalAmount());
+        eInvoice.put("ValDtls", valDtls);
+
+        return eInvoice;
     }
 }

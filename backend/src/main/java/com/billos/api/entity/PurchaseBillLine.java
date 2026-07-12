@@ -41,6 +41,15 @@ public class PurchaseBillLine extends BaseEntity {
     @Column(name = "tax_amount", nullable = false)
     private BigDecimal taxAmount = BigDecimal.ZERO;
 
+    @Column(name = "cgst_amount", nullable = false)
+    private BigDecimal cgstAmount = BigDecimal.ZERO;
+
+    @Column(name = "sgst_amount", nullable = false)
+    private BigDecimal sgstAmount = BigDecimal.ZERO;
+
+    @Column(name = "igst_amount", nullable = false)
+    private BigDecimal igstAmount = BigDecimal.ZERO;
+
     @Column(name = "line_total", nullable = false)
     private BigDecimal lineTotal;
 }
