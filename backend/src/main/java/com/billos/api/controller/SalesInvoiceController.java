@@ -41,4 +41,9 @@ public class SalesInvoiceController {
     public ResponseEntity<SalesInvoiceDto> createSalesInvoice(@RequestBody SalesInvoiceDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(salesInvoiceService.createSalesInvoice(dto));
     }
+
+    @PostMapping("/{id}/issue")
+    public ResponseEntity<SalesInvoiceDto> issueInvoice(@PathVariable UUID id) {
+        return ResponseEntity.ok(salesInvoiceService.issueInvoice(id));
+    }
 }

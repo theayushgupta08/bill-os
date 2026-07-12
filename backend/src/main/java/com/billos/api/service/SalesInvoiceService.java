@@ -68,7 +68,9 @@ public class SalesInvoiceService {
         invoice.setInvoiceNumber(sequenceGeneratorService.getNextDocumentNumber(DocumentType.INVOICE));
         invoice.setInvoiceDate(dto.getInvoiceDate());
         invoice.setDueDate(dto.getDueDate());
-        invoice.setStatus(SalesInvoiceStatus.ISSUED); // Mark as Issued immediately
+
+        SalesInvoiceStatus initialStatus = dto.getStatus() != null ? dto.getStatus() : SalesInvoiceStatus.DRAFT;
+        invoice.setStatus(initialStatus);
         invoice.setNotes(dto.getNotes());
 
         BigDecimal subtotal = BigDecimal.ZERO;
@@ -111,19 +113,19 @@ public class SalesInvoiceService {
 
             invoice.addLine(line);
 
-            // AUTOMATIC STOCK DEDUCTION
-            StockMovementDto movement = new StockMovementDto();
-            movement.setWarehouseId(warehouse.getId());
-            movement.setProductId(product.getId());
-            movement.setMovementType(MovementType.OUT);
-            movement.setQuantity(line.getQuantity());
-            // For OUT, cost is calculated based on current WAC, but setting unit cost here to 0 or price
-            // The InventoryService enforces WAC for OUT if not set, or we can just send unitPrice
-            movement.setUnitCost(line.getUnitPrice());
-            movement.setReferenceType("SALES_INVOICE");
-            movement.setReason("Sold via Invoice " + invoice.getInvoiceNumber());
+            if (initialStatus == SalesInvoiceStatus.ISSUED) {
+                // AUTOMATIC STOCK DEDUCTION
+                StockMovementDto movement = new StockMovementDto();
+                movement.setWarehouseId(warehouse.getId());
+                movement.setProductId(product.getId());
+                movement.setMovementType(MovementType.OUT);
+                movement.setQuantity(line.getQuantity());
+                movement.setUnitCost(line.getUnitPrice());
+                movement.setReferenceType("SALES_INVOICE");
+                movement.setReason("Sold via Invoice " + invoice.getInvoiceNumber());
 
-            inventoryService.adjustStock(movement);
+                inventoryService.adjustStock(movement);
+            }
         }
 
         invoice.setSubtotal(subtotal);
@@ -132,6 +134,34 @@ public class SalesInvoiceService {
 
         SalesInvoice savedInvoice = salesInvoiceRepository.save(invoice);
 
+        return salesInvoiceMapper.toDto(savedInvoice);
+    }
+
+    @Transactional
+    public SalesInvoiceDto issueInvoice(UUID id) {
+        SalesInvoice invoice =
+                salesInvoiceRepository.findById(id).orElseThrow(() -> new RuntimeException("Invoice not found"));
+
+        if (invoice.getStatus() != SalesInvoiceStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT invoices can be issued");
+        }
+
+        invoice.setStatus(SalesInvoiceStatus.ISSUED);
+
+        for (SalesInvoiceLine line : invoice.getLines()) {
+            StockMovementDto movement = new StockMovementDto();
+            movement.setWarehouseId(line.getWarehouse().getId());
+            movement.setProductId(line.getProduct().getId());
+            movement.setMovementType(MovementType.OUT);
+            movement.setQuantity(line.getQuantity());
+            movement.setUnitCost(line.getUnitPrice());
+            movement.setReferenceType("SALES_INVOICE");
+            movement.setReason("Sold via Invoice " + invoice.getInvoiceNumber());
+
+            inventoryService.adjustStock(movement);
+        }
+
+        SalesInvoice savedInvoice = salesInvoiceRepository.save(invoice);
         return salesInvoiceMapper.toDto(savedInvoice);
     }
 }

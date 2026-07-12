@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchApi, downloadPdf } from "@/lib/api-client";
+import apiClient, { downloadPdf } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
@@ -18,7 +18,7 @@ export default function QuotationsPage() {
 
   const loadQuotes = async () => {
     try {
-      const data = await fetchApi("/api/v1/quotations");
+      const data: any = await apiClient.get("/quotations");
       setQuotes(data);
     } catch (error) {
       console.error("Failed to load quotes", error);

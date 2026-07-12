@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchApi } from "@/lib/api-client";
+import apiClient, { downloadPdf } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
@@ -18,7 +18,7 @@ export default function SalesOrdersPage() {
 
   const loadOrders = async () => {
     try {
-      const data = await fetchApi("/api/v1/sales-orders");
+      const data: any = await apiClient.get("/sales-orders");
       setOrders(data);
     } catch (error) {
       console.error("Failed to load SOs", error);
