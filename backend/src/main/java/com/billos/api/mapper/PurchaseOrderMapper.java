@@ -7,7 +7,7 @@ import com.billos.api.entity.PurchaseOrderLine;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = org.mapstruct.ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring")
 public interface PurchaseOrderMapper {
 
     @Mapping(source = "supplier.id", target = "supplierId")

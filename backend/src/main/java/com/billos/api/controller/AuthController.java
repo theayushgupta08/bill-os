@@ -29,8 +29,7 @@ public class AuthController {
                 registerRequest.getLastName(),
                 registerRequest.getEmail(),
                 registerRequest.getPassword(),
-                registerRequest.getPhone()
-        );
+                registerRequest.getPhone());
         return ResponseEntity.ok(new JwtAuthResponse(token));
     }
 

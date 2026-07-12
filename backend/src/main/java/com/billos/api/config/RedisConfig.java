@@ -4,11 +4,10 @@ import io.github.bucket4j.distributed.proxy.ProxyManager;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
+import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.time.Duration;
 
 @Configuration
 public class RedisConfig {
@@ -24,10 +23,8 @@ public class RedisConfig {
 
     @Bean
     public RedisClient redisClient() {
-        RedisURI.Builder uriBuilder = RedisURI.builder()
-                .withHost(redisHost)
-                .withPort(redisPort);
-        
+        RedisURI.Builder uriBuilder = RedisURI.builder().withHost(redisHost).withPort(redisPort);
+
         if (redisPassword != null && !redisPassword.isEmpty()) {
             uriBuilder.withPassword(redisPassword.toCharArray());
         }
@@ -37,8 +34,11 @@ public class RedisConfig {
 
     @Bean
     public ProxyManager<byte[]> proxyManager(RedisClient redisClient) {
-        io.github.bucket4j.distributed.proxy.ClientSideConfig clientSideConfig = io.github.bucket4j.distributed.proxy.ClientSideConfig.getDefault()
-                .withExpirationAfterWriteStrategy(io.github.bucket4j.distributed.ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofSeconds(10)));
+        io.github.bucket4j.distributed.proxy.ClientSideConfig clientSideConfig =
+                io.github.bucket4j.distributed.proxy.ClientSideConfig.getDefault()
+                        .withExpirationAfterWriteStrategy(
+                                io.github.bucket4j.distributed.ExpirationAfterWriteStrategy
+                                        .basedOnTimeForRefillingBucketUpToMax(Duration.ofSeconds(10)));
 
         return LettuceBasedProxyManager.builderFor(redisClient)
                 .withClientSideConfig(clientSideConfig)

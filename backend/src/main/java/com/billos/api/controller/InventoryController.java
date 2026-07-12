@@ -3,13 +3,12 @@ package com.billos.api.controller;
 import com.billos.api.dto.InventoryLevelDto;
 import com.billos.api.dto.StockMovementDto;
 import com.billos.api.service.InventoryService;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/inventory")

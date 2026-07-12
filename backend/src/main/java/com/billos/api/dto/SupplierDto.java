@@ -1,7 +1,7 @@
 package com.billos.api.dto;
 
-import lombok.Data;
 import java.util.UUID;
+import lombok.Data;
 
 @Data
 public class SupplierDto {
@@ -10,7 +10,7 @@ public class SupplierDto {
     private String email;
     private String phone;
     private String gstin;
-    
+
     private String addressLine1;
     private String addressLine2;
     private String city;

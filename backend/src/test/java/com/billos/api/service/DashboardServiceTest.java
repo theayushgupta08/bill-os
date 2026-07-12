@@ -1,5 +1,9 @@
 package com.billos.api.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.when;
+
 import com.billos.api.dto.DashboardSummaryDto;
 import com.billos.api.entity.Customer;
 import com.billos.api.entity.PurchaseBill;
@@ -15,37 +19,39 @@ import com.billos.api.repository.ProductRepository;
 import com.billos.api.repository.PurchaseBillRepository;
 import com.billos.api.repository.SalesInvoiceRepository;
 import com.billos.api.repository.SupplierRepository;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class DashboardServiceTest {
 
     @Mock
     private SalesInvoiceRepository salesInvoiceRepository;
+
     @Mock
     private PurchaseBillRepository purchaseBillRepository;
+
     @Mock
     private CustomerRepository customerRepository;
+
     @Mock
     private SupplierRepository supplierRepository;
+
     @Mock
     private ProductRepository productRepository;
+
     @Mock
     private SalesInvoiceMapper salesInvoiceMapper;
+
     @Mock
     private PurchaseBillMapper purchaseBillMapper;
+
     @Mock
     private ProductMapper productMapper;
 

@@ -5,14 +5,13 @@ import com.billos.api.entity.*;
 import com.billos.api.mapper.SalesInvoiceMapper;
 import com.billos.api.repository.*;
 import com.billos.api.tenant.TenantContext;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +26,7 @@ public class SalesInvoiceService {
     private final TaxRateRepository taxRateRepository;
     private final SalesInvoiceMapper salesInvoiceMapper;
     private final SequenceGeneratorService sequenceGeneratorService;
-    
+
     private final InventoryService inventoryService;
 
     @Transactional(readOnly = true)
@@ -39,7 +38,8 @@ public class SalesInvoiceService {
 
     @Transactional(readOnly = true)
     public SalesInvoiceDto getSalesInvoiceById(UUID id) {
-        return salesInvoiceRepository.findById(id)
+        return salesInvoiceRepository
+                .findById(id)
                 .map(salesInvoiceMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Sales Invoice not found"));
     }
@@ -47,22 +47,24 @@ public class SalesInvoiceService {
     @Transactional
     public SalesInvoiceDto createSalesInvoice(SalesInvoiceDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
-        
-        Customer customer = customerRepository.findById(dto.getCustomerId())
+
+        Customer customer = customerRepository
+                .findById(dto.getCustomerId())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         SalesInvoice invoice = new SalesInvoice();
         invoice.setOrganizationId(orgId);
         invoice.setCustomer(customer);
-        
+
         if (dto.getSoId() != null) {
-            SalesOrder so = salesOrderRepository.findById(dto.getSoId())
+            SalesOrder so = salesOrderRepository
+                    .findById(dto.getSoId())
                     .orElseThrow(() -> new RuntimeException("SO not found"));
             // invoice.setSalesOrder(so); // Left commented out as not mapped directly in basic implementation
             so.setStatus(SalesOrderStatus.INVOICED);
             salesOrderRepository.save(so);
         }
-        
+
         invoice.setInvoiceNumber(sequenceGeneratorService.getNextDocumentNumber(DocumentType.INVOICE));
         invoice.setInvoiceDate(dto.getInvoiceDate());
         invoice.setDueDate(dto.getDueDate());
@@ -73,14 +75,17 @@ public class SalesInvoiceService {
         BigDecimal taxTotal = BigDecimal.ZERO;
 
         for (SalesInvoiceLineDto lineDto : dto.getLines()) {
-            Product product = productRepository.findById(lineDto.getProductId())
+            Product product = productRepository
+                    .findById(lineDto.getProductId())
                     .orElseThrow(() -> new RuntimeException("Product not found"));
-            Warehouse warehouse = warehouseRepository.findById(lineDto.getWarehouseId())
+            Warehouse warehouse = warehouseRepository
+                    .findById(lineDto.getWarehouseId())
                     .orElseThrow(() -> new RuntimeException("Warehouse not found"));
-                    
+
             TaxRate taxRate = null;
             if (lineDto.getTaxRateId() != null) {
-                taxRate = taxRateRepository.findById(lineDto.getTaxRateId())
+                taxRate = taxRateRepository
+                        .findById(lineDto.getTaxRateId())
                         .orElseThrow(() -> new RuntimeException("Tax Rate not found"));
             }
 
@@ -90,10 +95,10 @@ public class SalesInvoiceService {
             line.setTaxRate(taxRate);
             line.setQuantity(lineDto.getQuantity());
             line.setUnitPrice(lineDto.getUnitPrice());
-            
+
             BigDecimal lineBase = line.getQuantity().multiply(line.getUnitPrice());
             subtotal = subtotal.add(lineBase);
-            
+
             if (taxRate != null) {
                 BigDecimal lineTax = lineBase.multiply(taxRate.getRate()).divide(new BigDecimal("100"));
                 line.setTaxAmount(lineTax);
@@ -103,9 +108,9 @@ public class SalesInvoiceService {
                 line.setTaxAmount(BigDecimal.ZERO);
                 line.setLineTotal(lineBase);
             }
-            
+
             invoice.addLine(line);
-            
+
             // AUTOMATIC STOCK DEDUCTION
             StockMovementDto movement = new StockMovementDto();
             movement.setWarehouseId(warehouse.getId());
@@ -114,10 +119,10 @@ public class SalesInvoiceService {
             movement.setQuantity(line.getQuantity());
             // For OUT, cost is calculated based on current WAC, but setting unit cost here to 0 or price
             // The InventoryService enforces WAC for OUT if not set, or we can just send unitPrice
-            movement.setUnitCost(line.getUnitPrice()); 
+            movement.setUnitCost(line.getUnitPrice());
             movement.setReferenceType("SALES_INVOICE");
             movement.setReason("Sold via Invoice " + invoice.getInvoiceNumber());
-            
+
             inventoryService.adjustStock(movement);
         }
 

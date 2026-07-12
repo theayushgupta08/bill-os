@@ -2,13 +2,12 @@ package com.billos.api.controller;
 
 import com.billos.api.dto.ProductCategoryDto;
 import com.billos.api.service.ProductCategoryService;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/product-categories")
@@ -33,7 +32,8 @@ public class ProductCategoryController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductCategoryDto> updateCategory(@PathVariable UUID id, @RequestBody ProductCategoryDto dto) {
+    public ResponseEntity<ProductCategoryDto> updateCategory(
+            @PathVariable UUID id, @RequestBody ProductCategoryDto dto) {
         return ResponseEntity.ok(productCategoryService.updateCategory(id, dto));
     }
 

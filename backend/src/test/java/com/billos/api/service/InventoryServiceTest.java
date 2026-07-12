@@ -1,5 +1,8 @@
 package com.billos.api.service;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import com.billos.api.dto.StockMovementDto;
 import com.billos.api.entity.*;
 import com.billos.api.mapper.InventoryMapper;
@@ -8,19 +11,15 @@ import com.billos.api.repository.ProductRepository;
 import com.billos.api.repository.StockMovementRepository;
 import com.billos.api.repository.WarehouseRepository;
 import com.billos.api.tenant.TenantContext;
+import java.math.BigDecimal;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.math.BigDecimal;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
@@ -72,8 +71,9 @@ class InventoryServiceTest {
 
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId)).thenReturn(Optional.empty());
-        
+        when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId))
+                .thenReturn(Optional.empty());
+
         when(inventoryLevelRepository.save(any(InventoryLevel.class))).thenAnswer(i -> i.getArguments()[0]);
         when(stockMovementRepository.save(any(StockMovement.class))).thenAnswer(i -> i.getArguments()[0]);
         when(inventoryMapper.toMovementDto(any(StockMovement.class))).thenReturn(new StockMovementDto());
@@ -82,7 +82,7 @@ class InventoryServiceTest {
 
         // Verify that product base price (our simple WAC implementation) is updated
         verify(productRepository).save(argThat(p -> p.getBasePrice().compareTo(new BigDecimal("50.00")) == 0));
-        
+
         // Verify inventory level quantity is set to 10
         verify(inventoryLevelRepository).save(argThat(l -> l.getQuantity().compareTo(new BigDecimal("10")) == 0));
     }
@@ -108,8 +108,9 @@ class InventoryServiceTest {
 
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId)).thenReturn(Optional.of(existingLevel));
-        
+        when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId))
+                .thenReturn(Optional.of(existingLevel));
+
         when(inventoryLevelRepository.save(any(InventoryLevel.class))).thenAnswer(i -> i.getArguments()[0]);
         when(stockMovementRepository.save(any(StockMovement.class))).thenAnswer(i -> i.getArguments()[0]);
         when(inventoryMapper.toMovementDto(any(StockMovement.class))).thenReturn(new StockMovementDto());
@@ -118,7 +119,7 @@ class InventoryServiceTest {
 
         // Calculation: (10 * 100) + (10 * 150) = 1000 + 1500 = 2500 / 20 = 125
         verify(productRepository).save(argThat(p -> p.getBasePrice().compareTo(new BigDecimal("125.00")) == 0));
-        
+
         // Verify inventory level quantity is set to 20
         verify(inventoryLevelRepository).save(argThat(l -> l.getQuantity().compareTo(new BigDecimal("20")) == 0));
     }

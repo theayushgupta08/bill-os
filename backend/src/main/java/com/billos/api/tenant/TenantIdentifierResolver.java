@@ -1,10 +1,9 @@
 package com.billos.api.tenant;
 
+import java.util.UUID;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
-import java.util.UUID;
 
 @Component
 public class TenantIdentifierResolver implements CurrentTenantIdentifierResolver<UUID> {
@@ -30,4 +29,3 @@ public class TenantIdentifierResolver implements CurrentTenantIdentifierResolver
         return true;
     }
 }
-

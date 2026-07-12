@@ -1,39 +1,42 @@
 package com.billos.api.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.when;
+
 import com.billos.api.dto.PnlDto;
 import com.billos.api.entity.PurchaseBill;
+import com.billos.api.entity.PurchaseBillStatus;
 import com.billos.api.entity.SalesInvoice;
+import com.billos.api.entity.SalesInvoiceStatus;
 import com.billos.api.mapper.PurchaseBillMapper;
 import com.billos.api.mapper.SalesInvoiceMapper;
-import com.billos.api.entity.SalesInvoiceStatus;
-import com.billos.api.entity.PurchaseBillStatus;
 import com.billos.api.repository.PurchaseBillRepository;
 import com.billos.api.repository.SalesInvoiceRepository;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class ReportServiceTest {
 
     @Mock
     private SalesInvoiceRepository salesInvoiceRepository;
+
     @Mock
     private PurchaseBillRepository purchaseBillRepository;
+
     @Mock
     private InventoryService inventoryService;
+
     @Mock
     private SalesInvoiceMapper salesInvoiceMapper;
+
     @Mock
     private PurchaseBillMapper purchaseBillMapper;
 

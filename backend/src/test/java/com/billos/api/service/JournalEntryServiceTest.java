@@ -1,5 +1,10 @@
 package com.billos.api.service;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import com.billos.api.dto.JournalEntryDto;
 import com.billos.api.dto.JournalEntryLineDto;
 import com.billos.api.entity.Account;
@@ -8,23 +13,17 @@ import com.billos.api.mapper.JournalEntryMapper;
 import com.billos.api.repository.AccountRepository;
 import com.billos.api.repository.JournalEntryRepository;
 import com.billos.api.tenant.TenantContext;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
@@ -52,17 +51,17 @@ class JournalEntryServiceTest {
         JournalEntryDto dto = new JournalEntryDto();
         dto.setEntryDate(LocalDate.now());
         dto.setDescription("Initial Investment");
-        
+
         JournalEntryLineDto debit = new JournalEntryLineDto();
         debit.setAccountId(UUID.randomUUID());
         debit.setDebitAmount(new BigDecimal("1000.00"));
         debit.setCreditAmount(BigDecimal.ZERO);
-        
+
         JournalEntryLineDto credit = new JournalEntryLineDto();
         credit.setAccountId(UUID.randomUUID());
         credit.setDebitAmount(BigDecimal.ZERO);
         credit.setCreditAmount(new BigDecimal("1000.00"));
-        
+
         dto.setLines(new ArrayList<>());
         dto.getLines().add(debit);
         dto.getLines().add(credit);
@@ -83,17 +82,17 @@ class JournalEntryServiceTest {
         JournalEntryDto dto = new JournalEntryDto();
         dto.setEntryDate(LocalDate.now());
         dto.setDescription("Unbalanced Entry");
-        
+
         JournalEntryLineDto debit = new JournalEntryLineDto();
         debit.setAccountId(UUID.randomUUID());
         debit.setDebitAmount(new BigDecimal("1000.00"));
         debit.setCreditAmount(BigDecimal.ZERO);
-        
+
         JournalEntryLineDto credit = new JournalEntryLineDto();
         credit.setAccountId(UUID.randomUUID());
         credit.setDebitAmount(BigDecimal.ZERO);
         credit.setCreditAmount(new BigDecimal("999.00")); // Mismatch!
-        
+
         dto.setLines(new ArrayList<>());
         dto.getLines().add(debit);
         dto.getLines().add(credit);

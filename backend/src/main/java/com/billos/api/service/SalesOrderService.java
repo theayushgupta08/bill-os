@@ -9,14 +9,13 @@ import com.billos.api.repository.ProductRepository;
 import com.billos.api.repository.SalesOrderRepository;
 import com.billos.api.repository.TaxRateRepository;
 import com.billos.api.tenant.TenantContext;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +38,8 @@ public class SalesOrderService {
 
     @Transactional(readOnly = true)
     public SalesOrderDto getSalesOrderById(UUID id) {
-        return salesOrderRepository.findById(id)
+        return salesOrderRepository
+                .findById(id)
                 .map(salesOrderMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Sales Order not found"));
     }
@@ -47,8 +47,9 @@ public class SalesOrderService {
     @Transactional
     public SalesOrderDto createSalesOrder(SalesOrderDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
-        
-        Customer customer = customerRepository.findById(dto.getCustomerId())
+
+        Customer customer = customerRepository
+                .findById(dto.getCustomerId())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         SalesOrder so = new SalesOrder();
@@ -63,12 +64,14 @@ public class SalesOrderService {
         BigDecimal taxTotal = BigDecimal.ZERO;
 
         for (SalesOrderLineDto lineDto : dto.getLines()) {
-            Product product = productRepository.findById(lineDto.getProductId())
+            Product product = productRepository
+                    .findById(lineDto.getProductId())
                     .orElseThrow(() -> new RuntimeException("Product not found"));
-            
+
             TaxRate taxRate = null;
             if (lineDto.getTaxRateId() != null) {
-                taxRate = taxRateRepository.findById(lineDto.getTaxRateId())
+                taxRate = taxRateRepository
+                        .findById(lineDto.getTaxRateId())
                         .orElseThrow(() -> new RuntimeException("Tax Rate not found"));
             }
 
@@ -77,10 +80,10 @@ public class SalesOrderService {
             line.setTaxRate(taxRate);
             line.setQuantity(lineDto.getQuantity());
             line.setUnitPrice(lineDto.getUnitPrice());
-            
+
             BigDecimal lineBase = line.getQuantity().multiply(line.getUnitPrice());
             subtotal = subtotal.add(lineBase);
-            
+
             if (taxRate != null) {
                 BigDecimal lineTax = lineBase.multiply(taxRate.getRate()).divide(new BigDecimal("100"));
                 line.setTaxAmount(lineTax);
@@ -90,7 +93,7 @@ public class SalesOrderService {
                 line.setTaxAmount(BigDecimal.ZERO);
                 line.setLineTotal(lineBase);
             }
-            
+
             so.addLine(line);
         }
 

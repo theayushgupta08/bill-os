@@ -9,14 +9,13 @@ import com.billos.api.mapper.JournalEntryMapper;
 import com.billos.api.repository.AccountRepository;
 import com.billos.api.repository.JournalEntryRepository;
 import com.billos.api.tenant.TenantContext;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +35,8 @@ public class JournalEntryService {
 
     @Transactional(readOnly = true)
     public JournalEntryDto getJournalEntryById(UUID id) {
-        return journalEntryRepository.findById(id)
+        return journalEntryRepository
+                .findById(id)
                 .map(journalEntryMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Journal Entry not found"));
     }
@@ -46,14 +46,15 @@ public class JournalEntryService {
         // Validate Debits == Credits
         BigDecimal totalDebits = BigDecimal.ZERO;
         BigDecimal totalCredits = BigDecimal.ZERO;
-        
+
         for (JournalEntryLineDto line : dto.getLines()) {
             if (line.getDebitAmount() != null) totalDebits = totalDebits.add(line.getDebitAmount());
             if (line.getCreditAmount() != null) totalCredits = totalCredits.add(line.getCreditAmount());
         }
 
         if (totalDebits.compareTo(totalCredits) != 0) {
-            throw new IllegalArgumentException("Journal Entry must balance. Total Debits: " + totalDebits + ", Total Credits: " + totalCredits);
+            throw new IllegalArgumentException(
+                    "Journal Entry must balance. Total Debits: " + totalDebits + ", Total Credits: " + totalCredits);
         }
 
         JournalEntry entry = journalEntryMapper.toEntity(dto);
@@ -61,11 +62,12 @@ public class JournalEntryService {
 
         for (JournalEntryLineDto lineDto : dto.getLines()) {
             JournalEntryLine line = journalEntryMapper.lineToEntity(lineDto);
-            Account account = accountRepository.findById(lineDto.getAccountId())
+            Account account = accountRepository
+                    .findById(lineDto.getAccountId())
                     .orElseThrow(() -> new RuntimeException("Account not found: " + lineDto.getAccountId()));
             line.setAccount(account);
             entry.addLine(line);
-            
+
             // Note: Currently we aren't auto-updating account balances in this MVP to prevent race conditions.
             // In a production app, we would either update balances here, or calculate them dynamically on read.
             // For now, balances can be computed via queries.

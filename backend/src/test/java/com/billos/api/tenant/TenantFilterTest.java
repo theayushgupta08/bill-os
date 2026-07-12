@@ -1,5 +1,8 @@
 package com.billos.api.tenant;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -9,9 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
@@ -38,9 +38,11 @@ class TenantFilterTest {
 
         // Capture the tenant value during doFilter
         doAnswer(invocation -> {
-            assertThat(TenantContext.getCurrentTenant()).isEqualTo(orgId);
-            return null;
-        }).when(filterChain).doFilter(request, response);
+                    assertThat(TenantContext.getCurrentTenant()).isEqualTo(orgId);
+                    return null;
+                })
+                .when(filterChain)
+                .doFilter(request, response);
 
         // Act
         tenantFilter.doFilterInternal(request, response, filterChain);
@@ -77,8 +79,7 @@ class TenantFilterTest {
         FilterChain filterChain = mock(FilterChain.class);
 
         when(request.getHeader("X-Organization-Id")).thenReturn("some-tenant");
-        doThrow(new RuntimeException("Downstream error"))
-                .when(filterChain).doFilter(request, response);
+        doThrow(new RuntimeException("Downstream error")).when(filterChain).doFilter(request, response);
 
         // Act
         try {

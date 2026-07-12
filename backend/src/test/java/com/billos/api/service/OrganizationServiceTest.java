@@ -1,5 +1,12 @@
 package com.billos.api.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.billos.api.entity.Organization;
 import com.billos.api.entity.User;
 import com.billos.api.entity.UserOrgRole;
@@ -7,6 +14,10 @@ import com.billos.api.repository.OrganizationRepository;
 import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.UserPrincipal;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,18 +28,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
@@ -154,8 +153,7 @@ class OrganizationServiceTest {
 
         // Assert
         assertThat(result).hasSize(2);
-        assertThat(result).extracting(Organization::getName)
-                .containsExactly("Org One", "Org Two");
+        assertThat(result).extracting(Organization::getName).containsExactly("Org One", "Org Two");
     }
 
     @Test

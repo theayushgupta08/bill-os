@@ -4,8 +4,9 @@ import com.billos.api.dto.WarehouseDto;
 import com.billos.api.entity.Warehouse;
 import org.mapstruct.Mapper;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = org.mapstruct.ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring")
 public interface WarehouseMapper {
     WarehouseDto toDto(Warehouse entity);
+
     Warehouse toEntity(WarehouseDto dto);
 }

@@ -92,6 +92,26 @@ The AI Service will be available at `http://localhost:8000`.
 
 ---
 
+## 🧹 Code Formatting & Auto-Cleanup
+This project uses the `spotless-maven-plugin` to automatically format Java code and remove unused imports. 
+The plugin is bound to the `process-sources` phase, meaning it will automatically format your code whenever you run `mvn compile` or `mvn test`.
+
+To manually format the code and remove unused imports without compiling, you can run:
+
+**On Windows:**
+```powershell
+cd backend
+.\mvnw.cmd spotless:apply
+```
+
+**On macOS/Linux:**
+```bash
+cd backend
+./mvnw spotless:apply
+```
+
+---
+
 ## 🗂️ Project Structure
 - `/backend`: Spring Boot application containing core business logic, authentication, and tenant-isolated database access.
 - `/frontend`: Next.js frontend featuring a dashboard shell, organization onboarding, and authentication flow.

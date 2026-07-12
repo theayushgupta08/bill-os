@@ -6,13 +6,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
-
-import java.time.LocalDate;
-import java.util.UUID;
 
 @Entity
 @Table(name = "organizations")
@@ -31,26 +30,26 @@ public class Organization extends BaseEntity {
 
     private String gstin;
     private String pan;
-    
+
     @Column(name = "legal_name")
     private String legalName;
-    
+
     @Column(name = "address_line1")
     private String addressLine1;
-    
+
     @Column(name = "address_line2")
     private String addressLine2;
-    
+
     private String city;
     private String state;
     private String pincode;
     private String country;
     private String phone;
     private String email;
-    
+
     @Column(name = "logo_url")
     private String logoUrl;
-    
+
     @Column(name = "financial_year_start")
     private LocalDate financialYearStart;
 }

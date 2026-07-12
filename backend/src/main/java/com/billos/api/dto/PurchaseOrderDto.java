@@ -1,12 +1,11 @@
 package com.billos.api.dto;
 
 import com.billos.api.entity.PurchaseOrderStatus;
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import lombok.Data;
 
 @Data
 public class PurchaseOrderDto {

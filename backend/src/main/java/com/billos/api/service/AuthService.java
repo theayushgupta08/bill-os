@@ -22,9 +22,8 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
 
     public String login(String email, String password) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, password)
-        );
+        Authentication authentication =
+                authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -43,9 +42,9 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setPhone(phone);
-        
+
         userRepository.save(user);
-        
+
         // Auto login after registration
         return login(email, password);
     }

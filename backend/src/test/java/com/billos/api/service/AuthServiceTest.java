@@ -1,5 +1,11 @@
 package com.billos.api.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.*;
+
 import com.billos.api.entity.User;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.JwtTokenProvider;
@@ -14,12 +20,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
@@ -57,17 +57,16 @@ class AuthServiceTest {
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(mockAuthentication);
-        when(jwtTokenProvider.generateToken(mockAuthentication))
-                .thenReturn(expectedToken);
+        when(jwtTokenProvider.generateToken(mockAuthentication)).thenReturn(expectedToken);
 
         // Act
         String token = authService.login(email, password);
 
         // Assert
         assertThat(token).isEqualTo(expectedToken);
-        verify(authenticationManager).authenticate(
-                argThat(auth -> auth.getPrincipal().equals(email) && auth.getCredentials().equals(password))
-        );
+        verify(authenticationManager)
+                .authenticate(argThat(auth -> auth.getPrincipal().equals(email)
+                        && auth.getCredentials().equals(password)));
         verify(jwtTokenProvider).generateToken(mockAuthentication);
     }
 
@@ -87,8 +86,7 @@ class AuthServiceTest {
         when(passwordEncoder.encode(password)).thenReturn(encodedPassword);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(mockAuthentication);
-        when(jwtTokenProvider.generateToken(mockAuthentication))
-                .thenReturn(expectedToken);
+        when(jwtTokenProvider.generateToken(mockAuthentication)).thenReturn(expectedToken);
 
         // Act
         String token = authService.register(firstName, lastName, email, password, phone);
@@ -112,9 +110,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
 
         // Act & Assert
-        assertThatThrownBy(() ->
-                authService.register("Jane", "Doe", "taken@example.com", "pass", null)
-        )
+        assertThatThrownBy(() -> authService.register("Jane", "Doe", "taken@example.com", "pass", null))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Email is already taken");
 

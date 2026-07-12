@@ -9,15 +9,14 @@ import com.billos.api.repository.ProductRepository;
 import com.billos.api.repository.StockMovementRepository;
 import com.billos.api.repository.WarehouseRepository;
 import com.billos.api.tenant.TenantContext;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -47,10 +46,12 @@ public class InventoryService {
     @Transactional
     public StockMovementDto adjustStock(StockMovementDto request) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
-        
-        Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
+
+        Warehouse warehouse = warehouseRepository
+                .findById(request.getWarehouseId())
                 .orElseThrow(() -> new RuntimeException("Warehouse not found"));
-        Product product = productRepository.findById(request.getProductId())
+        Product product = productRepository
+                .findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
         // 1. Get or create InventoryLevel
@@ -67,14 +68,15 @@ public class InventoryService {
 
         // 2. Update Quantity (Request quantity is the relative change)
         BigDecimal newQuantity = level.getQuantity().add(request.getQuantity());
-        
+
         // 3. WAC (Weighted Average Cost) Calculation Logic (only applicable for IN movements like Purchases)
         if (request.getMovementType() == MovementType.IN && request.getUnitCost() != null) {
-            BigDecimal currentTotalValue = level.getQuantity().multiply(product.getBasePrice() != null ? product.getBasePrice() : BigDecimal.ZERO);
+            BigDecimal currentTotalValue = level.getQuantity()
+                    .multiply(product.getBasePrice() != null ? product.getBasePrice() : BigDecimal.ZERO);
             BigDecimal newIncomingValue = request.getQuantity().multiply(request.getUnitCost());
-            
+
             BigDecimal totalValue = currentTotalValue.add(newIncomingValue);
-            
+
             if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal newWac = totalValue.divide(newQuantity, 2, RoundingMode.HALF_UP);
                 // In a full system, you might store WAC on the InventoryLevel or Product
@@ -100,7 +102,7 @@ public class InventoryService {
         movement.setReferenceId(request.getReferenceId());
 
         StockMovement savedMovement = stockMovementRepository.save(movement);
-        
+
         return inventoryMapper.toMovementDto(savedMovement);
     }
 }

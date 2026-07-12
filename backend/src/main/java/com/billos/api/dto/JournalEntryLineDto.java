@@ -1,9 +1,8 @@
 package com.billos.api.dto;
 
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.util.UUID;
+import lombok.Data;
 
 @Data
 public class JournalEntryLineDto {

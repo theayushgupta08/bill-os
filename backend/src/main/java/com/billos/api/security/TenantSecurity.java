@@ -3,14 +3,13 @@ package com.billos.api.security;
 import com.billos.api.entity.UserOrgRole;
 import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.tenant.TenantContext;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @Service("tenantSecurity")
 @RequiredArgsConstructor
@@ -41,7 +40,7 @@ public class TenantSecurity {
         }
 
         String userRole = userOrgRoleOpt.get().getRole();
-        
+
         // Check hierarchy (lower index means higher privilege)
         int requiredLevel = ROLE_HIERARCHY.indexOf(requiredRole);
         int userLevel = ROLE_HIERARCHY.indexOf(userRole);

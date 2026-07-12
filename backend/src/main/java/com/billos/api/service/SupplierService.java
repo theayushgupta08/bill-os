@@ -5,13 +5,12 @@ import com.billos.api.entity.Supplier;
 import com.billos.api.mapper.SupplierMapper;
 import com.billos.api.repository.SupplierRepository;
 import com.billos.api.tenant.TenantContext;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,14 +22,13 @@ public class SupplierService {
 
     @Transactional(readOnly = true)
     public List<SupplierDto> getAllSuppliers() {
-        return supplierRepository.findAll().stream()
-                .map(supplierMapper::toDto)
-                .collect(Collectors.toList());
+        return supplierRepository.findAll().stream().map(supplierMapper::toDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public SupplierDto getSupplierById(UUID id) {
-        return supplierRepository.findById(id)
+        return supplierRepository
+                .findById(id)
                 .map(supplierMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Supplier not found"));
     }
@@ -45,9 +43,9 @@ public class SupplierService {
 
     @Transactional
     public SupplierDto updateSupplier(UUID id, SupplierDto supplierDto) {
-        Supplier existingSupplier = supplierRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
-        
+        Supplier existingSupplier =
+                supplierRepository.findById(id).orElseThrow(() -> new RuntimeException("Supplier not found"));
+
         supplierMapper.updateEntityFromDto(supplierDto, existingSupplier);
         Supplier updatedSupplier = supplierRepository.save(existingSupplier);
         return supplierMapper.toDto(updatedSupplier);
@@ -55,8 +53,8 @@ public class SupplierService {
 
     @Transactional
     public void deleteSupplier(UUID id) {
-        Supplier supplier = supplierRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+        Supplier supplier =
+                supplierRepository.findById(id).orElseThrow(() -> new RuntimeException("Supplier not found"));
         supplierRepository.delete(supplier);
     }
 }

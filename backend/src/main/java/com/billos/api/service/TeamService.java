@@ -12,16 +12,15 @@ import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.UserPrincipal;
 import com.billos.api.tenant.TenantContext;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -51,8 +50,7 @@ public class TeamService {
                             user.getFirstName(),
                             user.getLastName(),
                             role.getRole(),
-                            "ACTIVE"
-                    ));
+                            "ACTIVE"));
                 }
             }
         }
@@ -61,14 +59,7 @@ public class TeamService {
         List<OrganizationInvitation> invitations = invitationRepository.findByOrganizationId(orgId);
         for (OrganizationInvitation inv : invitations) {
             if ("PENDING".equals(inv.getStatus()) && inv.getExpiresAt().isAfter(ZonedDateTime.now())) {
-                team.add(new TeamMemberDto(
-                        null,
-                        inv.getEmail(),
-                        null,
-                        null,
-                        inv.getRole(),
-                        "INVITED"
-                ));
+                team.add(new TeamMemberDto(null, inv.getEmail(), null, null, inv.getRole(), "INVITED"));
             }
         }
 
@@ -78,23 +69,25 @@ public class TeamService {
     @Transactional
     public void inviteUser(InviteUserRequest request) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
-        
-        Organization org = organizationRepository.findById(orgId)
+
+        Organization org = organizationRepository
+                .findById(orgId)
                 .orElseThrow(() -> new RuntimeException("Organization not found"));
 
         // Check if user is already in the org
         Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
         if (existingUser.isPresent()) {
-            Optional<UserOrgRole> role = userOrgRoleRepository.findByUserIdAndOrganizationId(existingUser.get().getId(), orgId);
+            Optional<UserOrgRole> role = userOrgRoleRepository.findByUserIdAndOrganizationId(
+                    existingUser.get().getId(), orgId);
             if (role.isPresent()) {
                 throw new RuntimeException("User is already a member of this organization");
             }
         }
 
         // Check if there's already a pending invitation
-        Optional<OrganizationInvitation> existingInvite = invitationRepository
-                .findByOrganizationIdAndEmailAndStatus(orgId, request.getEmail(), "PENDING");
-        
+        Optional<OrganizationInvitation> existingInvite =
+                invitationRepository.findByOrganizationIdAndEmailAndStatus(orgId, request.getEmail(), "PENDING");
+
         if (existingInvite.isPresent() && existingInvite.get().getExpiresAt().isAfter(ZonedDateTime.now())) {
             throw new RuntimeException("A pending invitation already exists for this email");
         }
@@ -107,32 +100,36 @@ public class TeamService {
         invitation.setToken(UUID.randomUUID().toString());
         invitation.setExpiresAt(ZonedDateTime.now().plusDays(7));
         invitation.setStatus("PENDING");
-        
+
         invitationRepository.save(invitation);
 
         // Send Email
-        emailService.sendOrganizationInvitation(request.getEmail(), org.getName(), request.getRole(), invitation.getToken());
+        emailService.sendOrganizationInvitation(
+                request.getEmail(), org.getName(), request.getRole(), invitation.getToken());
     }
 
     @Transactional
     public void acceptInvitation(String token) {
-        OrganizationInvitation invitation = invitationRepository.findByToken(token)
+        OrganizationInvitation invitation = invitationRepository
+                .findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid invitation token"));
 
-        if (!"PENDING".equals(invitation.getStatus()) || invitation.getExpiresAt().isBefore(ZonedDateTime.now())) {
+        if (!"PENDING".equals(invitation.getStatus())
+                || invitation.getExpiresAt().isBefore(ZonedDateTime.now())) {
             invitation.setStatus("EXPIRED");
             invitationRepository.save(invitation);
             throw new RuntimeException("Invitation has expired or is invalid");
         }
 
         // Check if current user email matches invitation email
-        UserPrincipal principal = (UserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        UserPrincipal principal = (UserPrincipal)
+                SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (!principal.getEmail().equalsIgnoreCase(invitation.getEmail())) {
             throw new RuntimeException("This invitation was sent to a different email address");
         }
 
-        User user = userRepository.findById(principal.getId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user =
+                userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
 
         // Assign role
         UserOrgRole role = new UserOrgRole();
@@ -149,10 +146,11 @@ public class TeamService {
     @Transactional
     public void updateUserRole(UUID userId, String newRole) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
-        
-        UserOrgRole role = userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId)
+
+        UserOrgRole role = userOrgRoleRepository
+                .findByUserIdAndOrganizationId(userId, orgId)
                 .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
-                
+
         // Prevent changing the role of the last OWNER
         if ("OWNER".equals(role.getRole()) && !"OWNER".equals(newRole)) {
             long ownerCount = userOrgRoleRepository.findAll().stream()
@@ -170,8 +168,9 @@ public class TeamService {
     @Transactional
     public void removeUser(UUID userId) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
-        
-        UserOrgRole role = userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId)
+
+        UserOrgRole role = userOrgRoleRepository
+                .findByUserIdAndOrganizationId(userId, orgId)
                 .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
 
         // Prevent removing the last OWNER

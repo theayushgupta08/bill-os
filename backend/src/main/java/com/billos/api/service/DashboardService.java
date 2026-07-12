@@ -1,21 +1,18 @@
 package com.billos.api.service;
 
 import com.billos.api.dto.DashboardSummaryDto;
-
 import com.billos.api.mapper.PurchaseBillMapper;
 import com.billos.api.mapper.SalesInvoiceMapper;
 import com.billos.api.repository.CustomerRepository;
-
 import com.billos.api.repository.PurchaseBillRepository;
 import com.billos.api.repository.SalesInvoiceRepository;
 import com.billos.api.repository.SupplierRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -47,7 +44,7 @@ public class DashboardService {
 
         // 2. MTD Revenue & Expenses
         LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
-        
+
         BigDecimal mtdRevenue = salesInvoiceRepository.findAll().stream()
                 .filter(inv -> !inv.getStatus().name().equals("VOID"))
                 .filter(inv -> !inv.getInvoiceDate().isBefore(startOfMonth))
@@ -66,16 +63,17 @@ public class DashboardService {
         summary.setRecentInvoices(salesInvoiceRepository.findTop5ByOrderByCreatedAtDesc().stream()
                 .map(salesInvoiceMapper::toDto)
                 .collect(Collectors.toList()));
-        
+
         summary.setRecentBills(purchaseBillRepository.findTop5ByOrderByCreatedAtDesc().stream()
                 .map(purchaseBillMapper::toDto)
                 .collect(Collectors.toList()));
 
-        // 4. Low stock products (Basic placeholder implementation for MVP - actual low stock requires inventory table join, 
+        // 4. Low stock products (Basic placeholder implementation for MVP - actual low stock requires inventory table
+        // join,
         // but for simplicity, if we have low stock fields on product or we just fetch products with low inventory)
-        // Since inventory tracking is a bit more complex (per warehouse), we'll skip detailed low stock here 
+        // Since inventory tracking is a bit more complex (per warehouse), we'll skip detailed low stock here
         // or return an empty list if not easily queryable without native query.
-        
+
         return summary;
     }
 }

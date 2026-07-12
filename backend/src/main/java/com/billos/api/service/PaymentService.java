@@ -6,14 +6,13 @@ import com.billos.api.entity.*;
 import com.billos.api.mapper.PaymentMapper;
 import com.billos.api.repository.*;
 import com.billos.api.tenant.TenantContext;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,9 +29,7 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<PaymentDto> getAllPayments() {
-        return paymentRepository.findAll().stream()
-                .map(paymentMapper::toDto)
-                .collect(Collectors.toList());
+        return paymentRepository.findAll().stream().map(paymentMapper::toDto).collect(Collectors.toList());
     }
 
     @Transactional
@@ -63,15 +60,17 @@ public class PaymentService {
         for (PaymentAllocationDto allocDto : dto.getAllocations()) {
             PaymentAllocation allocation = new PaymentAllocation();
             allocation.setAllocatedAmount(allocDto.getAllocatedAmount());
-            
+
             if (type == PaymentType.RECEIPT && allocDto.getSalesInvoiceId() != null) {
-                SalesInvoice invoice = salesInvoiceRepository.findById(allocDto.getSalesInvoiceId())
+                SalesInvoice invoice = salesInvoiceRepository
+                        .findById(allocDto.getSalesInvoiceId())
                         .orElseThrow(() -> new RuntimeException("Invoice not found"));
                 allocation.setSalesInvoice(invoice);
-                
+
                 // Update Customer balance
                 Customer customer = invoice.getCustomer();
-                customer.setOutstandingBalance(customer.getOutstandingBalance().subtract(allocDto.getAllocatedAmount()));
+                customer.setOutstandingBalance(
+                        customer.getOutstandingBalance().subtract(allocDto.getAllocatedAmount()));
                 customerRepository.save(customer);
 
                 // Ideally we'd sum all previous allocations, but for V1 simple mockup:
@@ -82,15 +81,17 @@ public class PaymentService {
                     invoice.setStatus(SalesInvoiceStatus.PARTIAL);
                 }
                 salesInvoiceRepository.save(invoice);
-                
+
             } else if (type == PaymentType.PAYMENT && allocDto.getPurchaseBillId() != null) {
-                PurchaseBill bill = purchaseBillRepository.findById(allocDto.getPurchaseBillId())
+                PurchaseBill bill = purchaseBillRepository
+                        .findById(allocDto.getPurchaseBillId())
                         .orElseThrow(() -> new RuntimeException("Bill not found"));
                 allocation.setPurchaseBill(bill);
-                
+
                 // Update Supplier balance
                 Supplier supplier = bill.getSupplier();
-                supplier.setOutstandingBalance(supplier.getOutstandingBalance().subtract(allocDto.getAllocatedAmount()));
+                supplier.setOutstandingBalance(
+                        supplier.getOutstandingBalance().subtract(allocDto.getAllocatedAmount()));
                 supplierRepository.save(supplier);
 
                 if (allocDto.getAllocatedAmount().compareTo(bill.getTotalAmount()) >= 0) {

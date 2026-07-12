@@ -1,11 +1,10 @@
 package com.billos.api.dto;
 
-import lombok.Data;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import lombok.Data;
 
 @Data
 public class JournalEntryDto {

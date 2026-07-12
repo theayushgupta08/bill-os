@@ -1,14 +1,13 @@
 package com.billos.api.security;
 
 import com.billos.api.entity.User;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.UUID;
 
 @Getter
 @AllArgsConstructor
@@ -25,7 +24,7 @@ public class UserPrincipal implements UserDetails {
                 user.getEmail(),
                 user.getPasswordHash(),
                 Collections.emptyList() // Roles are managed per organization, not globally
-        );
+                );
     }
 
     @Override

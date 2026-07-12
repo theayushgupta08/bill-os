@@ -1,10 +1,16 @@
 package com.billos.api.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
+
 import com.billos.api.dto.CustomerDto;
 import com.billos.api.entity.Customer;
 import com.billos.api.mapper.CustomerMapper;
 import com.billos.api.repository.CustomerRepository;
 import com.billos.api.tenant.TenantContext;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -13,13 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
@@ -85,10 +84,10 @@ class CustomerServiceTest {
         UUID customerId = UUID.randomUUID();
         Customer customer = new Customer();
         customer.setId(customerId);
-        
+
         CustomerDto dto = new CustomerDto();
         dto.setId(customerId);
-        
+
         when(customerRepository.findById(customerId)).thenReturn(Optional.of(customer));
         when(customerMapper.toDto(customer)).thenReturn(dto);
 

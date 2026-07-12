@@ -1,20 +1,19 @@
 package com.billos.api.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import java.util.Collections;
+import java.util.Date;
+import javax.crypto.SecretKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import javax.crypto.SecretKey;
-import java.util.Collections;
-import java.util.Date;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @SuppressWarnings("null")
 class JwtTokenProviderTest {
@@ -36,8 +35,8 @@ class JwtTokenProviderTest {
     @DisplayName("generateToken - should produce a valid JWT")
     void generateToken_shouldProduceValidJwt() {
         // Arrange
-        Authentication auth = new UsernamePasswordAuthenticationToken(
-                "user@example.com", null, Collections.emptyList());
+        Authentication auth =
+                new UsernamePasswordAuthenticationToken("user@example.com", null, Collections.emptyList());
 
         // Act
         String token = jwtTokenProvider.generateToken(auth);
@@ -52,8 +51,8 @@ class JwtTokenProviderTest {
     @DisplayName("getUsername - should extract subject from token")
     void getUsername_shouldExtractSubject() {
         // Arrange
-        Authentication auth = new UsernamePasswordAuthenticationToken(
-                "user@example.com", null, Collections.emptyList());
+        Authentication auth =
+                new UsernamePasswordAuthenticationToken("user@example.com", null, Collections.emptyList());
         String token = jwtTokenProvider.generateToken(auth);
 
         // Act
@@ -67,8 +66,8 @@ class JwtTokenProviderTest {
     @DisplayName("validateToken - should return true for valid token")
     void validateToken_shouldReturnTrueForValid() {
         // Arrange
-        Authentication auth = new UsernamePasswordAuthenticationToken(
-                "user@example.com", null, Collections.emptyList());
+        Authentication auth =
+                new UsernamePasswordAuthenticationToken("user@example.com", null, Collections.emptyList());
         String token = jwtTokenProvider.generateToken(auth);
 
         // Act & Assert

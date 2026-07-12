@@ -1,10 +1,17 @@
 package com.billos.api.service;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import com.billos.api.dto.*;
 import com.billos.api.entity.*;
 import com.billos.api.mapper.PurchaseBillMapper;
 import com.billos.api.repository.*;
 import com.billos.api.tenant.TenantContext;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,28 +19,25 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
 class PurchaseBillServiceTest {
 
     @Mock
     private PurchaseBillRepository purchaseBillRepository;
+
     @Mock
     private CustomerRepository customerRepository;
+
     @Mock
     private ProductRepository productRepository;
+
     @Mock
     private WarehouseRepository warehouseRepository;
+
     @Mock
     private InventoryService inventoryService;
+
     @Mock
     private PurchaseBillMapper purchaseBillMapper;
 
@@ -80,11 +84,10 @@ class PurchaseBillServiceTest {
         purchaseBillService.createPurchaseBill(requestDto);
 
         // Verify InventoryService.adjustStock is called correctly
-        verify(inventoryService).adjustStock(argThat(movement -> 
-            movement.getProductId().equals(productId) &&
-            movement.getWarehouseId().equals(warehouseId) &&
-            movement.getQuantity().compareTo(new BigDecimal("10")) == 0 &&
-            movement.getMovementType() == MovementType.IN
-        ));
+        verify(inventoryService)
+                .adjustStock(argThat(movement -> movement.getProductId().equals(productId)
+                        && movement.getWarehouseId().equals(warehouseId)
+                        && movement.getQuantity().compareTo(new BigDecimal("10")) == 0
+                        && movement.getMovementType() == MovementType.IN));
     }
 }

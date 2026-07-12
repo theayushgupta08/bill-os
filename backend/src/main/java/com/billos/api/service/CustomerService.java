@@ -5,13 +5,12 @@ import com.billos.api.entity.Customer;
 import com.billos.api.mapper.CustomerMapper;
 import com.billos.api.repository.CustomerRepository;
 import com.billos.api.tenant.TenantContext;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,14 +22,13 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public List<CustomerDto> getAllCustomers() {
-        return customerRepository.findAll().stream()
-                .map(customerMapper::toDto)
-                .collect(Collectors.toList());
+        return customerRepository.findAll().stream().map(customerMapper::toDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public CustomerDto getCustomerById(UUID id) {
-        return customerRepository.findById(id)
+        return customerRepository
+                .findById(id)
                 .map(customerMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
     }
@@ -45,9 +43,9 @@ public class CustomerService {
 
     @Transactional
     public CustomerDto updateCustomer(UUID id, CustomerDto customerDto) {
-        Customer existingCustomer = customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
-        
+        Customer existingCustomer =
+                customerRepository.findById(id).orElseThrow(() -> new RuntimeException("Customer not found"));
+
         customerMapper.updateEntityFromDto(customerDto, existingCustomer);
         Customer updatedCustomer = customerRepository.save(existingCustomer);
         return customerMapper.toDto(updatedCustomer);
@@ -55,8 +53,8 @@ public class CustomerService {
 
     @Transactional
     public void deleteCustomer(UUID id) {
-        Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+        Customer customer =
+                customerRepository.findById(id).orElseThrow(() -> new RuntimeException("Customer not found"));
         customerRepository.delete(customer);
     }
 }

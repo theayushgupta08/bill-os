@@ -7,7 +7,7 @@ import com.billos.api.entity.StockMovement;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = org.mapstruct.ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring")
 public interface InventoryMapper {
 
     @Mapping(source = "warehouse.id", target = "warehouseId")

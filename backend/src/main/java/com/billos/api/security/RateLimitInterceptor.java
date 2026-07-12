@@ -6,17 +6,16 @@ import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Duration;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import java.time.Duration;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -26,20 +25,49 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private final RateLimitingService rateLimitingService;
 
     // Rate Limit Definitions
-    private static final Bandwidth LIMIT_LOGIN = Bandwidth.builder().capacity(5).refillIntervally(5, Duration.ofMinutes(1)).build();
-    private static final Bandwidth LIMIT_REGISTER = Bandwidth.builder().capacity(3).refillIntervally(3, Duration.ofHours(1)).build();
-    private static final Bandwidth LIMIT_REFRESH = Bandwidth.builder().capacity(20).refillIntervally(20, Duration.ofMinutes(1)).build();
-    private static final Bandwidth LIMIT_DASHBOARD = Bandwidth.builder().capacity(60).refillIntervally(60, Duration.ofMinutes(1)).build();
-    private static final Bandwidth LIMIT_REPORTS = Bandwidth.builder().capacity(20).refillIntervally(20, Duration.ofMinutes(1)).build();
-    private static final Bandwidth LIMIT_SEARCH = Bandwidth.builder().capacity(300).refillIntervally(300, Duration.ofMinutes(1)).build();
-    private static final Bandwidth LIMIT_AI_FORECAST = Bandwidth.builder().capacity(5).refillIntervally(5, Duration.ofHours(1)).build();
-    private static final Bandwidth LIMIT_FILES = Bandwidth.builder().capacity(30).refillIntervally(30, Duration.ofHours(1)).build();
-    private static final Bandwidth LIMIT_CRUD = Bandwidth.builder().capacity(120).refillIntervally(120, Duration.ofMinutes(1)).build();
+    private static final Bandwidth LIMIT_LOGIN = Bandwidth.builder()
+            .capacity(5)
+            .refillIntervally(5, Duration.ofMinutes(1))
+            .build();
+    private static final Bandwidth LIMIT_REGISTER = Bandwidth.builder()
+            .capacity(3)
+            .refillIntervally(3, Duration.ofHours(1))
+            .build();
+    private static final Bandwidth LIMIT_REFRESH = Bandwidth.builder()
+            .capacity(20)
+            .refillIntervally(20, Duration.ofMinutes(1))
+            .build();
+    private static final Bandwidth LIMIT_DASHBOARD = Bandwidth.builder()
+            .capacity(60)
+            .refillIntervally(60, Duration.ofMinutes(1))
+            .build();
+    private static final Bandwidth LIMIT_REPORTS = Bandwidth.builder()
+            .capacity(20)
+            .refillIntervally(20, Duration.ofMinutes(1))
+            .build();
+    private static final Bandwidth LIMIT_SEARCH = Bandwidth.builder()
+            .capacity(300)
+            .refillIntervally(300, Duration.ofMinutes(1))
+            .build();
+    private static final Bandwidth LIMIT_AI_FORECAST = Bandwidth.builder()
+            .capacity(5)
+            .refillIntervally(5, Duration.ofHours(1))
+            .build();
+    private static final Bandwidth LIMIT_FILES = Bandwidth.builder()
+            .capacity(30)
+            .refillIntervally(30, Duration.ofHours(1))
+            .build();
+    private static final Bandwidth LIMIT_CRUD = Bandwidth.builder()
+            .capacity(120)
+            .refillIntervally(120, Duration.ofMinutes(1))
+            .build();
 
     @Override
-    public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) throws Exception {
+    public boolean preHandle(
+            @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler)
+            throws Exception {
         String path = request.getRequestURI();
-        
+
         // Exclude Swagger and Actuator from Rate Limiting
         if (path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui") || path.startsWith("/actuator")) {
             return true;
@@ -47,7 +75,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
         // Determine Category and Key
         RateLimitConfig config = determineLimit(request, path);
-        
+
         // If config is null, bypass rate limiting (e.g. AI Chat per user request)
         if (config == null) {
             return true;
@@ -79,7 +107,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         } else if (path.equals("/api/v1/auth/register")) {
             return new RateLimitConfig("rl:register:" + ip, LIMIT_REGISTER);
         } else if (path.startsWith("/api/v1/auth/forgot-password")) {
-            return new RateLimitConfig("rl:forgot-password:" + ip, LIMIT_REGISTER); // Uses same limit Bandwidth as register
+            return new RateLimitConfig(
+                    "rl:forgot-password:" + ip, LIMIT_REGISTER); // Uses same limit Bandwidth as register
         } else if (path.startsWith("/api/v1/auth/refresh")) {
             return new RateLimitConfig("rl:refresh:" + userKey, LIMIT_REFRESH);
         } else if (path.startsWith("/api/v1/dashboard")) {

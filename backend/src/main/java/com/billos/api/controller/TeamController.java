@@ -5,14 +5,13 @@ import com.billos.api.dto.TeamMemberDto;
 import com.billos.api.dto.UpdateRoleRequest;
 import com.billos.api.service.TeamService;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/team")
@@ -43,8 +42,7 @@ public class TeamController {
     @PutMapping("/{userId}/role")
     @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> updateUserRole(
-            @PathVariable UUID userId,
-            @Valid @RequestBody UpdateRoleRequest request) {
+            @PathVariable UUID userId, @Valid @RequestBody UpdateRoleRequest request) {
         teamService.updateUserRole(userId, request.getRole());
         return ResponseEntity.ok(Map.of("message", "User role updated successfully"));
     }

@@ -5,13 +5,12 @@ import com.billos.api.entity.Warehouse;
 import com.billos.api.mapper.WarehouseMapper;
 import com.billos.api.repository.WarehouseRepository;
 import com.billos.api.tenant.TenantContext;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +29,8 @@ public class WarehouseService {
 
     @Transactional(readOnly = true)
     public WarehouseDto getWarehouseById(UUID id) {
-        return warehouseRepository.findById(id)
+        return warehouseRepository
+                .findById(id)
                 .map(warehouseMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Warehouse not found"));
     }
@@ -45,9 +45,9 @@ public class WarehouseService {
 
     @Transactional
     public WarehouseDto updateWarehouse(UUID id, WarehouseDto dto) {
-        Warehouse existing = warehouseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Warehouse not found"));
-        
+        Warehouse existing =
+                warehouseRepository.findById(id).orElseThrow(() -> new RuntimeException("Warehouse not found"));
+
         existing.setName(dto.getName());
         existing.setCode(dto.getCode());
         existing.setAddressLine1(dto.getAddressLine1());
@@ -56,7 +56,7 @@ public class WarehouseService {
         existing.setState(dto.getState());
         existing.setPincode(dto.getPincode());
         existing.setActive(dto.isActive());
-        
+
         Warehouse updated = warehouseRepository.save(existing);
         return warehouseMapper.toDto(updated);
     }

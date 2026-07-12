@@ -1,17 +1,13 @@
 package com.billos.api.service;
 
-
+import java.util.HashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Service
 @RequiredArgsConstructor
-
 public class GstReportingService {
-
 
     /**
      * Placeholder for generating HSN summaries.
