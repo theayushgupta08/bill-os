@@ -158,21 +158,45 @@ export function Sidebar() {
               Journal Entries
             </Link>
             <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
-              Reports & Settings
+              Reports
             </div>
             <Link
-              href="/reports/gst"
-              className={getLinkClass("/reports/gst")}
+              href="/reports/sales"
+              className={getLinkClass("/reports/sales")}
             >
               <LineChart className="h-4 w-4" />
-              GST Reports
+              Sales Register
             </Link>
             <Link
-              href="/settings"
-              className={getLinkClass("/settings")}
+              href="/reports/purchases"
+              className={getLinkClass("/reports/purchases")}
+            >
+              <LineChart className="h-4 w-4" />
+              Purchase Register
+            </Link>
+            <Link
+              href="/reports/stock"
+              className={getLinkClass("/reports/stock")}
+            >
+              <LineChart className="h-4 w-4" />
+              Stock Summary
+            </Link>
+            <Link
+              href="/reports/pnl"
+              className={getLinkClass("/reports/pnl")}
+            >
+              <LineChart className="h-4 w-4" />
+              Profit & Loss
+            </Link>
+            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
+              Settings
+            </div>
+            <Link
+              href="/settings/organization"
+              className={getLinkClass("/settings/organization")}
             >
               <Settings className="h-4 w-4" />
-              Settings
+              Organization
             </Link>
           </nav>
         </div>

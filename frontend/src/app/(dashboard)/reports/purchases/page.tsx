@@ -5,33 +5,33 @@ import apiClient from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 export default function PurchaseRegisterPage() {
-  const [data, setData] = useState<any[]>([]);
+  const [bills, setBills] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const fetchReport = () => {
+  const loadData = async () => {
     setLoading(true);
-    let url = "/api/v1/reports/purchase-register";
-    const params = new URLSearchParams();
-    if (startDate) params.append("startDate", startDate);
-    if (endDate) params.append("endDate", endDate);
-    if (params.toString()) {
-      url += `?${params.toString()}`;
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+      
+      const data: any = await apiClient.get(`/reports/purchase-register?${params.toString()}`);
+      setBills(data);
+    } catch (error) {
+      console.error("Failed to load purchase register", error);
+    } finally {
+      setLoading(false);
     }
-
-    apiClient.get(url.replace('/api/v1', ''))
-      .then((res: any) => setData(res))
-      .catch((err: any) => console.error(err))
-      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchReport();
-  }, []);
+    loadData();
+  }, [startDate, endDate]);
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -39,13 +39,26 @@ export default function PurchaseRegisterPage() {
         <h2 className="text-3xl font-bold tracking-tight">Purchase Register</h2>
       </div>
 
-      <div className="flex space-x-2">
-        <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="Start Date" />
-        <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} placeholder="End Date" />
-        <Button onClick={fetchReport} disabled={loading}>Filter</Button>
+      <div className="flex items-end gap-4 bg-muted/50 p-4 rounded-md border">
+        <div className="space-y-1">
+          <Label>Start Date</Label>
+          <Input 
+            type="date" 
+            value={startDate} 
+            onChange={(e) => setStartDate(e.target.value)} 
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>End Date</Label>
+          <Input 
+            type="date" 
+            value={endDate} 
+            onChange={(e) => setEndDate(e.target.value)} 
+          />
+        </div>
       </div>
-
-      <div className="border rounded-md">
+      
+      <div className="rounded-md border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -53,23 +66,31 @@ export default function PurchaseRegisterPage() {
               <TableHead>Bill #</TableHead>
               <TableHead>Supplier</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Tax</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Total Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((bill: any) => (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">Loading...</TableCell>
+              </TableRow>
+            ) : bills.map((bill) => (
               <TableRow key={bill.id}>
                 <TableCell>{bill.billDate}</TableCell>
-                <TableCell>{bill.billNumber}</TableCell>
+                <TableCell className="font-medium">{bill.billNumber}</TableCell>
                 <TableCell>{bill.supplierName}</TableCell>
-                <TableCell><Badge>{bill.status}</Badge></TableCell>
-                <TableCell className="text-right">₹{bill.totalTax?.toFixed(2)}</TableCell>
-                <TableCell className="text-right font-medium">₹{bill.totalAmount?.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{bill.status}</Badge>
+                </TableCell>
+                <TableCell className="text-right">₹{bill.totalAmount.toFixed(2)}</TableCell>
               </TableRow>
             ))}
-            {data.length === 0 && !loading && (
-              <TableRow><TableCell colSpan={6} className="text-center">No records found</TableCell></TableRow>
+            {!loading && bills.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  No purchases found in this period.
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>

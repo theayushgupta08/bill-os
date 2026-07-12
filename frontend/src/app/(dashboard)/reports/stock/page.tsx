@@ -3,52 +3,60 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 
 export default function StockSummaryPage() {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchReport = () => {
-    setLoading(true);
-    apiClient.get("/reports/stock-summary")
-      .then((res: any) => setData(res))
-      .catch((err: any) => console.error(err))
-      .finally(() => setLoading(false));
-  };
+  const [stock, setStock] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchReport();
+    const loadData = async () => {
+      try {
+        const data: any = await apiClient.get(`/reports/stock-summary`);
+        setStock(data);
+      } catch (error) {
+        console.error("Failed to load stock summary", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
   }, []);
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Stock Summary</h2>
-        <Button onClick={fetchReport} disabled={loading}>Refresh</Button>
       </div>
 
-      <div className="border rounded-md">
+      <div className="rounded-md border bg-white mt-4">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Product Name</TableHead>
+              <TableHead>SKU</TableHead>
               <TableHead>Warehouse</TableHead>
-              <TableHead className="text-right">Quantity</TableHead>
-              <TableHead className="text-right">Valuation</TableHead>
+              <TableHead className="text-right">Current Stock</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((item: any, idx) => (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8">Loading...</TableCell>
+              </TableRow>
+            ) : stock.map((item, idx) => (
               <TableRow key={idx}>
-                <TableCell>{item.productName}</TableCell>
+                <TableCell className="font-medium">{item.productName}</TableCell>
+                <TableCell>{item.sku}</TableCell>
                 <TableCell>{item.warehouseName}</TableCell>
-                <TableCell className="text-right">{item.quantity}</TableCell>
-                <TableCell className="text-right">₹0.00</TableCell> {/* Placeholder until Valuation is implemented */}
+                <TableCell className="text-right font-bold">{item.quantity}</TableCell>
               </TableRow>
             ))}
-            {data.length === 0 && !loading && (
-              <TableRow><TableCell colSpan={4} className="text-center">No inventory found</TableCell></TableRow>
+            {!loading && stock.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  No stock found.
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>

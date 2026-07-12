@@ -5,33 +5,33 @@ import apiClient from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 export default function SalesRegisterPage() {
-  const [data, setData] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const fetchReport = () => {
+  const loadData = async () => {
     setLoading(true);
-    let url = "/api/v1/reports/sales-register";
-    const params = new URLSearchParams();
-    if (startDate) params.append("startDate", startDate);
-    if (endDate) params.append("endDate", endDate);
-    if (params.toString()) {
-      url += `?${params.toString()}`;
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+      
+      const data: any = await apiClient.get(`/reports/sales-register?${params.toString()}`);
+      setInvoices(data);
+    } catch (error) {
+      console.error("Failed to load sales register", error);
+    } finally {
+      setLoading(false);
     }
-
-    apiClient.get(url.replace('/api/v1', ''))
-      .then((res: any) => setData(res))
-      .catch((err: any) => console.error(err))
-      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchReport();
-  }, []);
+    loadData();
+  }, [startDate, endDate]);
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -39,13 +39,26 @@ export default function SalesRegisterPage() {
         <h2 className="text-3xl font-bold tracking-tight">Sales Register</h2>
       </div>
 
-      <div className="flex space-x-2">
-        <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="Start Date" />
-        <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} placeholder="End Date" />
-        <Button onClick={fetchReport} disabled={loading}>Filter</Button>
+      <div className="flex items-end gap-4 bg-muted/50 p-4 rounded-md border">
+        <div className="space-y-1">
+          <Label>Start Date</Label>
+          <Input 
+            type="date" 
+            value={startDate} 
+            onChange={(e) => setStartDate(e.target.value)} 
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>End Date</Label>
+          <Input 
+            type="date" 
+            value={endDate} 
+            onChange={(e) => setEndDate(e.target.value)} 
+          />
+        </div>
       </div>
-
-      <div className="border rounded-md">
+      
+      <div className="rounded-md border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -53,23 +66,31 @@ export default function SalesRegisterPage() {
               <TableHead>Invoice #</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Tax</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Total Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((inv: any) => (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">Loading...</TableCell>
+              </TableRow>
+            ) : invoices.map((inv) => (
               <TableRow key={inv.id}>
                 <TableCell>{inv.invoiceDate}</TableCell>
-                <TableCell>{inv.invoiceNumber}</TableCell>
+                <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                 <TableCell>{inv.customerName}</TableCell>
-                <TableCell><Badge>{inv.status}</Badge></TableCell>
-                <TableCell className="text-right">₹{inv.totalTax?.toFixed(2)}</TableCell>
-                <TableCell className="text-right font-medium">₹{inv.totalAmount?.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{inv.status}</Badge>
+                </TableCell>
+                <TableCell className="text-right">₹{inv.totalAmount.toFixed(2)}</TableCell>
               </TableRow>
             ))}
-            {data.length === 0 && !loading && (
-              <TableRow><TableCell colSpan={6} className="text-center">No records found</TableCell></TableRow>
+            {!loading && invoices.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  No sales found in this period.
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>
