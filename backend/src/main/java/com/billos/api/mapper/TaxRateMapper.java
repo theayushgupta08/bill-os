@@ -4,7 +4,7 @@ import com.billos.api.dto.TaxRateDto;
 import com.billos.api.entity.TaxRate;
 import org.mapstruct.Mapper;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = org.mapstruct.ReportingPolicy.IGNORE)
 public interface TaxRateMapper {
     TaxRateDto toDto(TaxRate entity);
 

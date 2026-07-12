@@ -5,7 +5,7 @@ import com.billos.api.entity.Supplier;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = org.mapstruct.ReportingPolicy.IGNORE)
 public interface SupplierMapper {
     SupplierDto toDto(Supplier supplier);
 
