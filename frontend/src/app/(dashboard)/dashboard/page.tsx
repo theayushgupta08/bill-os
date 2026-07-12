@@ -138,6 +138,34 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick Actions Row */}
+      <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-4 mt-4">
+        <Card className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => window.location.href = '/sales/invoices/new'}>
+          <CardContent className="flex flex-col items-center justify-center p-6 space-y-2 text-center">
+            <FileText className="h-8 w-8 text-blue-500" />
+            <span className="font-medium">Create Invoice</span>
+          </CardContent>
+        </Card>
+        <Card className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => window.location.href = '/sales/orders/new'}>
+          <CardContent className="flex flex-col items-center justify-center p-6 space-y-2 text-center">
+            <ArrowUpRight className="h-8 w-8 text-green-500" />
+            <span className="font-medium">Add Sale</span>
+          </CardContent>
+        </Card>
+        <Card className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => window.location.href = '/products/new'}>
+          <CardContent className="flex flex-col items-center justify-center p-6 space-y-2 text-center">
+            <IndianRupee className="h-8 w-8 text-yellow-500" />
+            <span className="font-medium">Add Product</span>
+          </CardContent>
+        </Card>
+        <Card className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => window.location.href = '/payments/new'}>
+          <CardContent className="flex flex-col items-center justify-center p-6 space-y-2 text-center">
+            <ArrowDownRight className="h-8 w-8 text-purple-500" />
+            <span className="font-medium">Record Payment</span>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
