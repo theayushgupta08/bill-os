@@ -189,6 +189,40 @@ export function Sidebar() {
               Profit & Loss
             </Link>
             <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
+              GST Reports
+            </div>
+            <Link
+              href="/reports/gstr1"
+              className={getLinkClass("/reports/gstr1")}
+            >
+              <LineChart className="h-4 w-4" />
+              GSTR-1 (Outward)
+            </Link>
+            <Link
+              href="/reports/gstr3b"
+              className={getLinkClass("/reports/gstr3b")}
+            >
+              <LineChart className="h-4 w-4" />
+              GSTR-3B (Summary)
+            </Link>
+            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
+              Outstanding
+            </div>
+            <Link
+              href="/reports/outstanding/receivables"
+              className={getLinkClass("/reports/outstanding/receivables")}
+            >
+              <LineChart className="h-4 w-4" />
+              Receivables
+            </Link>
+            <Link
+              href="/reports/outstanding/payables"
+              className={getLinkClass("/reports/outstanding/payables")}
+            >
+              <LineChart className="h-4 w-4" />
+              Payables
+            </Link>
+            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
               Settings
             </div>
             <Link

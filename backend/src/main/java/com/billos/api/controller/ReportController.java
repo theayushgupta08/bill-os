@@ -1,9 +1,13 @@
 package com.billos.api.controller;
 
+import com.billos.api.dto.CustomerDto;
+import com.billos.api.dto.Gstr1Dto;
+import com.billos.api.dto.Gstr3bDto;
 import com.billos.api.dto.InventoryLevelDto;
 import com.billos.api.dto.PnlDto;
 import com.billos.api.dto.PurchaseBillDto;
 import com.billos.api.dto.SalesInvoiceDto;
+import com.billos.api.dto.SupplierDto;
 import com.billos.api.service.ReportService;
 import java.time.LocalDate;
 import java.util.List;
@@ -43,5 +47,29 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(reportService.getProfitAndLoss(startDate, endDate));
+    }
+
+    @GetMapping("/outstanding-receivables")
+    public ResponseEntity<List<CustomerDto>> getOutstandingReceivables() {
+        return ResponseEntity.ok(reportService.getOutstandingReceivables());
+    }
+
+    @GetMapping("/outstanding-payables")
+    public ResponseEntity<List<SupplierDto>> getOutstandingPayables() {
+        return ResponseEntity.ok(reportService.getOutstandingPayables());
+    }
+
+    @GetMapping("/gstr1")
+    public ResponseEntity<List<Gstr1Dto>> getGstr1(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(reportService.getGstr1(startDate, endDate));
+    }
+
+    @GetMapping("/gstr3b")
+    public ResponseEntity<Gstr3bDto> getGstr3b(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(reportService.getGstr3b(startDate, endDate));
     }
 }
