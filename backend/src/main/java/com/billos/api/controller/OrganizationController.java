@@ -1,5 +1,6 @@
 package com.billos.api.controller;
 
+import com.billos.api.dto.OrganizationSettingsDto;
 import com.billos.api.entity.Organization;
 import com.billos.api.service.OrganizationService;
 import java.util.List;
@@ -51,5 +52,18 @@ public class OrganizationController {
         // Assume security handles authorization (e.g. only OWNER/ADMIN can update)
         Organization updatedOrg = organizationService.updateOrganization(id, organization);
         return ResponseEntity.ok(updatedOrg);
+    }
+
+    @GetMapping("/{id}/settings")
+    public ResponseEntity<OrganizationSettingsDto> getOrganizationSettings(@PathVariable java.util.UUID id) {
+        OrganizationSettingsDto settings = organizationService.getOrganizationSettings(id);
+        return ResponseEntity.ok(settings);
+    }
+
+    @PutMapping("/{id}/settings")
+    public ResponseEntity<OrganizationSettingsDto> updateOrganizationSettings(
+            @PathVariable java.util.UUID id, @RequestBody OrganizationSettingsDto dto) {
+        OrganizationSettingsDto updatedSettings = organizationService.updateOrganizationSettings(id, dto);
+        return ResponseEntity.ok(updatedSettings);
     }
 }

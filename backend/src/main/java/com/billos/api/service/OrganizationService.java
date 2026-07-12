@@ -1,13 +1,17 @@
 package com.billos.api.service;
 
+import com.billos.api.dto.OrganizationSettingsDto;
 import com.billos.api.entity.Organization;
+import com.billos.api.entity.OrganizationSettings;
 import com.billos.api.entity.User;
 import com.billos.api.entity.UserOrgRole;
 import com.billos.api.repository.OrganizationRepository;
+import com.billos.api.repository.OrganizationSettingsRepository;
 import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.UserPrincipal;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
@@ -21,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
+    private final OrganizationSettingsRepository organizationSettingsRepository;
     private final UserOrgRoleRepository userOrgRoleRepository;
     private final UserRepository userRepository;
     private final AccountService accountService;
@@ -49,6 +54,11 @@ public class OrganizationService {
 
         // Seed default Main Warehouse
         warehouseService.seedDefaultWarehouse(savedOrg.getId());
+
+        // Seed default Organization Settings
+        OrganizationSettings defaultSettings = new OrganizationSettings();
+        defaultSettings.setOrganizationId(savedOrg.getId());
+        organizationSettingsRepository.save(defaultSettings);
 
         return savedOrg;
     }
@@ -86,5 +96,51 @@ public class OrganizationService {
         if (updatedDetails.getPincode() != null) org.setPincode(updatedDetails.getPincode());
 
         return organizationRepository.save(org);
+    }
+
+    @Transactional(readOnly = true)
+    public OrganizationSettingsDto getOrganizationSettings(UUID orgId) {
+        OrganizationSettings settings = organizationSettingsRepository
+                .findByOrganizationId(orgId)
+                .orElseThrow(() -> new RuntimeException("Settings not found for organization"));
+
+        return mapToDto(settings);
+    }
+
+    @Transactional
+    public OrganizationSettingsDto updateOrganizationSettings(UUID orgId, OrganizationSettingsDto dto) {
+        OrganizationSettings settings = organizationSettingsRepository
+                .findByOrganizationId(orgId)
+                .orElseThrow(() -> new RuntimeException("Settings not found for organization"));
+
+        if (dto.getDefaultGstRate() != null) settings.setDefaultGstRate(dto.getDefaultGstRate());
+        if (dto.getTaxInclusivePricing() != null) settings.setTaxInclusivePricing(dto.getTaxInclusivePricing());
+        if (dto.getInvoicePrefix() != null) settings.setInvoicePrefix(dto.getInvoicePrefix());
+        if (dto.getInvoiceNumberFormat() != null) settings.setInvoiceNumberFormat(dto.getInvoiceNumberFormat());
+        if (dto.getInvoiceTerms() != null) settings.setInvoiceTerms(dto.getInvoiceTerms());
+        if (dto.getBankDetails() != null) settings.setBankDetails(dto.getBankDetails());
+        if (dto.getTheme() != null) settings.setTheme(dto.getTheme());
+        if (dto.getLanguage() != null) settings.setLanguage(dto.getLanguage());
+        if (dto.getTimezone() != null) settings.setTimezone(dto.getTimezone());
+        if (dto.getDateFormat() != null) settings.setDateFormat(dto.getDateFormat());
+
+        return mapToDto(organizationSettingsRepository.save(settings));
+    }
+
+    private OrganizationSettingsDto mapToDto(OrganizationSettings entity) {
+        OrganizationSettingsDto dto = new OrganizationSettingsDto();
+        dto.setId(entity.getId());
+        dto.setOrganizationId(entity.getOrganizationId());
+        dto.setDefaultGstRate(entity.getDefaultGstRate());
+        dto.setTaxInclusivePricing(entity.getTaxInclusivePricing());
+        dto.setInvoicePrefix(entity.getInvoicePrefix());
+        dto.setInvoiceNumberFormat(entity.getInvoiceNumberFormat());
+        dto.setInvoiceTerms(entity.getInvoiceTerms());
+        dto.setBankDetails(entity.getBankDetails());
+        dto.setTheme(entity.getTheme());
+        dto.setLanguage(entity.getLanguage());
+        dto.setTimezone(entity.getTimezone());
+        dto.setDateFormat(entity.getDateFormat());
+        return dto;
     }
 }

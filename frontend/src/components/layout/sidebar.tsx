@@ -188,6 +188,13 @@ export function Sidebar() {
               <LineChart className="h-4 w-4" />
               Profit & Loss
             </Link>
+            <Link
+              href="/reports/audit-logs"
+              className={getLinkClass("/reports/audit-logs")}
+            >
+              <FileText className="h-4 w-4" />
+              Audit Logs
+            </Link>
             <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
               GST Reports
             </div>
@@ -229,8 +236,29 @@ export function Sidebar() {
               href="/settings/organization"
               className={getLinkClass("/settings/organization")}
             >
-              <Settings className="h-4 w-4" />
+              <Building2 className="h-4 w-4" />
               Organization
+            </Link>
+            <Link
+              href="/settings/tax"
+              className={getLinkClass("/settings/tax")}
+            >
+              <Receipt className="h-4 w-4" />
+              Tax Settings
+            </Link>
+            <Link
+              href="/settings/invoice"
+              className={getLinkClass("/settings/invoice")}
+            >
+              <FileText className="h-4 w-4" />
+              Invoice Settings
+            </Link>
+            <Link
+              href="/settings/preferences"
+              className={getLinkClass("/settings/preferences")}
+            >
+              <Settings className="h-4 w-4" />
+              Preferences
             </Link>
           </nav>
         </div>
