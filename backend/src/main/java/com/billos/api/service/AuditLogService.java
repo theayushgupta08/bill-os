@@ -31,8 +31,7 @@ public class AuditLogService {
         log.setAction(action);
         log.setDetails(details);
         
-        // TODO: Get real userId from SecurityContext if available
-        // log.setUserId(currentUserId);
+                // log.setUserId(currentUserId);
         
         auditLogRepository.save(log);
     }

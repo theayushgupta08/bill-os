@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class ReportService {
 
     private final SalesInvoiceRepository salesInvoiceRepository;
@@ -55,12 +56,12 @@ public class ReportService {
         PnlDto pnl = new PnlDto();
         
         BigDecimal revenue = getSalesRegister(startDate, endDate).stream()
-                .filter(inv -> !inv.getStatus().equals("VOID"))
+                .filter(inv -> !inv.getStatus().name().equals("VOID"))
                 .map(SalesInvoiceDto::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
                 
         BigDecimal purchases = getPurchaseRegister(startDate, endDate).stream()
-                .filter(bill -> !bill.getStatus().equals("VOID"))
+                .filter(bill -> !bill.getStatus().name().equals("VOID"))
                 .map(PurchaseBillDto::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
                 

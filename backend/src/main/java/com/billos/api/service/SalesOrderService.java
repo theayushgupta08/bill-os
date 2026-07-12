@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class SalesOrderService {
 
     private final SalesOrderRepository salesOrderRepository;

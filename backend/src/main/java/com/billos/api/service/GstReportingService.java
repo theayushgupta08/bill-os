@@ -1,6 +1,6 @@
 package com.billos.api.service;
 
-import com.billos.api.repository.SalesInvoiceRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -9,9 +9,9 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+
 public class GstReportingService {
 
-    private final SalesInvoiceRepository salesInvoiceRepository;
 
     /**
      * Placeholder for generating HSN summaries.

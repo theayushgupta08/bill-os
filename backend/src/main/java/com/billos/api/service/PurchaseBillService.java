@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class PurchaseBillService {
 
     private final PurchaseBillRepository purchaseBillRepository;
@@ -28,7 +29,6 @@ public class PurchaseBillService {
     private final PurchaseBillMapper purchaseBillMapper;
     
     private final InventoryService inventoryService;
-    private final JournalEntryService journalEntryService;
 
     @Transactional(readOnly = true)
     public List<PurchaseBillDto> getAllPurchaseBills() {

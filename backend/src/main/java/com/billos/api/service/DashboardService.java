@@ -1,15 +1,14 @@
 package com.billos.api.service;
 
 import com.billos.api.dto.DashboardSummaryDto;
-import com.billos.api.mapper.ProductMapper;
+
 import com.billos.api.mapper.PurchaseBillMapper;
 import com.billos.api.mapper.SalesInvoiceMapper;
 import com.billos.api.repository.CustomerRepository;
-import com.billos.api.repository.ProductRepository;
+
 import com.billos.api.repository.PurchaseBillRepository;
 import com.billos.api.repository.SalesInvoiceRepository;
 import com.billos.api.repository.SupplierRepository;
-import com.billos.api.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,17 +19,16 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class DashboardService {
 
     private final SalesInvoiceRepository salesInvoiceRepository;
     private final PurchaseBillRepository purchaseBillRepository;
     private final CustomerRepository customerRepository;
     private final SupplierRepository supplierRepository;
-    private final ProductRepository productRepository;
 
     private final SalesInvoiceMapper salesInvoiceMapper;
     private final PurchaseBillMapper purchaseBillMapper;
-    private final ProductMapper productMapper;
 
     @Transactional(readOnly = true)
     public DashboardSummaryDto getSummary() {
