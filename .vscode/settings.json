@@ -1,3 +1,13 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic"
+    "java.compile.nullAnalysis.mode": "automatic",
+    "files.exclude": {
+        "**/backend/target": true,
+        "**/.git": true
+    },
+    "search.exclude": {
+        "**/backend/target": true
+    },
+    "java.project.resourceFilters": [
+        "backend/target"
+    ]
 }
