@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchApi } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
@@ -19,7 +19,7 @@ export default function PurchaseBillsPage() {
 
   const loadBills = async () => {
     try {
-      const data = await fetchApi("/api/v1/purchase-bills");
+      const data: any = await apiClient.get("/purchase-bills");
       setBills(data);
     } catch (error) {
       console.error("Failed to load Bills", error);
@@ -52,10 +52,7 @@ export default function PurchaseBillsPage() {
         ]
       };
 
-      await fetchApi("/api/v1/payments/vouchers", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      await apiClient.post("/payments/vouchers", payload);
       await loadBills();
     } catch (error) {
       console.error("Failed to record payment", error);
