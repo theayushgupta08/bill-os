@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import fetchApi from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -25,7 +25,7 @@ export default function SuppliersPage() {
   const loadSuppliers = async () => {
     try {
       setLoading(true);
-      const data = await fetchApi("/suppliers");
+      const data: any = await apiClient.get("/suppliers");
       setSuppliers(data);
     } catch (error) {
       console.error("Failed to load suppliers:", error);
@@ -37,7 +37,7 @@ export default function SuppliersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this supplier?")) return;
     try {
-      await fetchApi(`/suppliers/${id}`, { method: "DELETE" });
+      await apiClient.delete(`/suppliers/${id}`);
       loadSuppliers();
     } catch (error) {
       console.error("Failed to delete supplier:", error);
@@ -63,6 +63,7 @@ export default function SuppliersPage() {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>GSTIN</TableHead>
+              <TableHead>Outstanding</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -86,6 +87,7 @@ export default function SuppliersPage() {
                   <TableCell>{supplier.email || "-"}</TableCell>
                   <TableCell>{supplier.phone || "-"}</TableCell>
                   <TableCell>{supplier.gstin || "-"}</TableCell>
+                  <TableCell>₹{supplier.outstandingBalance?.toFixed(2) || "0.00"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Link href={`/suppliers/${supplier.id}`}>

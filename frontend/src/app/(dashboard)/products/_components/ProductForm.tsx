@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import fetchApi from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 
 interface ProductFormProps {
   productId?: string; // If provided, it's in edit mode
@@ -36,7 +36,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
 
   const loadCategories = async () => {
     try {
-      const data = await fetchApi("/product-categories");
+      const data: any = await apiClient.get("/product-categories");
       setCategories(data);
     } catch (error) {
       console.error("Failed to load categories:", error);
@@ -45,7 +45,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
 
   const loadProduct = async () => {
     try {
-      const data = await fetchApi(`/products/${productId}`);
+      const data: any = await apiClient.get(`/products/${productId}`);
       setFormData({
         name: data.name || "",
         description: data.description || "",
@@ -77,15 +77,9 @@ export default function ProductForm({ productId }: ProductFormProps) {
       };
 
       if (productId) {
-        await fetchApi(`/products/${productId}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
+        await apiClient.put(`/products/${productId}`, payload);
       } else {
-        await fetchApi("/products", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
+        await apiClient.post("/products", payload);
       }
       router.push("/products");
     } catch (error) {

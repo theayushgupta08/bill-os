@@ -11,5 +11,6 @@ public interface CustomerMapper {
 
     Customer toEntity(CustomerDto customerDto);
 
+    @org.mapstruct.Mapping(target = "outstandingBalance", ignore = true)
     void updateEntityFromDto(CustomerDto dto, @MappingTarget Customer entity);
 }

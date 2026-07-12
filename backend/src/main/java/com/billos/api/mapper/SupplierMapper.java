@@ -11,5 +11,6 @@ public interface SupplierMapper {
 
     Supplier toEntity(SupplierDto supplierDto);
 
+    @org.mapstruct.Mapping(target = "outstandingBalance", ignore = true)
     void updateEntityFromDto(SupplierDto dto, @MappingTarget Supplier entity);
 }

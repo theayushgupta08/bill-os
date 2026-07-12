@@ -1,5 +1,6 @@
 package com.billos.api.dto;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.Data;
 
@@ -17,4 +18,6 @@ public class SupplierDto {
     private String state;
     private String pincode;
     private String country;
+
+    private BigDecimal outstandingBalance;
 }

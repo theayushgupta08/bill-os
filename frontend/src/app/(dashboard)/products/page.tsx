@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import fetchApi from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -25,7 +25,7 @@ export default function ProductsPage() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const data = await fetchApi("/products");
+      const data: any = await apiClient.get("/products");
       setProducts(data);
     } catch (error) {
       console.error("Failed to load products:", error);
@@ -37,7 +37,7 @@ export default function ProductsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
     try {
-      await fetchApi(`/products/${id}`, { method: "DELETE" });
+      await apiClient.delete(`/products/${id}`);
       loadProducts();
     } catch (error) {
       console.error("Failed to delete product:", error);

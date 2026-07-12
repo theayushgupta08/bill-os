@@ -1,5 +1,6 @@
 package com.billos.api.dto;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.Data;
 
@@ -24,4 +25,6 @@ public class CustomerDto {
     private String shippingState;
     private String shippingPincode;
     private String shippingCountry;
+
+    private BigDecimal outstandingBalance;
 }

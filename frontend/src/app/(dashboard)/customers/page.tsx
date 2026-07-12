@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import fetchApi from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -25,7 +25,7 @@ export default function CustomersPage() {
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      const data = await fetchApi("/customers");
+      const data: any = await apiClient.get("/customers");
       setCustomers(data);
     } catch (error) {
       console.error("Failed to load customers:", error);
@@ -37,7 +37,7 @@ export default function CustomersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this customer?")) return;
     try {
-      await fetchApi(`/customers/${id}`, { method: "DELETE" });
+      await apiClient.delete(`/customers/${id}`);
       loadCustomers();
     } catch (error) {
       console.error("Failed to delete customer:", error);
@@ -63,6 +63,7 @@ export default function CustomersPage() {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>GSTIN</TableHead>
+              <TableHead>Outstanding</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -86,6 +87,7 @@ export default function CustomersPage() {
                   <TableCell>{customer.email || "-"}</TableCell>
                   <TableCell>{customer.phone || "-"}</TableCell>
                   <TableCell>{customer.gstin || "-"}</TableCell>
+                  <TableCell>₹{customer.outstandingBalance?.toFixed(2) || "0.00"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Link href={`/customers/${customer.id}`}>

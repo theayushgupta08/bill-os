@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import fetchApi from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 
 interface CustomerFormProps {
   customerId?: string; // If provided, it's in edit mode
@@ -36,7 +36,7 @@ export default function CustomerForm({ customerId }: CustomerFormProps) {
 
   const loadCustomer = async () => {
     try {
-      const data = await fetchApi(`/customers/${customerId}`);
+      const data: any = await apiClient.get(`/customers/${customerId}`);
       setFormData({
         name: data.name || "",
         email: data.email || "",
@@ -65,15 +65,9 @@ export default function CustomerForm({ customerId }: CustomerFormProps) {
     setLoading(true);
     try {
       if (customerId) {
-        await fetchApi(`/customers/${customerId}`, {
-          method: "PUT",
-          body: JSON.stringify(formData),
-        });
+        await apiClient.put(`/customers/${customerId}`, formData);
       } else {
-        await fetchApi("/customers", {
-          method: "POST",
-          body: JSON.stringify(formData),
-        });
+        await apiClient.post("/customers", formData);
       }
       router.push("/customers");
     } catch (error) {

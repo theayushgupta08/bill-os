@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import fetchApi from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 
 interface SupplierFormProps {
   supplierId?: string; // If provided, it's in edit mode
@@ -36,7 +36,7 @@ export default function SupplierForm({ supplierId }: SupplierFormProps) {
 
   const loadSupplier = async () => {
     try {
-      const data = await fetchApi(`/suppliers/${supplierId}`);
+      const data: any = await apiClient.get(`/suppliers/${supplierId}`);
       setFormData({
         name: data.name || "",
         email: data.email || "",
@@ -65,15 +65,9 @@ export default function SupplierForm({ supplierId }: SupplierFormProps) {
     setLoading(true);
     try {
       if (supplierId) {
-        await fetchApi(`/suppliers/${supplierId}`, {
-          method: "PUT",
-          body: JSON.stringify(formData),
-        });
+        await apiClient.put(`/suppliers/${supplierId}`, formData);
       } else {
-        await fetchApi("/suppliers", {
-          method: "POST",
-          body: JSON.stringify(formData),
-        });
+        await apiClient.post("/suppliers", formData);
       }
       router.push("/suppliers");
     } catch (error) {

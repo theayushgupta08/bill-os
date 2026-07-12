@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import fetchApi from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 
 interface ProductCategoryFormProps {
   categoryId?: string; // If provided, it's in edit mode
@@ -31,7 +31,7 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
 
   const loadParentCategories = async () => {
     try {
-      const data = await fetchApi("/product-categories");
+      const data: any = await apiClient.get("/product-categories");
       // filter out self if editing
       setCategories(data.filter((c: any) => c.id !== categoryId));
     } catch (error) {
@@ -41,7 +41,7 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
 
   const loadCategory = async () => {
     try {
-      const data = await fetchApi(`/product-categories/${categoryId}`);
+      const data: any = await apiClient.get(`/product-categories/${categoryId}`);
       setFormData({
         name: data.name || "",
         description: data.description || "",
@@ -66,15 +66,9 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
       const payload = { ...formData, parentId: formData.parentId || null };
 
       if (categoryId) {
-        await fetchApi(`/product-categories/${categoryId}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
+        await apiClient.put(`/product-categories/${categoryId}`, payload);
       } else {
-        await fetchApi("/product-categories", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
+        await apiClient.post("/product-categories", payload);
       }
       router.push("/product-categories");
     } catch (error) {
