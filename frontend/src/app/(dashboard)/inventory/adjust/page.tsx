@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchApi } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,11 +33,11 @@ export default function StockAdjustmentPage() {
     const loadData = async () => {
       try {
         const [ws, ps] = await Promise.all([
-          fetchApi("/api/v1/warehouses"),
-          fetchApi("/api/v1/products"),
+          apiClient.get("/warehouses"),
+          apiClient.get("/products"),
         ]);
-        setWarehouses(ws);
-        setProducts(ps);
+        setWarehouses(ws as any[]);
+        setProducts(ps as any[]);
       } catch (error) {
         console.error("Failed to load reference data", error);
       }
@@ -55,10 +55,7 @@ export default function StockAdjustmentPage() {
         quantity: Number(formData.quantity)
       };
 
-      await fetchApi("/api/v1/inventory/adjust", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      await apiClient.post("/inventory/adjust", payload);
       
       router.push("/inventory");
       router.refresh();

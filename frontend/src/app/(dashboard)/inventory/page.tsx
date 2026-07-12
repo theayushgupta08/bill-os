@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchApi } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -25,7 +25,7 @@ export default function InventoryLevelsPage() {
 
   const loadLevels = async () => {
     try {
-      const data = await fetchApi("/api/v1/inventory/levels");
+      const data: any = await apiClient.get("/inventory/levels");
       setLevels(data);
     } catch (error) {
       console.error("Failed to load inventory levels", error);

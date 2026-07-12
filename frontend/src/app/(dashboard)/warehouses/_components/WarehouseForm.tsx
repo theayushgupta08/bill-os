@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchApi } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +32,7 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
     const init = async () => {
       if (id) {
         try {
-          const data = await fetchApi(`/api/v1/warehouses/${id}`);
+          const data: any = await apiClient.get(`/warehouses/${id}`);
           setFormData({
             name: data.name || "",
             code: data.code || "",
@@ -62,22 +62,16 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
 
     try {
       if (id) {
-        await fetchApi(`/api/v1/warehouses/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(formData),
-        });
+        await apiClient.put(`/warehouses/${id}`, formData);
       } else {
-        await fetchApi("/api/v1/warehouses", {
-          method: "POST",
-          body: JSON.stringify(formData),
-        });
+        await apiClient.post("/warehouses", formData);
       }
       
       router.push("/warehouses");
       router.refresh();
     } catch (error) {
       console.error("Failed to save warehouse", error);
-      alert("Failed to save warehouse. See console.");
+      alert(error.response?.data?.message || "Failed to save warehouse. See console.");
     } finally {
       setLoading(false);
     }

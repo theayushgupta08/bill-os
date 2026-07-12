@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchApi } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -25,7 +25,7 @@ export default function WarehousesPage() {
 
   const loadWarehouses = async () => {
     try {
-      const data = await fetchApi("/api/v1/warehouses");
+      const data: any = await apiClient.get("/warehouses");
       setWarehouses(data);
     } catch (error) {
       console.error("Failed to load warehouses", error);
@@ -37,7 +37,7 @@ export default function WarehousesPage() {
   const deleteWarehouse = async (id: string) => {
     if (!confirm("Are you sure you want to delete this warehouse?")) return;
     try {
-      await fetchApi(`/api/v1/warehouses/${id}`, { method: "DELETE" });
+      await apiClient.delete(`/warehouses/${id}`);
       loadWarehouses();
     } catch (error) {
       console.error("Failed to delete warehouse", error);

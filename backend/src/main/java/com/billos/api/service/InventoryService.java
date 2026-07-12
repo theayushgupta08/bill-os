@@ -69,8 +69,13 @@ public class InventoryService {
         // 2. Update Quantity (Request quantity is the relative change)
         BigDecimal newQuantity = level.getQuantity().add(request.getQuantity());
 
-        // 3. WAC (Weighted Average Cost) Calculation Logic (only applicable for IN movements like Purchases)
-        if (request.getMovementType() == MovementType.IN && request.getUnitCost() != null) {
+        // 3. WAC (Weighted Average Cost) Calculation Logic
+        // Recalculate WAC only for valuation-related transactions: Purchase Bills, Opening Stock, Purchase Returns
+        boolean isValuationTransaction = "PURCHASE_BILL".equals(request.getReferenceType())
+                || "OPENING_STOCK".equals(request.getReferenceType())
+                || "PURCHASE_RETURN".equals(request.getReferenceType());
+
+        if (request.getMovementType() == MovementType.IN && request.getUnitCost() != null && isValuationTransaction) {
             BigDecimal currentTotalValue = level.getQuantity()
                     .multiply(product.getBasePrice() != null ? product.getBasePrice() : BigDecimal.ZERO);
             BigDecimal newIncomingValue = request.getQuantity().multiply(request.getUnitCost());
