@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import apiClient from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -29,20 +32,14 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      });
-      
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || 'Registration failed');
-      }
-
-      const data = await response.json();
+      const data: any = await apiClient.post('/auth/register', formData);
       localStorage.setItem('token', data.accessToken);
-      router.push('/setup');
+      
+      if (returnUrl) {
+        router.push(returnUrl);
+      } else {
+        router.push('/setup');
+      }
 
     } catch (err: any) {
       setError(err.message || 'Registration failed');
@@ -143,7 +140,7 @@ export default function RegisterPage() {
 
       <div className="text-center text-sm text-muted-foreground mt-2">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-primary hover:underline underline-offset-4 transition-all">
+        <Link href={`/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`} className="font-semibold text-primary hover:underline underline-offset-4 transition-all">
           Sign in
         </Link>
       </div>

@@ -11,7 +11,7 @@ export default function StockSummaryPage() {
 
   const fetchReport = () => {
     setLoading(true);
-    apiClient("/api/v1/reports/stock-summary", { method: "GET" })
+    apiClient.get("/reports/stock-summary")
       .then((res: any) => setData(res))
       .catch((err: any) => console.error(err))
       .finally(() => setLoading(false));

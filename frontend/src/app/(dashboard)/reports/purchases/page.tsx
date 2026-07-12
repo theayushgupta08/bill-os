@@ -23,7 +23,7 @@ export default function PurchaseRegisterPage() {
       url += `?${params.toString()}`;
     }
 
-    apiClient(url, { method: "GET" })
+    apiClient.get(url.replace('/api/v1', ''))
       .then((res: any) => setData(res))
       .catch((err: any) => console.error(err))
       .finally(() => setLoading(false));

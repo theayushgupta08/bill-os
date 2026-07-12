@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchApi } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,7 +19,7 @@ export default function TaxRatesPage() {
 
   const loadTaxes = async () => {
     try {
-      const data = await fetchApi("/api/v1/tax-rates");
+      const data: any = await apiClient.get("/tax-rates");
       setTaxes(data);
     } catch (error) {
       console.error("Failed to load taxes", error);
@@ -31,10 +31,7 @@ export default function TaxRatesPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await fetchApi("/api/v1/tax-rates", {
-        method: "POST",
-        body: JSON.stringify({ name, rate: Number(rate), isActive: true }),
-      });
+      await apiClient.post("/tax-rates", { name, rate: Number(rate), isActive: true });
       setName("");
       setRate("");
       loadTaxes();
@@ -46,8 +43,11 @@ export default function TaxRatesPage() {
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <h2 className="text-3xl font-bold tracking-tight">Tax Rates Master</h2>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Tax Rates Master</h3>
+        <p className="text-sm text-muted-foreground">Manage your organization's tax rates.</p>
+      </div>
       
       <form onSubmit={handleAdd} className="flex gap-4 items-end mb-8">
         <div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import apiClient from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -27,21 +29,16 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      });
-      
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || 'Invalid credentials');
-      }
+      const data: any = await apiClient.post('/auth/login', formData);
 
-      const data = await response.json();
       localStorage.setItem('token', data.accessToken);
       
-      const orgs = await apiClient('/api/v1/organizations', { method: 'GET' });
+      if (returnUrl) {
+        router.push(returnUrl);
+        return;
+      }
+      
+      const orgs: any = await apiClient.get('/organizations');
       
       if (orgs && orgs.length > 0) {
         localStorage.setItem('active_org_id', orgs[0].id);
@@ -115,7 +112,7 @@ export default function LoginPage() {
 
       <div className="text-center text-sm text-muted-foreground mt-2">
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="font-semibold text-primary hover:underline underline-offset-4 transition-all">
+        <Link href={`/register${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`} className="font-semibold text-primary hover:underline underline-offset-4 transition-all">
           Sign up
         </Link>
       </div>

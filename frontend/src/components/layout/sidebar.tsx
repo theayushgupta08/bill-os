@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   Package2,
@@ -18,6 +19,17 @@ import {
 import { Button } from "@/components/ui/button";
 
 export function Sidebar() {
+  const pathname = usePathname();
+  
+  const getLinkClass = (path: string, exact: boolean = false) => {
+    const isActive = exact ? pathname === path : pathname.startsWith(path);
+    return `flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
+      isActive 
+        ? "bg-muted text-primary" 
+        : "text-muted-foreground hover:text-primary"
+    }`;
+  };
+
   return (
     <div className="hidden border-r bg-muted/40 md:block">
       <div className="flex h-full max-h-screen flex-col gap-2">
@@ -35,125 +47,125 @@ export function Sidebar() {
           <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/dashboard", true)}
             >
               <Home className="h-4 w-4" />
               Dashboard
             </Link>
             <Link
               href="/invoices"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/invoices")}
             >
               <ShoppingCart className="h-4 w-4" />
               Invoices
             </Link>
             <Link
               href="/customers"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/customers")}
             >
               <Users className="h-4 w-4" />
               Customers
             </Link>
             <Link
               href="/suppliers"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/suppliers")}
             >
               <Users className="h-4 w-4" />
               Suppliers
             </Link>
             <Link
               href="/products"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/products")}
             >
               <Package2 className="h-4 w-4" />
               Products
             </Link>
             <Link
               href="/product-categories"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/product-categories")}
             >
               <FolderTree className="h-4 w-4" />
               Categories
             </Link>
             <Link
               href="/warehouses"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/warehouses")}
             >
               <Building2 className="h-4 w-4" />
               Warehouses
             </Link>
             <Link
               href="/sales/quotes"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/sales/quotes")}
             >
               <FileText className="h-4 w-4" />
               Quotations
             </Link>
             <Link
               href="/sales/orders"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/sales/orders")}
             >
               <FileText className="h-4 w-4" />
               Sales Orders
             </Link>
             <Link
               href="/sales/invoices"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/sales/invoices")}
             >
               <Receipt className="h-4 w-4" />
               Sales Invoices
             </Link>
             <Link
               href="/purchases/orders"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/purchases/orders")}
             >
               <FileText className="h-4 w-4" />
               Purchase Orders
             </Link>
             <Link
               href="/purchases/bills"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/purchases/bills")}
             >
               <Receipt className="h-4 w-4" />
               Purchase Bills
             </Link>
             <Link
               href="/inventory"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/inventory")}
             >
               <Package2 className="h-4 w-4" />
               Inventory
             </Link>
             <Link
               href="/accounts"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/accounts")}
             >
               <BookOpen className="h-4 w-4" />
               Chart of Accounts
             </Link>
             <Link
               href="/journal-entries"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/journal-entries")}
             >
               <Receipt className="h-4 w-4" />
               Journal Entries
             </Link>
             <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
-              Reports
+              Reports & Settings
             </div>
             <Link
               href="/reports/gst"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              className={getLinkClass("/reports/gst")}
             >
               <LineChart className="h-4 w-4" />
               GST Reports
             </Link>
             <Link
-              href="/settings/taxes"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              href="/settings"
+              className={getLinkClass("/settings")}
             >
               <Settings className="h-4 w-4" />
-              Tax Rates
+              Settings
             </Link>
           </nav>
         </div>

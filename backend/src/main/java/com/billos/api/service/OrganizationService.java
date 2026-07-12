@@ -67,4 +67,24 @@ public class OrganizationService {
                 .filter(org -> org != null)
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public Organization updateOrganization(java.util.UUID id, Organization updatedDetails) {
+        Organization org =
+                organizationRepository.findById(id).orElseThrow(() -> new RuntimeException("Organization not found"));
+
+        // Simple update logic
+        if (updatedDetails.getName() != null) org.setName(updatedDetails.getName());
+        if (updatedDetails.getLegalName() != null) org.setLegalName(updatedDetails.getLegalName());
+        if (updatedDetails.getGstin() != null) org.setGstin(updatedDetails.getGstin());
+        if (updatedDetails.getPhone() != null) org.setPhone(updatedDetails.getPhone());
+        if (updatedDetails.getEmail() != null) org.setEmail(updatedDetails.getEmail());
+        if (updatedDetails.getAddressLine1() != null) org.setAddressLine1(updatedDetails.getAddressLine1());
+        if (updatedDetails.getAddressLine2() != null) org.setAddressLine2(updatedDetails.getAddressLine2());
+        if (updatedDetails.getCity() != null) org.setCity(updatedDetails.getCity());
+        if (updatedDetails.getState() != null) org.setState(updatedDetails.getState());
+        if (updatedDetails.getPincode() != null) org.setPincode(updatedDetails.getPincode());
+
+        return organizationRepository.save(org);
+    }
 }

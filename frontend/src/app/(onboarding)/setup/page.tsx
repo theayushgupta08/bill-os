@@ -33,10 +33,7 @@ export default function SetupOrganizationPage() {
     setLoading(true);
     try {
       // For now, we assume the backend will return the created org with its ID
-      const response = await apiClient("/api/v1/organizations", {
-        method: "POST",
-        body: JSON.stringify(formData)
-      });
+      const response: any = await apiClient.post("/organizations", formData);
       const orgId = response.data?.id || response.id;
       
       // Store the active organization ID in localStorage (or a Zustand store)

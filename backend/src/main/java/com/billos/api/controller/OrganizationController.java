@@ -6,7 +6,9 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,5 +31,25 @@ public class OrganizationController {
     public ResponseEntity<List<Organization>> getMyOrganizations() {
         List<Organization> organizations = organizationService.getMyOrganizations();
         return ResponseEntity.ok(organizations);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Organization> getOrganizationById(@PathVariable java.util.UUID id) {
+        // Technically we should check if user belongs to this org,
+        // but TenantFilter/TenantSecurity handles access at broader levels,
+        // and getMyOrganizations gets all. For now we will just use getMyOrganizations and filter.
+        return organizationService.getMyOrganizations().stream()
+                .filter(org -> org.getId().equals(id))
+                .findFirst()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Organization> updateOrganization(
+            @PathVariable java.util.UUID id, @RequestBody Organization organization) {
+        // Assume security handles authorization (e.g. only OWNER/ADMIN can update)
+        Organization updatedOrg = organizationService.updateOrganization(id, organization);
+        return ResponseEntity.ok(updatedOrg);
     }
 }

@@ -17,7 +17,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiClient("/api/v1/dashboard/summary", { method: "GET" })
+    apiClient.get("/dashboard/summary")
       .then((res: any) => setSummary(res))
       .catch((err: any) => console.error(err))
       .finally(() => setLoading(false));

@@ -1,77 +1,76 @@
+import axios from 'axios';
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
+// Create a centralized Axios instance
+const apiClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor to attach tokens and organization ID
+apiClient.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      const orgId = localStorage.getItem('active_org_id');
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      if (orgId) {
+        config.headers['X-Organization-Id'] = orgId;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to unwrap data and handle global errors
+apiClient.interceptors.response.use(
+  (response) => {
+    // Axios wraps the response in a `data` object. We return just the data.
+    return response.data;
+  },
+  (error) => {
+    // If we get a 401 Unauthorized, we might want to log them out or refresh token in the future
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      // Optional: automatically redirect to login or clear token
+      // localStorage.removeItem('token');
+      // window.location.href = '/login';
+    }
+
+    // Standardize the error message
+    const message = error.response?.data?.message || error.message || 'API request failed';
+    return Promise.reject(new Error(message));
+  }
+);
+
 /**
- * Basic fetch wrapper for API calls that automatically includes the token.
- */
-export async function fetchApi(endpoint: string, options: RequestInit = {}) {
-  // In a real app, you would retrieve the token from a secure location (e.g., Zustand store, context, or HTTP-only cookie)
-  // For now, we will assume a dummy token or retrieve from localStorage for simplicity during MVP scaffolding.
-  let token = '';
-  let orgId = '';
-  if (typeof window !== 'undefined') {
-    token = localStorage.getItem('token') || '';
-    orgId = localStorage.getItem('active_org_id') || '';
-  }
-
-  const headers = new Headers(options.headers);
-  headers.set('Content-Type', 'application/json');
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-  if (orgId) {
-    headers.set('X-Organization-Id', orgId);
-  }
-
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    // Handle error
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'API request failed');
-  }
-
-  return response.json();
-}
-
-/**
- * Downloads a PDF from the API.
+ * Downloads a PDF from the API using the Axios instance.
  */
 export async function downloadPdf(endpoint: string, filename: string) {
-  let token = '';
-  let orgId = '';
-  if (typeof window !== 'undefined') {
-    token = localStorage.getItem('token') || '';
-    orgId = localStorage.getItem('active_org_id') || '';
-  }
+  try {
+    const response = await apiClient.get(endpoint, {
+      responseType: 'blob', // Important for downloading binary data
+    });
 
-  const headers = new Headers();
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-  if (orgId) {
-    headers.set('X-Organization-Id', orgId);
-  }
-
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    headers,
-  });
-
-  if (!response.ok) {
+    const url = window.URL.createObjectURL(new Blob([response as any])); // response is the blob because of our interceptor returning data
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
     throw new Error('Failed to download PDF');
   }
-
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
 }
 
-export default fetchApi;
+export default apiClient;
