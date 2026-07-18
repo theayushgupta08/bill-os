@@ -31,7 +31,7 @@ backend-clean:
 	cd backend && mvnw.cmd clean
 
 backend-run:
-	cmd /c start http://localhost:8080/docs
+	cmd /c start http://localhost:8080/swagger-ui/index.html
 	cd backend && mvnw.cmd spring-boot:run
 
 backend-test:

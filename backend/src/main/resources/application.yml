@@ -23,10 +23,12 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        tenant_identifier_resolver: com.billos.api.tenant.TenantIdentifierResolver
 
   flyway:
     enabled: true
     baseline-on-migrate: true
+    baseline-version: 0
     locations: classpath:db/migration
 
   redis:
