@@ -61,6 +61,7 @@ class InventoryServiceTest {
         request.setMovementType(MovementType.IN);
         request.setQuantity(new BigDecimal("10"));
         request.setUnitCost(new BigDecimal("50.00"));
+        request.setReferenceType("PURCHASE_BILL");
 
         Warehouse warehouse = new Warehouse();
         warehouse.setId(warehouseId);
@@ -95,6 +96,7 @@ class InventoryServiceTest {
         request.setMovementType(MovementType.IN);
         request.setQuantity(new BigDecimal("10"));
         request.setUnitCost(new BigDecimal("150.00")); // New items are more expensive
+        request.setReferenceType("PURCHASE_BILL");
 
         Warehouse warehouse = new Warehouse();
         warehouse.setId(warehouseId);

@@ -77,10 +77,8 @@ public class DocumentGenerationServiceTest {
 
     @Test
     void testGeneratePdfFromHtml_InvalidHtmlThrowsException() {
-        // Just verify it doesn't crash on simple invalid HTML (openhtmltopdf is lenient or strict depending on mode)
-        // With useFastMode() it's quite resilient.
-        byte[] pdf = documentGenerationService.generatePdfFromHtml("<html><body>No closing tags");
-        assertNotNull(pdf);
-        assertTrue(pdf.length > 0);
+        org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> {
+            documentGenerationService.generatePdfFromHtml("<html><body>No closing tags");
+        });
     }
 }

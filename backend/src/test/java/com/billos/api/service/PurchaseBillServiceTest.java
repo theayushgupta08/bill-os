@@ -27,7 +27,10 @@ class PurchaseBillServiceTest {
     private PurchaseBillRepository purchaseBillRepository;
 
     @Mock
-    private CustomerRepository customerRepository;
+    private SupplierRepository supplierRepository;
+
+    @Mock
+    private OrganizationRepository organizationRepository;
 
     @Mock
     private ProductRepository productRepository;
@@ -37,6 +40,12 @@ class PurchaseBillServiceTest {
 
     @Mock
     private InventoryService inventoryService;
+
+    @Mock
+    private PurchaseOrderRepository purchaseOrderRepository;
+
+    @Mock
+    private TaxRateRepository taxRateRepository;
 
     @Mock
     private PurchaseBillMapper purchaseBillMapper;
@@ -66,7 +75,7 @@ class PurchaseBillServiceTest {
         lineDto.setUnitPrice(new BigDecimal("100"));
         requestDto.setLines(List.of(lineDto));
 
-        Customer supplier = new Customer();
+        Supplier supplier = new Supplier();
         supplier.setId(supplierId);
 
         Product product = new Product();
@@ -75,7 +84,11 @@ class PurchaseBillServiceTest {
         Warehouse warehouse = new Warehouse();
         warehouse.setId(warehouseId);
 
-        when(customerRepository.findById(supplierId)).thenReturn(Optional.of(supplier));
+        Organization org = new Organization();
+        org.setId(UUID.fromString(TenantContext.getCurrentTenant()));
+
+        when(organizationRepository.findById(any())).thenReturn(Optional.of(org));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(supplier));
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
         when(purchaseBillRepository.save(any(PurchaseBill.class))).thenAnswer(i -> i.getArguments()[0]);

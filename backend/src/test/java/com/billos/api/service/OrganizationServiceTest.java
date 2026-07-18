@@ -11,6 +11,7 @@ import com.billos.api.entity.Organization;
 import com.billos.api.entity.User;
 import com.billos.api.entity.UserOrgRole;
 import com.billos.api.repository.OrganizationRepository;
+import com.billos.api.repository.OrganizationSettingsRepository;
 import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.UserPrincipal;
@@ -41,6 +42,15 @@ class OrganizationServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private AccountService accountService;
+
+    @Mock
+    private WarehouseService warehouseService;
+
+    @Mock
+    private OrganizationSettingsRepository organizationSettingsRepository;
 
     @InjectMocks
     private OrganizationService organizationService;

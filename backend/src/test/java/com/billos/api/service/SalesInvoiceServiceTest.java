@@ -41,6 +41,9 @@ class SalesInvoiceServiceTest {
     private InventoryService inventoryService;
 
     @Mock
+    private OrganizationRepository organizationRepository;
+
+    @Mock
     private SequenceGeneratorService sequenceGeneratorService;
 
     @Mock
@@ -62,6 +65,7 @@ class SalesInvoiceServiceTest {
 
         SalesInvoiceDto requestDto = new SalesInvoiceDto();
         requestDto.setCustomerId(customerId);
+        requestDto.setStatus(SalesInvoiceStatus.ISSUED);
 
         SalesInvoiceLineDto lineDto = new SalesInvoiceLineDto();
         lineDto.setProductId(productId);
@@ -79,6 +83,10 @@ class SalesInvoiceServiceTest {
         Warehouse warehouse = new Warehouse();
         warehouse.setId(warehouseId);
 
+        Organization org = new Organization();
+        org.setId(UUID.fromString(TenantContext.getCurrentTenant()));
+
+        when(organizationRepository.findById(any())).thenReturn(Optional.of(org));
         when(customerRepository.findById(customerId)).thenReturn(Optional.of(customer));
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));

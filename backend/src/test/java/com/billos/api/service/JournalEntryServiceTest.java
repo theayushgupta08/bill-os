@@ -9,6 +9,7 @@ import com.billos.api.dto.JournalEntryDto;
 import com.billos.api.dto.JournalEntryLineDto;
 import com.billos.api.entity.Account;
 import com.billos.api.entity.JournalEntry;
+import com.billos.api.entity.JournalEntryLine;
 import com.billos.api.mapper.JournalEntryMapper;
 import com.billos.api.repository.AccountRepository;
 import com.billos.api.repository.JournalEntryRepository;
@@ -67,6 +68,7 @@ class JournalEntryServiceTest {
         dto.getLines().add(credit);
 
         when(journalEntryMapper.toEntity(any(JournalEntryDto.class))).thenReturn(new JournalEntry());
+        when(journalEntryMapper.lineToEntity(any(JournalEntryLineDto.class))).thenReturn(new JournalEntryLine());
         when(accountRepository.findById(any(UUID.class))).thenReturn(Optional.of(new Account()));
         when(journalEntryRepository.save(any(JournalEntry.class))).thenReturn(new JournalEntry());
         when(journalEntryMapper.toDto(any(JournalEntry.class))).thenReturn(new JournalEntryDto());

@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 
 import com.billos.api.dto.PnlDto;
+import com.billos.api.dto.PurchaseBillDto;
+import com.billos.api.dto.SalesInvoiceDto;
 import com.billos.api.entity.PurchaseBill;
 import com.billos.api.entity.PurchaseBillStatus;
 import com.billos.api.entity.SalesInvoice;
@@ -55,8 +57,18 @@ class ReportServiceTest {
         pb1.setStatus(PurchaseBillStatus.UNPAID);
         pb1.setBillDate(LocalDate.now());
 
+        SalesInvoiceDto i1Dto = new SalesInvoiceDto();
+        i1Dto.setTotalAmount(new BigDecimal("1000.00"));
+        i1Dto.setStatus(SalesInvoiceStatus.ISSUED);
+
+        PurchaseBillDto pb1Dto = new PurchaseBillDto();
+        pb1Dto.setTotalAmount(new BigDecimal("400.00"));
+        pb1Dto.setStatus(PurchaseBillStatus.UNPAID);
+
         when(salesInvoiceRepository.findAll()).thenReturn(List.of(i1));
         when(purchaseBillRepository.findAll()).thenReturn(List.of(pb1));
+        when(salesInvoiceMapper.toDto(i1)).thenReturn(i1Dto);
+        when(purchaseBillMapper.toDto(pb1)).thenReturn(pb1Dto);
 
         PnlDto result = reportService.getProfitAndLoss(null, null);
 
