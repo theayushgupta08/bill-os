@@ -237,7 +237,7 @@ export default function ContactPage() {
             <p className="text-muted-foreground">Can't find the answer you're looking for? Reach out to our customer support team.</p>
           </div>
 
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion className="w-full">
             <AccordionItem value="item-1" className="border-b border-border/50 py-2">
               <AccordionTrigger className="text-left text-lg font-medium hover:text-primary hover:no-underline">
                 How fast can I expect a response?
