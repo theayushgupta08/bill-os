@@ -51,8 +51,8 @@ frontend-build:
 	cd frontend && pnpm build
 
 frontend-clean:
-	if exist frontend\.next rmdir /s /q frontend\.next
-	if exist frontend\node_modules rmdir /s /q frontend\node_modules
+	cmd /c "if exist frontend\.next rmdir /s /q frontend\.next"
+	cmd /c "if exist frontend\node_modules rmdir /s /q frontend\node_modules"
 
 frontend-run:
 	cd frontend && pnpm dev
@@ -69,13 +69,13 @@ frontend-format:
 .PHONY: ai-install ai-clean ai-run ai-test ai-lint ai-format
 
 ai-install:
-	cd ai-service && if not exist venv python -m venv venv
+	cd ai-service && cmd /c "if not exist venv python -m venv venv"
 	cd ai-service && venv\Scripts\pip install -e .[dev]
 
 ai-clean:
-	if exist ai-service\__pycache__ rmdir /s /q ai-service\__pycache__
-	if exist ai-service\.pytest_cache rmdir /s /q ai-service\.pytest_cache
-	if exist ai-service\venv rmdir /s /q ai-service\venv
+	cmd /c "if exist ai-service\__pycache__ rmdir /s /q ai-service\__pycache__"
+	cmd /c "if exist ai-service\.pytest_cache rmdir /s /q ai-service\.pytest_cache"
+	cmd /c "if exist ai-service\venv rmdir /s /q ai-service\venv"
 
 ai-run:
 	cd ai-service && venv\Scripts\uvicorn app.main:app --reload
@@ -106,6 +106,6 @@ test: backend-test ai-test
 format: backend-format frontend-format ai-format
 
 run:
-	start "Backend" cmd /c "cd backend && mvnw.cmd spring-boot:run"
-	start "Frontend" cmd /c "cd frontend && pnpm dev"
-	start "AI Service" cmd /c "cd ai-service && venv\Scripts\uvicorn app.main:app --reload"
+	cmd /c start "Backend" cmd /k "cd backend && .\mvnw.cmd spring-boot:run"
+	cmd /c start "Frontend" cmd /k "cd frontend && pnpm dev"
+	cmd /c start "AI Service" cmd /k "cd ai-service && .\venv\Scripts\uvicorn app.main:app --reload"
