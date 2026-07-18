@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api-client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 interface CustomerFormProps {
   customerId?: string; // If provided, it's in edit mode
@@ -13,8 +15,8 @@ interface CustomerFormProps {
 
 export default function CustomerForm({ customerId }: CustomerFormProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(!!customerId);
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -28,56 +30,59 @@ export default function CustomerForm({ customerId }: CustomerFormProps) {
     billingCountry: "",
   });
 
-  useEffect(() => {
-    if (customerId) {
-      loadCustomer();
-    }
-  }, [customerId]);
-
-  const loadCustomer = async () => {
-    try {
+  const { data: customer, isLoading: isFetching } = useQuery({
+    queryKey: ["customer", customerId],
+    queryFn: async () => {
       const data: any = await apiClient.get(`/customers/${customerId}`);
+      return data;
+    },
+    enabled: !!customerId,
+  });
+
+  useEffect(() => {
+    if (customer) {
       setFormData({
-        name: data.name || "",
-        email: data.email || "",
-        phone: data.phone || "",
-        gstin: data.gstin || "",
-        billingAddressLine1: data.billingAddressLine1 || "",
-        billingAddressLine2: data.billingAddressLine2 || "",
-        billingCity: data.billingCity || "",
-        billingState: data.billingState || "",
-        billingPincode: data.billingPincode || "",
-        billingCountry: data.billingCountry || "",
+        name: customer.name || "",
+        email: customer.email || "",
+        phone: customer.phone || "",
+        gstin: customer.gstin || "",
+        billingAddressLine1: customer.billingAddressLine1 || "",
+        billingAddressLine2: customer.billingAddressLine2 || "",
+        billingCity: customer.billingCity || "",
+        billingState: customer.billingState || "",
+        billingPincode: customer.billingPincode || "",
+        billingCountry: customer.billingCountry || "",
       });
-    } catch (error) {
-      console.error("Failed to load customer:", error);
-    } finally {
-      setInitialLoading(false);
     }
-  };
+  }, [customer]);
+
+  const saveMutation = useMutation({
+    mutationFn: (data: typeof formData) => {
+      if (customerId) {
+        return apiClient.put(`/customers/${customerId}`, data);
+      } else {
+        return apiClient.post("/customers", data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      router.push("/customers");
+    },
+    onError: (error) => {
+      console.error("Failed to save customer:", error);
+    },
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      if (customerId) {
-        await apiClient.put(`/customers/${customerId}`, formData);
-      } else {
-        await apiClient.post("/customers", formData);
-      }
-      router.push("/customers");
-    } catch (error) {
-      console.error("Failed to save customer:", error);
-    } finally {
-      setLoading(false);
-    }
+    saveMutation.mutate(formData);
   };
 
-  if (initialLoading) {
+  if (isFetching) {
     return <div>Loading...</div>;
   }
 
@@ -133,11 +138,11 @@ export default function CustomerForm({ customerId }: CustomerFormProps) {
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button type="button" variant="outline" onClick={() => router.push("/customers")}>
+        <Button type="button" variant="outline" onClick={() => router.push("/customers")} disabled={saveMutation.isPending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Save Customer"}
+        <Button type="submit" disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? "Saving..." : "Save Customer"}
         </Button>
       </div>
     </form>

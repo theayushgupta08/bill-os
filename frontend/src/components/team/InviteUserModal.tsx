@@ -52,11 +52,11 @@ export function InviteUserModal({ onRefresh }: { onRefresh: () => void }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
+      <DialogTrigger render={
+        <Button />
+      }>
           <Mail className="mr-2 h-4 w-4" />
           Invite Member
-        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -83,7 +83,7 @@ export function InviteUserModal({ onRefresh }: { onRefresh: () => void }) {
             <Label htmlFor="role">Assign Role</Label>
             <Select 
               value={formData.role} 
-              onValueChange={(val) => setFormData({ ...formData, role: val })}
+              onValueChange={(val) => setFormData({ ...formData, role: val ?? formData.role })}
             >
               <SelectTrigger id="role">
                 <SelectValue placeholder="Select a role" />

@@ -99,8 +99,10 @@ export function Header() {
         <Breadcrumb className="hidden md:flex">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/">Home</Link>
+              <BreadcrumbLink render={
+                <Link href="/" />
+              }>
+                Home
               </BreadcrumbLink>
             </BreadcrumbItem>
             {paths.map((path, index) => {
@@ -115,8 +117,10 @@ export function Header() {
                     {isLast ? (
                       <BreadcrumbPage>{title}</BreadcrumbPage>
                     ) : (
-                      <BreadcrumbLink asChild>
-                        <Link href={href}>{title}</Link>
+                      <BreadcrumbLink render={
+                        <Link href={href} />
+                      }>
+                        {title}
                       </BreadcrumbLink>
                     )}
                   </BreadcrumbItem>
@@ -136,8 +140,10 @@ export function Header() {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>My Account</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer" asChild>
-            <Link href="/settings">Settings</Link>
+          <DropdownMenuItem className="cursor-pointer" render={
+            <Link href="/settings" />
+          }>
+            Settings
           </DropdownMenuItem>
           <DropdownMenuItem>Support</DropdownMenuItem>
           <DropdownMenuSeparator />

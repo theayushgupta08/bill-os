@@ -69,7 +69,7 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
       
       router.push("/warehouses");
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save warehouse", error);
       alert(error.response?.data?.message || "Failed to save warehouse. See console.");
     } finally {

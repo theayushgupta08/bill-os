@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api-client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ProductCategoryFormProps {
   categoryId?: string; // If provided, it's in edit mode
@@ -13,72 +14,70 @@ interface ProductCategoryFormProps {
 
 export default function ProductCategoryForm({ categoryId }: ProductCategoryFormProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(!!categoryId);
-  const [categories, setCategories] = useState<any[]>([]);
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     parentId: "",
   });
 
-  useEffect(() => {
-    loadParentCategories();
-    if (categoryId) {
-      loadCategory();
-    }
-  }, [categoryId]);
-
-  const loadParentCategories = async () => {
-    try {
+  const { data: categories = [] } = useQuery({
+    queryKey: ["product-categories-dropdown"],
+    queryFn: async () => {
       const data: any = await apiClient.get("/product-categories");
-      // filter out self if editing
-      setCategories(data.filter((c: any) => c.id !== categoryId));
-    } catch (error) {
-      console.error("Failed to load categories:", error);
-    }
-  };
+      return data.filter((c: any) => c.id !== categoryId);
+    },
+  });
 
-  const loadCategory = async () => {
-    try {
+  const { data: category, isLoading: isFetching } = useQuery({
+    queryKey: ["product-category", categoryId],
+    queryFn: async () => {
       const data: any = await apiClient.get(`/product-categories/${categoryId}`);
+      return data;
+    },
+    enabled: !!categoryId,
+  });
+
+  useEffect(() => {
+    if (category) {
       setFormData({
-        name: data.name || "",
-        description: data.description || "",
-        parentId: data.parentId || "",
+        name: category.name || "",
+        description: category.description || "",
+        parentId: category.parentId || "",
       });
-    } catch (error) {
-      console.error("Failed to load category:", error);
-    } finally {
-      setInitialLoading(false);
     }
-  };
+  }, [category]);
+
+  const saveMutation = useMutation({
+    mutationFn: (data: typeof formData) => {
+      const payload = { ...data, parentId: data.parentId || null };
+      if (categoryId) {
+        return apiClient.put(`/product-categories/${categoryId}`, payload);
+      } else {
+        return apiClient.post("/product-categories", payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["product-categories-dropdown"] });
+      router.push("/product-categories");
+    },
+    onError: (error) => {
+      console.error("Failed to save category:", error);
+    },
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      // payload
-      const payload = { ...formData, parentId: formData.parentId || null };
-
-      if (categoryId) {
-        await apiClient.put(`/product-categories/${categoryId}`, payload);
-      } else {
-        await apiClient.post("/product-categories", payload);
-      }
-      router.push("/product-categories");
-    } catch (error) {
-      console.error("Failed to save category:", error);
-    } finally {
-      setLoading(false);
-    }
+    saveMutation.mutate(formData);
   };
 
-  if (initialLoading) {
+  if (isFetching) {
     return <div>Loading...</div>;
   }
 
@@ -95,7 +94,6 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
         </div>
         <div className="space-y-2">
           <Label htmlFor="parentId">Parent Category</Label>
-          {/* using native select for simplicity */}
           <select
             id="parentId"
             name="parentId"
@@ -104,7 +102,7 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="">None</option>
-            {categories.map((c) => (
+            {categories.map((c: any) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
@@ -114,11 +112,11 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button type="button" variant="outline" onClick={() => router.push("/product-categories")}>
+        <Button type="button" variant="outline" onClick={() => router.push("/product-categories")} disabled={saveMutation.isPending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Save Category"}
+        <Button type="submit" disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? "Saving..." : "Save Category"}
         </Button>
       </div>
     </form>

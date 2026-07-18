@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchApi } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,11 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function JournalEntryForm() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [accounts, setAccounts] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
     entryDate: new Date().toISOString().split("T")[0],
@@ -39,55 +39,49 @@ export function JournalEntryForm() {
     { id: "2", accountId: "", debitAmount: 0, creditAmount: 0, description: "" },
   ]);
 
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        const data = await fetchApi("/api/v1/accounts");
-        setAccounts(data);
-      } catch (error) {
-        console.error("Failed to load accounts", error);
-      }
-    };
-    fetchAccounts();
-  }, []);
+  const { data: accounts = [] as any[], isLoading: loadingAccounts } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: async () => {
+      const res = await api.get<any>("/accounts");
+      return res;
+    }
+  });
 
   const totalDebits = lines.reduce((sum, line) => sum + (Number(line.debitAmount) || 0), 0);
   const totalCredits = lines.reduce((sum, line) => sum + (Number(line.creditAmount) || 0), 0);
   const isBalanced = totalDebits === totalCredits && totalDebits > 0;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const createMutation = useMutation({
+    mutationFn: (payload: any) => api.post("/journal-entries", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      router.push("/journal-entries");
+      router.refresh();
+    },
+    onError: (error) => {
+      console.error("Failed to save journal entry", error);
+      alert("Failed to save journal entry. See console.");
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isBalanced) {
       alert("Debits must equal Credits to post an entry!");
       return;
     }
 
-    setLoading(true);
+    const payload = {
+      ...formData,
+      lines: lines.filter((l: any) => l.accountId !== "").map(l => ({
+        accountId: l.accountId,
+        debitAmount: Number(l.debitAmount) || 0,
+        creditAmount: Number(l.creditAmount) || 0,
+        description: l.description
+      }))
+    };
 
-    try {
-      const payload = {
-        ...formData,
-        lines: lines.filter(l => l.accountId !== "").map(l => ({
-          accountId: l.accountId,
-          debitAmount: Number(l.debitAmount) || 0,
-          creditAmount: Number(l.creditAmount) || 0,
-          description: l.description
-        }))
-      };
-
-      await fetchApi("/api/v1/journal-entries", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      
-      router.push("/journal-entries");
-      router.refresh();
-    } catch (error) {
-      console.error("Failed to save journal entry", error);
-      alert("Failed to save journal entry. See console.");
-    } finally {
-      setLoading(false);
-    }
+    createMutation.mutate(payload);
   };
 
   const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,14 +94,13 @@ export function JournalEntryForm() {
   };
 
   const removeLine = (id: string) => {
-    setLines(lines.filter(l => l.id !== id));
+    setLines(lines.filter((l: any) => l.id !== id));
   };
 
   const updateLine = (id: string, field: string, value: any) => {
     setLines(lines.map(l => {
       if (l.id === id) {
         const updated = { ...l, [field]: value };
-        // Clear opposite amount if one is entered
         if (field === 'debitAmount' && value > 0) updated.creditAmount = 0;
         if (field === 'creditAmount' && value > 0) updated.debitAmount = 0;
         return updated;
@@ -115,6 +108,8 @@ export function JournalEntryForm() {
       return l;
     }));
   };
+
+  if (loadingAccounts) return <div className="p-8">Loading...</div>;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -164,18 +159,18 @@ export function JournalEntryForm() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {lines.map((line) => (
+            {lines.map((line: any) => (
               <TableRow key={line.id}>
                 <TableCell>
                   <Select 
                     value={line.accountId} 
-                    onValueChange={(val) => updateLine(line.id, 'accountId', val)}
+                    onValueChange={(val: any) => updateLine(line.id, 'accountId', val)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select account" />
                     </SelectTrigger>
                     <SelectContent>
-                      {accounts.map(acc => (
+                      {accounts.map((acc: any) => (
                         <SelectItem key={acc.id} value={acc.id}>
                           {acc.accountCode} - {acc.name}
                         </SelectItem>
@@ -247,8 +242,8 @@ export function JournalEntryForm() {
         <Button type="button" variant="outline" onClick={() => router.push("/journal-entries")}>
           Cancel
         </Button>
-        <Button type="submit" disabled={loading || !isBalanced}>
-          {loading ? "Posting..." : "Post Entry"}
+        <Button type="submit" disabled={createMutation.isPending || !isBalanced}>
+          {createMutation.isPending ? "Posting..." : "Post Entry"}
         </Button>
       </div>
     </form>

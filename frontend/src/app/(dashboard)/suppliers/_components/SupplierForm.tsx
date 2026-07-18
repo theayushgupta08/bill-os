@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api-client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface SupplierFormProps {
   supplierId?: string; // If provided, it's in edit mode
@@ -13,8 +14,8 @@ interface SupplierFormProps {
 
 export default function SupplierForm({ supplierId }: SupplierFormProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(!!supplierId);
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -28,56 +29,59 @@ export default function SupplierForm({ supplierId }: SupplierFormProps) {
     country: "",
   });
 
-  useEffect(() => {
-    if (supplierId) {
-      loadSupplier();
-    }
-  }, [supplierId]);
-
-  const loadSupplier = async () => {
-    try {
+  const { data: supplier, isLoading: isFetching } = useQuery({
+    queryKey: ["supplier", supplierId],
+    queryFn: async () => {
       const data: any = await apiClient.get(`/suppliers/${supplierId}`);
+      return data;
+    },
+    enabled: !!supplierId,
+  });
+
+  useEffect(() => {
+    if (supplier) {
       setFormData({
-        name: data.name || "",
-        email: data.email || "",
-        phone: data.phone || "",
-        gstin: data.gstin || "",
-        addressLine1: data.addressLine1 || "",
-        addressLine2: data.addressLine2 || "",
-        city: data.city || "",
-        state: data.state || "",
-        pincode: data.pincode || "",
-        country: data.country || "",
+        name: supplier.name || "",
+        email: supplier.email || "",
+        phone: supplier.phone || "",
+        gstin: supplier.gstin || "",
+        addressLine1: supplier.addressLine1 || "",
+        addressLine2: supplier.addressLine2 || "",
+        city: supplier.city || "",
+        state: supplier.state || "",
+        pincode: supplier.pincode || "",
+        country: supplier.country || "",
       });
-    } catch (error) {
-      console.error("Failed to load supplier:", error);
-    } finally {
-      setInitialLoading(false);
     }
-  };
+  }, [supplier]);
+
+  const saveMutation = useMutation({
+    mutationFn: (data: typeof formData) => {
+      if (supplierId) {
+        return apiClient.put(`/suppliers/${supplierId}`, data);
+      } else {
+        return apiClient.post("/suppliers", data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      router.push("/suppliers");
+    },
+    onError: (error) => {
+      console.error("Failed to save supplier:", error);
+    },
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      if (supplierId) {
-        await apiClient.put(`/suppliers/${supplierId}`, formData);
-      } else {
-        await apiClient.post("/suppliers", formData);
-      }
-      router.push("/suppliers");
-    } catch (error) {
-      console.error("Failed to save supplier:", error);
-    } finally {
-      setLoading(false);
-    }
+    saveMutation.mutate(formData);
   };
 
-  if (initialLoading) {
+  if (isFetching) {
     return <div>Loading...</div>;
   }
 
@@ -133,11 +137,11 @@ export default function SupplierForm({ supplierId }: SupplierFormProps) {
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button type="button" variant="outline" onClick={() => router.push("/suppliers")}>
+        <Button type="button" variant="outline" onClick={() => router.push("/suppliers")} disabled={saveMutation.isPending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Save Supplier"}
+        <Button type="submit" disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? "Saving..." : "Save Supplier"}
         </Button>
       </div>
     </form>

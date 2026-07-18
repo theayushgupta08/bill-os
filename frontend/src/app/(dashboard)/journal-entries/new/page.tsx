@@ -1,4 +1,4 @@
-import { JournalEntryForm } from "../_components/JournalEntryForm";
+import { JournalEntryForm } from "@/features/accounts/components/journal-entry-form";
 
 export default function NewJournalEntryPage() {
   return (

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import apiClient from "@/lib/api-client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ProductFormProps {
   productId?: string; // If provided, it's in edit mode
@@ -13,9 +14,8 @@ interface ProductFormProps {
 
 export default function ProductForm({ productId }: ProductFormProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(!!productId);
-  const [categories, setCategories] = useState<any[]>([]);
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -27,69 +27,69 @@ export default function ProductForm({ productId }: ProductFormProps) {
     categoryId: "",
   });
 
-  useEffect(() => {
-    loadCategories();
-    if (productId) {
-      loadProduct();
-    }
-  }, [productId]);
-
-  const loadCategories = async () => {
-    try {
+  const { data: categories = [] } = useQuery({
+    queryKey: ["product-categories"],
+    queryFn: async () => {
       const data: any = await apiClient.get("/product-categories");
-      setCategories(data);
-    } catch (error) {
-      console.error("Failed to load categories:", error);
-    }
-  };
+      return data;
+    },
+  });
 
-  const loadProduct = async () => {
-    try {
+  const { data: product, isLoading: isFetching } = useQuery({
+    queryKey: ["product", productId],
+    queryFn: async () => {
       const data: any = await apiClient.get(`/products/${productId}`);
+      return data;
+    },
+    enabled: !!productId,
+  });
+
+  useEffect(() => {
+    if (product) {
       setFormData({
-        name: data.name || "",
-        description: data.description || "",
-        sku: data.sku || "",
-        hsnSac: data.hsnSac || "",
-        basePrice: data.basePrice || 0,
-        taxRate: data.taxRate || 0,
-        unitOfMeasure: data.unitOfMeasure || "",
-        categoryId: data.categoryId || "",
+        name: product.name || "",
+        description: product.description || "",
+        sku: product.sku || "",
+        hsnSac: product.hsnSac || "",
+        basePrice: product.basePrice || 0,
+        taxRate: product.taxRate || 0,
+        unitOfMeasure: product.unitOfMeasure || "",
+        categoryId: product.categoryId || "",
       });
-    } catch (error) {
-      console.error("Failed to load product:", error);
-    } finally {
-      setInitialLoading(false);
     }
-  };
+  }, [product]);
+
+  const saveMutation = useMutation({
+    mutationFn: (data: typeof formData) => {
+      const payload = {
+        ...data,
+        categoryId: data.categoryId || null,
+      };
+      if (productId) {
+        return apiClient.put(`/products/${productId}`, payload);
+      } else {
+        return apiClient.post("/products", payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      router.push("/products");
+    },
+    onError: (error) => {
+      console.error("Failed to save product:", error);
+    },
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      const payload = {
-        ...formData,
-        categoryId: formData.categoryId || null,
-      };
-
-      if (productId) {
-        await apiClient.put(`/products/${productId}`, payload);
-      } else {
-        await apiClient.post("/products", payload);
-      }
-      router.push("/products");
-    } catch (error) {
-      console.error("Failed to save product:", error);
-    } finally {
-      setLoading(false);
-    }
+    saveMutation.mutate(formData);
   };
 
-  if (initialLoading) {
+  if (isFetching) {
     return <div>Loading...</div>;
   }
 
@@ -130,7 +130,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="">None</option>
-            {categories.map((c) => (
+            {categories.map((c: any) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
@@ -144,11 +144,11 @@ export default function ProductForm({ productId }: ProductFormProps) {
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button type="button" variant="outline" onClick={() => router.push("/products")}>
+        <Button type="button" variant="outline" onClick={() => router.push("/products")} disabled={saveMutation.isPending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Save Product"}
+        <Button type="submit" disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? "Saving..." : "Save Product"}
         </Button>
       </div>
     </form>

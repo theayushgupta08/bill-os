@@ -1,4 +1,4 @@
-import { AccountForm } from "../_components/AccountForm";
+import { AccountForm } from "@/features/accounts/components/account-form";
 
 export default function EditAccountPage({ params }: { params: { id: string } }) {
   return (

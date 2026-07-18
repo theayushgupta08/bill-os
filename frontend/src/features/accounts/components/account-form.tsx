@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchApi } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface AccountFormProps {
   id?: string;
@@ -22,8 +23,7 @@ interface AccountFormProps {
 
 export function AccountForm({ id }: AccountFormProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(!!id);
+  const queryClient = useQueryClient();
   const [parentAccounts, setParentAccounts] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
@@ -35,63 +35,69 @@ export function AccountForm({ id }: AccountFormProps) {
     isActive: true,
   });
 
+  const { data: accountsData } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: async () => {
+      const res = await api.get<any>("/accounts");
+      return res;
+    }
+  });
+
+  const { data: accountData, isLoading: isLoadingAccount } = useQuery({
+    queryKey: ["account", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const res = await api.get<any>(`/accounts/${id}`);
+      return res;
+    },
+    enabled: !!id
+  });
+
   useEffect(() => {
-    const init = async () => {
-      try {
-        const accounts = await fetchApi("/api/v1/accounts");
-        setParentAccounts(accounts.filter((a: any) => a.id !== id)); // exclude self
+    if (accountsData) {
+      setParentAccounts(accountsData.filter((a: any) => a.id !== id));
+    }
+  }, [accountsData, id]);
 
-        if (id) {
-          const data = await fetchApi(`/api/v1/accounts/${id}`);
-          setFormData({
-            accountCode: data.accountCode || "",
-            name: data.name || "",
-            description: data.description || "",
-            type: data.type || "ASSET",
-            parentId: data.parentId || "",
-            isActive: data.isActive !== undefined ? data.isActive : true,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to load account data", error);
-      } finally {
-        setInitialLoading(false);
-      }
-    };
+  useEffect(() => {
+    if (accountData) {
+      setFormData({
+        accountCode: accountData.accountCode || "",
+        name: accountData.name || "",
+        description: accountData.description || "",
+        type: accountData.type || "ASSET",
+        parentId: accountData.parentId || "",
+        isActive: accountData.isActive !== undefined ? accountData.isActive : true,
+      });
+    }
+  }, [accountData]);
 
-    init();
-  }, [id]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const payload = {
-        ...formData,
-        parentId: formData.parentId || null,
-      };
-
+  const mutation = useMutation({
+    mutationFn: (payload: any) => {
       if (id) {
-        await fetchApi(`/api/v1/accounts/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-      } else {
-        await fetchApi("/api/v1/accounts", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
+        return api.put(`/accounts/${id}`, payload);
       }
-      
+      return api.post("/accounts", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["account", id] });
       router.push("/accounts");
       router.refresh();
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Failed to save account", error);
       alert("Failed to save account. See console.");
-    } finally {
-      setLoading(false);
     }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = {
+      ...formData,
+      parentId: formData.parentId || null,
+    };
+    mutation.mutate(payload);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -99,7 +105,7 @@ export function AccountForm({ id }: AccountFormProps) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  if (initialLoading) return <div>Loading...</div>;
+  if (id && isLoadingAccount) return <div>Loading...</div>;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
@@ -133,7 +139,7 @@ export function AccountForm({ id }: AccountFormProps) {
           <Label htmlFor="type">Account Type *</Label>
           <Select 
             value={formData.type} 
-            onValueChange={(val) => setFormData(prev => ({ ...prev, type: val }))}
+            onValueChange={(val: any) => setFormData(prev => ({ ...prev, type: val }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select type" />
@@ -151,7 +157,7 @@ export function AccountForm({ id }: AccountFormProps) {
           <Label htmlFor="parentId">Parent Account (Optional)</Label>
           <Select 
             value={formData.parentId} 
-            onValueChange={(val) => setFormData(prev => ({ ...prev, parentId: val === "none" ? "" : val }))}
+            onValueChange={(val: any) => setFormData(prev => ({ ...prev, parentId: val === "none" ? "" : val }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select parent account" />
@@ -159,7 +165,7 @@ export function AccountForm({ id }: AccountFormProps) {
             <SelectContent>
               <SelectItem value="none">-- None --</SelectItem>
               {parentAccounts
-                .filter(a => a.type === formData.type) // Parent should ideally be same type
+                .filter((a: any) => a.type === formData.type) // Parent should ideally be same type
                 .map(acc => (
                 <SelectItem key={acc.id} value={acc.id}>
                   {acc.accountCode} - {acc.name}
@@ -192,8 +198,8 @@ export function AccountForm({ id }: AccountFormProps) {
       </div>
 
       <div className="flex gap-4">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Save Account"}
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? "Saving..." : "Save Account"}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.push("/accounts")}>
           Cancel

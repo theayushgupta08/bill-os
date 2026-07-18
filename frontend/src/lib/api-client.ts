@@ -73,4 +73,24 @@ export async function downloadPdf(endpoint: string, filename: string) {
   }
 }
 
+/**
+ * Type-safe API helpers.
+ * Because our response interceptor returns `response.data` directly,
+ * the runtime return type is `T`, not `AxiosResponse<T>`.
+ * These helpers make TypeScript aware of that.
+ */
+export const api = {
+  get: <T = any>(url: string, config?: any): Promise<T> =>
+    apiClient.get(url, config) as unknown as Promise<T>,
+  post: <T = any>(url: string, data?: any, config?: any): Promise<T> =>
+    apiClient.post(url, data, config) as unknown as Promise<T>,
+  put: <T = any>(url: string, data?: any, config?: any): Promise<T> =>
+    apiClient.put(url, data, config) as unknown as Promise<T>,
+  delete: <T = any>(url: string, config?: any): Promise<T> =>
+    apiClient.delete(url, config) as unknown as Promise<T>,
+  patch: <T = any>(url: string, data?: any, config?: any): Promise<T> =>
+    apiClient.patch(url, data, config) as unknown as Promise<T>,
+};
+
 export default apiClient;
+
