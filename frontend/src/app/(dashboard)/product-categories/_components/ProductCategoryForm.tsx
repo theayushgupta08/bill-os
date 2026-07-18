@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import apiClient from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ProductCategoryFormProps {
@@ -25,15 +25,15 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
   const { data: categories = [] } = useQuery({
     queryKey: ["product-categories-dropdown"],
     queryFn: async () => {
-      const data: any = await apiClient.get("/product-categories");
-      return data.filter((c: any) => c.id !== categoryId);
+      const data = await api.get<Array<{ id: string; name: string }>>("/product-categories");
+      return data.filter((c) => c.id !== categoryId);
     },
   });
 
   const { data: category, isLoading: isFetching } = useQuery({
     queryKey: ["product-category", categoryId],
     queryFn: async () => {
-      const data: any = await apiClient.get(`/product-categories/${categoryId}`);
+      const data = await api.get<{ name: string; description: string; parentId: string }>(`/product-categories/${categoryId}`);
       return data;
     },
     enabled: !!categoryId,
@@ -53,9 +53,9 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
     mutationFn: (data: typeof formData) => {
       const payload = { ...data, parentId: data.parentId || null };
       if (categoryId) {
-        return apiClient.put(`/product-categories/${categoryId}`, payload);
+        return api.put(`/product-categories/${categoryId}`, payload);
       } else {
-        return apiClient.post("/product-categories", payload);
+        return api.post("/product-categories", payload);
       }
     },
     onSuccess: () => {
@@ -102,7 +102,7 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="">None</option>
-            {categories.map((c: any) => (
+            {categories.map((c: { id: string; name: string }) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import apiClient from '@/lib/api-client';
+import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,7 +32,7 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const data: any = await apiClient.post('/auth/register', formData);
+      const data = await api.post<{ accessToken: string }>('/auth/register', formData);
       localStorage.setItem('token', data.accessToken);
       
       if (returnUrl) {
@@ -41,8 +41,9 @@ export default function RegisterPage() {
         router.push('/setup');
       }
 
-    } catch (err: any) {
-      setError(err.message || 'Registration failed');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      setError(errorMessage);
       console.error(err);
     } finally {
       setLoading(false);

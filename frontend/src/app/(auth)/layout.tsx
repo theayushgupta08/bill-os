@@ -33,7 +33,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             {/* Testimonial Quote */}
             <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
               <p className="text-zinc-300 italic mb-4">
-                "Switching to {siteConfig.name} was the best decision for our accounting. It feels like having a full-time CFO right in my browser."
+                &quot;Switching to {siteConfig.name} was the best decision for our accounting. It feels like having a full-time CFO right in my browser.&quot;
               </p>
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-inner">

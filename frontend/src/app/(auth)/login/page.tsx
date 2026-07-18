@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import apiClient from '@/lib/api-client';
+import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,7 +29,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const data: any = await apiClient.post('/auth/login', formData);
+      const data = await api.post<{ accessToken: string }>('/auth/login', formData);
 
       localStorage.setItem('token', data.accessToken);
       
@@ -38,7 +38,7 @@ export default function LoginPage() {
         return;
       }
       
-      const orgs: any = await apiClient.get('/organizations');
+      const orgs = await api.get<Array<{ id: string }>>('/organizations');
       
       if (orgs && orgs.length > 0) {
         localStorage.setItem('active_org_id', orgs[0].id);
@@ -47,8 +47,9 @@ export default function LoginPage() {
         router.push('/setup');
       }
 
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      setError(errorMessage);
       console.error(err);
     } finally {
       setLoading(false);

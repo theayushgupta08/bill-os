@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import apiClient from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -33,7 +33,7 @@ export default function CustomerForm({ customerId }: CustomerFormProps) {
   const { data: customer, isLoading: isFetching } = useQuery({
     queryKey: ["customer", customerId],
     queryFn: async () => {
-      const data: any = await apiClient.get(`/customers/${customerId}`);
+      const data = await api.get<Record<string, string>>(`/customers/${customerId}`);
       return data;
     },
     enabled: !!customerId,
@@ -59,9 +59,9 @@ export default function CustomerForm({ customerId }: CustomerFormProps) {
   const saveMutation = useMutation({
     mutationFn: (data: typeof formData) => {
       if (customerId) {
-        return apiClient.put(`/customers/${customerId}`, data);
+        return api.put(`/customers/${customerId}`, data);
       } else {
-        return apiClient.post("/customers", data);
+        return api.post("/customers", data);
       }
     },
     onSuccess: () => {
