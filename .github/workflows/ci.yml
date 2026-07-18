@@ -59,12 +59,16 @@ jobs:
       # Build Spring Boot
       - name: Build Spring Boot
         working-directory: ./backend
-        run: ./mvnw clean compile
+        run: |
+          chmod +x mvnw
+          ./mvnw clean compile
 
       # Run Backend Tests
       - name: Run Backend Tests
         working-directory: ./backend
-        run: ./mvnw test
+        run: |
+          chmod +x mvnw
+          ./mvnw test
 
       # Install Python
       - name: Install Python
