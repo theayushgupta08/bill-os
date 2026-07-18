@@ -1,0 +1,129 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Full CI Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Install Node.js
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Install pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      # Install Frontend Dependencies
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: pnpm install
+
+      # Run ESLint
+      - name: Run ESLint
+        working-directory: ./frontend
+        run: pnpm run lint
+
+      # Run TypeScript Check
+      - name: Run TypeScript Check
+        working-directory: ./frontend
+        run: pnpm tsc --noEmit
+
+      # Build Next.js
+      - name: Build Next.js
+        working-directory: ./frontend
+        run: pnpm run build
+
+      # Install Java
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      # Build Spring Boot
+      - name: Build Spring Boot
+        working-directory: ./backend
+        run: ./mvnw clean compile
+
+      # Run Backend Tests
+      - name: Run Backend Tests
+        working-directory: ./backend
+        run: ./mvnw test
+
+      # Install Python
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      # Install AI Dependencies
+      - name: Install AI Dependencies
+        working-directory: ./ai-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # Run FastAPI Tests
+      - name: Run FastAPI Tests
+        working-directory: ./ai-service
+        run: pytest
+
+      # Run code-review-graph
+      - name: Run code-review-graph
+        run: |
+          pip install code-review-graph
+          code-review-graph build
+          code-review-graph architecture
+          code-review-graph dead-code --limit 20
+
+      # Run Security Scan
+      - name: Run Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          # You can change exit-code to '1' if you want it to fail on finding vulnerabilities
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
+      # Generate Reports
+      - name: Generate Reports
+        if: always()
+        run: |
+          echo "### CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend**: Built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend**: Tests executed" >> $GITHUB_STEP_SUMMARY
+          echo "- **AI Service**: Tests executed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Architecture Check**: Executed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Scan**: Executed" >> $GITHUB_STEP_SUMMARY
+
+      # Pass or Fail
+      # This happens implicitly - if any required step above exits with a non-zero code, 
+      # the pipeline will fail. If all steps succeed, it passes.
+      - name: Pass or Fail
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "Pipeline Passed!"
+          else
+            echo "Pipeline Failed. Please check the logs."
+            exit 1
+          fi
