@@ -1,0 +1,15 @@
+import { ReactNode } from "react";
+import { SiteHeader } from "@/components/landing/SiteHeader";
+import { SiteFooter } from "@/components/landing/SiteFooter";
+
+export default function LandingLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <SiteHeader />
+      <main className="flex-1">
+        {children}
+      </main>
+      <SiteFooter />
+    </div>
+  );
+}

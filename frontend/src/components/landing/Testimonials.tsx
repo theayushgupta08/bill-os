@@ -16,7 +16,7 @@ export function Testimonials() {
           {/* Testimonial 1 */}
           <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
             <div className="flex gap-1 mb-4">
-              {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-primary text-primary" />)}
+              {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
             </div>
             <p className="text-lg mb-6 text-foreground">
               "I used to spend 4 hours a day on GST filing and inventory tracking. BillOS reduced that to 15 minutes. The AI assistant is basically a free employee."
@@ -30,7 +30,7 @@ export function Testimonials() {
           {/* Testimonial 2 */}
           <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
             <div className="flex gap-1 mb-4">
-              {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-primary text-primary" />)}
+              {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
             </div>
             <p className="text-lg mb-6 text-foreground">
               "We switched from a legacy ERP that took months to learn. Our staff learned BillOS in 20 minutes. The UI is incredibly fast and intuitive."
@@ -44,7 +44,7 @@ export function Testimonials() {
           {/* Testimonial 3 */}
           <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
             <div className="flex gap-1 mb-4">
-              {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-primary text-primary" />)}
+              {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
             </div>
             <p className="text-lg mb-6 text-foreground">
               "The ability to generate an E-way bill directly from the invoice screen without switching portals is a game-changer for our logistics."

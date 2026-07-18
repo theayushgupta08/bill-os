@@ -11,7 +11,7 @@ import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
 export function SiteHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showAnnouncement, setShowAnnouncement] = useState(true);
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,34 +23,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <AnimatePresence>
-        {showAnnouncement && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground flex items-center justify-center gap-2 relative z-50"
-          >
-            <span className="hidden sm:inline">✨ Meet your new AI Business Assistant. Now available in Beta</span>
-            <span className="sm:hidden">✨ AI Assistant now in Beta</span>
-            <Link href="#ai" className="underline underline-offset-4 hover:text-white/80 transition-colors">
-              Learn more
-            </Link>
-            <button
-              onClick={() => setShowAnnouncement(false)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-white/20 rounded-full transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <header
-        className={`fixed top-0 w-full z-40 transition-all duration-300 ${
-          isScrolled || !showAnnouncement ? "top-0" : "top-[40px] sm:top-[36px]"
-        }`}
-      >
+      <header className="fixed top-0 w-full z-40 transition-all duration-300">
         <div
           className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 transition-all duration-300 ${
             isScrolled ? "py-2" : "py-4"

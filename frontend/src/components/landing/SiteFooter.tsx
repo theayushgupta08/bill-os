@@ -36,18 +36,18 @@ export function SiteFooter() {
           <div>
             <h4 className="font-semibold mb-4">Company</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">About</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Blog</Link></li>
+              <li><Link href="/about" className="hover:text-foreground transition-colors">About</Link></li>
               <li><Link href="#" className="hover:text-foreground transition-colors">Careers</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Contact</Link></li>
+              <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="font-semibold mb-4">Legal</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">SOC2 Compliance</Link></li>
+              <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
+              <li><Link href="/refund" className="hover:text-foreground transition-colors">Refund Policy</Link></li>
+              <li><Link href="/security" className="hover:text-foreground transition-colors">Security & Privacy</Link></li>
             </ul>
           </div>
         </div>
