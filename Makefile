@@ -22,7 +22,7 @@ status:
 # ==========================================
 # Backend (Spring Boot) Commands
 # ==========================================
-.PHONY: backend-build backend-clean backend-run backend-test
+.PHONY: backend-build backend-clean backend-run backend-test backend-format
 
 backend-build:
 	cd backend && mvnw.cmd clean install -DskipTests
@@ -36,10 +36,13 @@ backend-run:
 backend-test:
 	cd backend && mvnw.cmd test
 
+backend-format:
+	cd backend && mvnw.cmd spotless:apply
+
 # ==========================================
 # Frontend (Next.js) Commands
 # ==========================================
-.PHONY: frontend-install frontend-build frontend-clean frontend-run frontend-lint
+.PHONY: frontend-install frontend-build frontend-clean frontend-run frontend-lint frontend-format
 
 frontend-install:
 	cd frontend && pnpm install
@@ -57,10 +60,13 @@ frontend-run:
 frontend-lint:
 	cd frontend && pnpm lint
 
+frontend-format:
+	cd frontend && pnpm lint --fix
+
 # ==========================================
 # AI Service (FastAPI) Commands
 # ==========================================
-.PHONY: ai-install ai-clean ai-run ai-test ai-lint
+.PHONY: ai-install ai-clean ai-run ai-test ai-lint ai-format
 
 ai-install:
 	cd ai-service && if not exist venv python -m venv venv
@@ -80,10 +86,13 @@ ai-test:
 ai-lint:
 	cd ai-service && venv\Scripts\ruff check . && venv\Scripts\mypy .
 
+ai-format:
+	cd ai-service && venv\Scripts\ruff format .
+
 # ==========================================
 # Global Commands
 # ==========================================
-.PHONY: install build clean test run
+.PHONY: install build clean test run format
 
 install: frontend-install ai-install
 	cd backend && mvnw.cmd dependency:resolve
@@ -93,6 +102,8 @@ build: backend-build frontend-build
 clean: backend-clean frontend-clean ai-clean
 
 test: backend-test ai-test
+
+format: backend-format frontend-format ai-format
 
 run:
 	start "Backend" cmd /c "cd backend && mvnw.cmd spring-boot:run"

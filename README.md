@@ -71,19 +71,12 @@ If you prefer not to use `make run`, you can use the individual commands:
 This project uses the `spotless-maven-plugin` to automatically format Java code and remove unused imports. 
 The plugin is bound to the `process-sources` phase, meaning it will automatically format your code whenever you run `mvn compile` or `mvn test`.
 
-To manually format the code and remove unused imports without compiling, you can run:
+To manually format the codebase (which handles Java, Python, and TypeScript), run the global make command:
 
-**On Windows:**
-```powershell
-cd backend
-.\mvnw.cmd spotless:apply
-```
-
-**On macOS/Linux:**
 ```bash
-cd backend
-./mvnw spotless:apply
+make format
 ```
+You can also run service-specific format commands like `make backend-format`, `make frontend-format`, or `make ai-format`.
 
 ---
 
