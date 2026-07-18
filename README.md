@@ -42,53 +42,28 @@ The backend is configured to use a remote **Supabase PostgreSQL** instance.
 
 *(Note: The database schema is automatically managed by Flyway migrations on backend startup.)*
 
-### 3. Run the Backend (Spring Boot API)
-Open a terminal in the `backend` directory and run the Spring Boot application using the Maven wrapper:
-
-**On Windows:**
-```powershell
-cd backend
-.\mvnw.cmd spring-boot:run
-```
-
-**On macOS/Linux:**
+### 3. Install Dependencies
+Before running the services, install all required dependencies (this will set up the frontend and initialize the AI service `venv`):
 ```bash
-cd backend
-./mvnw spring-boot:run
+make install
 ```
-The API will be available at `http://localhost:8080`.
 
-### 4. Run the Frontend (Next.js)
-Open a new terminal in the `frontend` directory, install dependencies, and start the development server:
-
+### 4. Run the Application
+You can start the Backend, Frontend, and AI Service simultaneously using the global Make command. This will open separate terminal windows for each service so you can monitor their logs individually:
 ```bash
-cd frontend
-pnpm install
-pnpm dev
+make run
 ```
-The web application will be available at `http://localhost:3000`.
+- **Backend API**: `http://localhost:8080`
+- **Frontend App**: `http://localhost:3000`
+- **AI Service**: `http://localhost:8000`
 
-### 5. Run the AI Service (FastAPI)
-Open a new terminal in the `ai-service` directory, set up a virtual environment, and start the API:
+### Running Services Manually
+If you prefer not to use `make run`, you can use the individual commands:
+- `make backend-run`
+- `make frontend-run`
+- `make ai-run`
 
-```bash
-cd ai-service
-
-# Create and activate a virtual environment
-python -m venv .venv
-
-# On Windows
-.venv\Scripts\activate
-# On macOS/Linux
-# source .venv/bin/activate
-
-# Install dependencies (if you have a requirements file, otherwise install manually)
-pip install fastapi uvicorn pydantic
-
-# Run the server
-uvicorn app.main:app --reload --port 8000
-```
-The AI Service will be available at `http://localhost:8000`.
+*(Note: The AI Service uses a Python virtual environment located at `ai-service/venv`. The make commands handle this automatically.)*
 
 ---
 

@@ -18,3 +18,83 @@ check-dead-code:
 status:
 	@echo "Graph status:"
 	@code-review-graph status
+
+# ==========================================
+# Backend (Spring Boot) Commands
+# ==========================================
+.PHONY: backend-build backend-clean backend-run backend-test
+
+backend-build:
+	cd backend && mvnw.cmd clean install -DskipTests
+
+backend-clean:
+	cd backend && mvnw.cmd clean
+
+backend-run:
+	cd backend && mvnw.cmd spring-boot:run
+
+backend-test:
+	cd backend && mvnw.cmd test
+
+# ==========================================
+# Frontend (Next.js) Commands
+# ==========================================
+.PHONY: frontend-install frontend-build frontend-clean frontend-run frontend-lint
+
+frontend-install:
+	cd frontend && pnpm install
+
+frontend-build:
+	cd frontend && pnpm build
+
+frontend-clean:
+	if exist frontend\.next rmdir /s /q frontend\.next
+	if exist frontend\node_modules rmdir /s /q frontend\node_modules
+
+frontend-run:
+	cd frontend && pnpm dev
+
+frontend-lint:
+	cd frontend && pnpm lint
+
+# ==========================================
+# AI Service (FastAPI) Commands
+# ==========================================
+.PHONY: ai-install ai-clean ai-run ai-test ai-lint
+
+ai-install:
+	cd ai-service && if not exist venv python -m venv venv
+	cd ai-service && venv\Scripts\pip install -e .[dev]
+
+ai-clean:
+	if exist ai-service\__pycache__ rmdir /s /q ai-service\__pycache__
+	if exist ai-service\.pytest_cache rmdir /s /q ai-service\.pytest_cache
+	if exist ai-service\venv rmdir /s /q ai-service\venv
+
+ai-run:
+	cd ai-service && venv\Scripts\uvicorn app.main:app --reload
+
+ai-test:
+	cd ai-service && venv\Scripts\pytest
+
+ai-lint:
+	cd ai-service && venv\Scripts\ruff check . && venv\Scripts\mypy .
+
+# ==========================================
+# Global Commands
+# ==========================================
+.PHONY: install build clean test run
+
+install: frontend-install ai-install
+	cd backend && mvnw.cmd dependency:resolve
+
+build: backend-build frontend-build
+
+clean: backend-clean frontend-clean ai-clean
+
+test: backend-test ai-test
+
+run:
+	start "Backend" cmd /c "cd backend && mvnw.cmd spring-boot:run"
+	start "Frontend" cmd /c "cd frontend && pnpm dev"
+	start "AI Service" cmd /c "cd ai-service && venv\Scripts\uvicorn app.main:app --reload"
