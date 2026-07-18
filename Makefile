@@ -31,6 +31,7 @@ backend-clean:
 	cd backend && mvnw.cmd clean
 
 backend-run:
+	cmd /c start http://localhost:8080/docs
 	cd backend && mvnw.cmd spring-boot:run
 
 backend-test:
@@ -55,6 +56,7 @@ frontend-clean:
 	cmd /c "if exist frontend\node_modules rmdir /s /q frontend\node_modules"
 
 frontend-run:
+	cmd /c start http://localhost:3000
 	cd frontend && pnpm dev
 
 frontend-lint:
@@ -69,25 +71,26 @@ frontend-format:
 .PHONY: ai-install ai-clean ai-run ai-test ai-lint ai-format
 
 ai-install:
-	cd ai-service && cmd /c "if not exist venv python -m venv venv"
-	cd ai-service && venv\Scripts\pip install -e .[dev]
+	cd ai-service && cmd /c "if not exist .venv python -m venv .venv"
+	cd ai-service && .\.venv\Scripts\pip install -e .[dev]
 
 ai-clean:
 	cmd /c "if exist ai-service\__pycache__ rmdir /s /q ai-service\__pycache__"
 	cmd /c "if exist ai-service\.pytest_cache rmdir /s /q ai-service\.pytest_cache"
-	cmd /c "if exist ai-service\venv rmdir /s /q ai-service\venv"
+	cmd /c "if exist ai-service\.venv rmdir /s /q ai-service\.venv"
 
 ai-run:
-	cd ai-service && venv\Scripts\uvicorn app.main:app --reload
+	cmd /c start http://localhost:8000/docs
+	cd ai-service && .\.venv\Scripts\uvicorn app.main:app --reload
 
 ai-test:
-	cd ai-service && venv\Scripts\pytest
+	cd ai-service && .\.venv\Scripts\pytest
 
 ai-lint:
-	cd ai-service && venv\Scripts\ruff check . && venv\Scripts\mypy .
+	cd ai-service && .\.venv\Scripts\ruff check . && .\.venv\Scripts\mypy .
 
 ai-format:
-	cd ai-service && venv\Scripts\ruff format .
+	cd ai-service && .\.venv\Scripts\ruff format .
 
 # ==========================================
 # Global Commands
@@ -106,6 +109,7 @@ test: backend-test ai-test
 format: backend-format frontend-format ai-format
 
 run:
-	cmd /c start "Backend" cmd /k "cd backend && .\mvnw.cmd spring-boot:run"
-	cmd /c start "Frontend" cmd /k "cd frontend && pnpm dev"
-	cmd /c start "AI Service" cmd /k "cd ai-service && .\venv\Scripts\uvicorn app.main:app --reload"
+	@echo "On Windows, running multiple servers headlessly via Make is problematic. Please open 3 separate terminal tabs and run:"
+	@echo "  make backend-run"
+	@echo "  make frontend-run"
+	@echo "  make ai-run"

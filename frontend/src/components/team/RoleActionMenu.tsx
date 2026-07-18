@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import apiClient from '@/lib/api-client';
+import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 interface TeamMember {
@@ -44,7 +44,7 @@ export function RoleActionMenu({
     if (newRole === member.role) return;
     setLoading(true);
     try {
-      await apiClient.put(`/team/${member.userId}/role`, { role: newRole });
+      await api.put(`/team/${member.userId}/role`, { role: newRole });
       toast.success(`Role updated to ${newRole}`);
       onRefresh();
     } catch (err: any) {
@@ -58,7 +58,7 @@ export function RoleActionMenu({
     if (!confirm('Are you sure you want to remove this user from the organization?')) return;
     setLoading(true);
     try {
-      await apiClient.delete(`/team/${member.userId}`);
+      await api.delete(`/team/${member.userId}`);
       toast.success('User removed from organization');
       onRefresh();
     } catch (err: any) {

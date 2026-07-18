@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import apiClient from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,7 +19,7 @@ export default function TaxRatesPage() {
 
   const loadTaxes = async () => {
     try {
-      const data: any = await apiClient.get("/tax-rates");
+      const data: any = await api.get("/tax-rates");
       setTaxes(data);
     } catch (error) {
       console.error("Failed to load taxes", error);
@@ -31,7 +31,7 @@ export default function TaxRatesPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiClient.post("/tax-rates", { name, rate: Number(rate), isActive: true });
+      await api.post("/tax-rates", { name, rate: Number(rate), isActive: true });
       setName("");
       setRate("");
       loadTaxes();

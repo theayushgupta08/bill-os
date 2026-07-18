@@ -76,9 +76,25 @@ build/
 *.tsbuildinfo
 
 # =========================
+# Python & AI Service
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+env/
+.mypy_cache/
+.ruff_cache/
+.env
+
+# =========================
 # Environment Variables
 # =========================
-.env
 .env.local
 .env.development.local
 .env.test.local

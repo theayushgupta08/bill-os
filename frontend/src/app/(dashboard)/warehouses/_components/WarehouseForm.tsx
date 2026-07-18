@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import apiClient from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +32,7 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
     const init = async () => {
       if (id) {
         try {
-          const data: any = await apiClient.get(`/warehouses/${id}`);
+          const data: any = await api.get(`/warehouses/${id}`);
           setFormData({
             name: data.name || "",
             code: data.code || "",
@@ -62,9 +62,9 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
 
     try {
       if (id) {
-        await apiClient.put(`/warehouses/${id}`, formData);
+        await api.put(`/warehouses/${id}`, formData);
       } else {
-        await apiClient.post("/warehouses", formData);
+        await api.post("/warehouses", formData);
       }
       
       router.push("/warehouses");

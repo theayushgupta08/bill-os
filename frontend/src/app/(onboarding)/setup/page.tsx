@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import apiClient from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 
 export default function SetupOrganizationPage() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function SetupOrganizationPage() {
     setLoading(true);
     try {
       // For now, we assume the backend will return the created org with its ID
-      const response: any = await apiClient.post("/organizations", formData);
+      const response: any = await api.post("/organizations", formData);
       const orgId = response.data?.id || response.id;
       
       // Store the active organization ID in localStorage (or a Zustand store)

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import apiClient from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface SupplierFormProps {
@@ -32,7 +32,7 @@ export default function SupplierForm({ supplierId }: SupplierFormProps) {
   const { data: supplier, isLoading: isFetching } = useQuery({
     queryKey: ["supplier", supplierId],
     queryFn: async () => {
-      const data: any = await apiClient.get(`/suppliers/${supplierId}`);
+      const data: any = await api.get(`/suppliers/${supplierId}`);
       return data;
     },
     enabled: !!supplierId,
@@ -58,9 +58,9 @@ export default function SupplierForm({ supplierId }: SupplierFormProps) {
   const saveMutation = useMutation({
     mutationFn: (data: typeof formData) => {
       if (supplierId) {
-        return apiClient.put(`/suppliers/${supplierId}`, data);
+        return api.put(`/suppliers/${supplierId}`, data);
       } else {
-        return apiClient.post("/suppliers", data);
+        return api.post("/suppliers", data);
       }
     },
     onSuccess: () => {

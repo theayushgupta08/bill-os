@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import apiClient from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileJson } from "lucide-react";
@@ -17,7 +17,7 @@ export default function GstReportsPage() {
 
   const loadHsnSummary = async () => {
     try {
-      const data: any = await apiClient.get("/reports/gst/hsn-summary");
+      const data: any = await api.get("/reports/gst/hsn-summary");
       setHsnSummary(data);
     } catch (error) {
       console.error("Failed to load HSN summary", error);
@@ -29,7 +29,7 @@ export default function GstReportsPage() {
   const downloadEInvoiceJson = async (invoiceId: string) => {
     setDownloadingJson(true);
     try {
-      const res: any = await apiClient.get(`/reports/gst/einvoice/${invoiceId}`, { responseType: 'blob' });
+      const res: any = await api.get(`/reports/gst/einvoice/${invoiceId}`, { responseType: 'blob' });
       const blob = new Blob([res]);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

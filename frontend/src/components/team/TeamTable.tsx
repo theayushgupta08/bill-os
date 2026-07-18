@@ -12,7 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PageLoader } from '@/components/ui/loader';
-import apiClient from '@/lib/api-client';
+import { api } from '@/lib/api-client';
 import { RoleActionMenu } from './RoleActionMenu';
 import { InviteUserModal } from './InviteUserModal';
 import { toast } from 'sonner';
@@ -39,7 +39,7 @@ export function TeamTable() {
   const fetchTeam = async () => {
     try {
       setLoading(true);
-      const data: any = await apiClient.get('/team');
+      const data: any = await api.get('/team');
       setMembers(data);
     } catch (err: any) {
       toast.error('Failed to load team members');

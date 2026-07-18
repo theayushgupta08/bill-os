@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import apiClient from '@/lib/api-client';
+import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageLoader } from '@/components/ui/loader';
@@ -43,7 +43,7 @@ function AcceptInviteContent() {
     setError('');
 
     try {
-      await apiClient.post(`/team/accept-invite?token=${token}`);
+      await api.post(`/team/accept-invite?token=${token}`);
       setSuccess(true);
       
       // Update active org if needed, or just redirect to dashboard

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import apiClient from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ProductFormProps {
@@ -30,7 +30,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
   const { data: categories = [] } = useQuery({
     queryKey: ["product-categories"],
     queryFn: async () => {
-      const data: any = await apiClient.get("/product-categories");
+      const data: any = await api.get("/product-categories");
       return data;
     },
   });
@@ -38,7 +38,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
   const { data: product, isLoading: isFetching } = useQuery({
     queryKey: ["product", productId],
     queryFn: async () => {
-      const data: any = await apiClient.get(`/products/${productId}`);
+      const data: any = await api.get(`/products/${productId}`);
       return data;
     },
     enabled: !!productId,
@@ -66,9 +66,9 @@ export default function ProductForm({ productId }: ProductFormProps) {
         categoryId: data.categoryId || null,
       };
       if (productId) {
-        return apiClient.put(`/products/${productId}`, payload);
+        return api.put(`/products/${productId}`, payload);
       } else {
-        return apiClient.post("/products", payload);
+        return api.post("/products", payload);
       }
     },
     onSuccess: () => {

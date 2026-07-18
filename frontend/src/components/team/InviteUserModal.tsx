@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import apiClient from '@/lib/api-client';
+import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 export function InviteUserModal({ onRefresh }: { onRefresh: () => void }) {
@@ -37,7 +37,7 @@ export function InviteUserModal({ onRefresh }: { onRefresh: () => void }) {
     setLoading(true);
 
     try {
-      await apiClient.post('/team/invite', formData);
+      await api.post('/team/invite', formData);
       
       toast.success('Invitation sent successfully!');
       setOpen(false);
