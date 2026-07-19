@@ -8,6 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { HelpCircle } from "lucide-react";
+
+function Tooltip({ text }: { text: string }) {
+  return (
+    <div className="group relative inline-block ml-1.5 align-middle cursor-help">
+      <HelpCircle className="w-3.5 h-3.5 text-slate-500 hover:text-indigo-400 transition-colors" />
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 bg-slate-950 text-slate-200 text-xs rounded-lg shadow-xl border border-slate-800 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150 z-50 font-normal">
+        {text}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-950"></div>
+      </div>
+    </div>
+  );
+}
 
 export function TaxSettingsForm() {
   const queryClient = useQueryClient();
@@ -88,7 +101,10 @@ export function TaxSettingsForm() {
           <CardContent className="space-y-6">
             
             <div className="space-y-2">
-              <Label htmlFor="defaultGstRate">Default GST Rate (%)</Label>
+              <div className="flex items-center">
+                <Label htmlFor="defaultGstRate">Default GST Rate (%)</Label>
+                <Tooltip text="The default percentage rate applied to items on invoices if no specific rate is configured." />
+              </div>
               <Input 
                 id="defaultGstRate" 
                 name="defaultGstRate" 
@@ -107,9 +123,12 @@ export function TaxSettingsForm() {
                 checked={settings.taxInclusivePricing || false}
                 onCheckedChange={(checked) => setSettings((p:any) => ({...p, taxInclusivePricing: checked}))}
               />
-              <Label htmlFor="taxInclusivePricing" className="font-normal cursor-pointer">
-                Tax Inclusive Pricing by Default
-              </Label>
+              <div className="flex items-center">
+                <Label htmlFor="taxInclusivePricing" className="font-normal cursor-pointer">
+                  Tax Inclusive Pricing by Default
+                </Label>
+                <Tooltip text="When checked, entered prices on sales/purchases include the tax amount by default." />
+              </div>
             </div>
 
             <div className="flex justify-end pt-4 border-t">

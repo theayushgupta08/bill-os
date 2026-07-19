@@ -7,6 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { HelpCircle } from "lucide-react";
+
+function Tooltip({ text }: { text: string }) {
+  return (
+    <div className="group relative inline-block ml-1.5 align-middle cursor-help">
+      <HelpCircle className="w-3.5 h-3.5 text-slate-500 hover:text-indigo-400 transition-colors" />
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 bg-slate-950 text-slate-200 text-xs rounded-lg shadow-xl border border-slate-800 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150 z-50 font-normal">
+        {text}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-950"></div>
+      </div>
+    </div>
+  );
+}
 
 export function PreferencesSettingsForm() {
   const queryClient = useQueryClient();
@@ -83,7 +96,10 @@ export function PreferencesSettingsForm() {
           <CardContent className="space-y-6">
             
             <div className="space-y-2">
-              <Label htmlFor="theme">Theme</Label>
+              <div className="flex items-center">
+                <Label htmlFor="theme">Theme</Label>
+                <Tooltip text="Choose the appearance theme for your billOS interface (Light, Dark, or sync with System preferences)." />
+              </div>
               <Select 
                 value={settings.theme || "light"} 
                 onValueChange={(val: any) => handleSelectChange("theme", val)}
@@ -100,7 +116,10 @@ export function PreferencesSettingsForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="language">Language</Label>
+              <div className="flex items-center">
+                <Label htmlFor="language">Language</Label>
+                <Tooltip text="Select the primary language used for the interface text, tooltips, and default templates." />
+              </div>
               <Select 
                 value={settings.language || "en"} 
                 onValueChange={(val: any) => handleSelectChange("language", val)}
@@ -117,7 +136,10 @@ export function PreferencesSettingsForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
+              <div className="flex items-center">
+                <Label htmlFor="timezone">Timezone</Label>
+                <Tooltip text="The default timezone for timestamps on created records, audit logs, and invoice dates." />
+              </div>
               <Select 
                 value={settings.timezone || "Asia/Kolkata"} 
                 onValueChange={(val: any) => handleSelectChange("timezone", val)}
@@ -134,7 +156,10 @@ export function PreferencesSettingsForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dateFormat">Date Format</Label>
+              <div className="flex items-center">
+                <Label htmlFor="dateFormat">Date Format</Label>
+                <Tooltip text="Select how dates should be formatted in all tables, invoices, and reports." />
+              </div>
               <Select 
                 value={settings.dateFormat || "DD/MM/YYYY"} 
                 onValueChange={(val: any) => handleSelectChange("dateFormat", val)}
