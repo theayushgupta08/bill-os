@@ -27,7 +27,7 @@ export function DocumentHeading({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const Tag = `h${level}` as React.ElementType;
 
   return (
     <Tag

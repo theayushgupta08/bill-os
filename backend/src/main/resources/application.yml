@@ -49,8 +49,14 @@ app:
       secret: ${JWT_SECRET:supersecretkeythatisverylongandsecurefortestingonlydoinproduction}
       expiration: 86400000 # 1 day in milliseconds
       refresh-expiration: 604800000 # 7 days in milliseconds
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:3001
+
 
 logging:
   level:
-    org.springframework.security: INFO
+    org.springframework.security: DEBUG
+    org.springframework.web.cors: DEBUG
     com.billos: DEBUG

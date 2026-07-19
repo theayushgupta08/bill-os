@@ -155,7 +155,7 @@ export default function PricingPage() {
           <h2 className="text-3xl font-bold text-foreground mb-4">Frequently Asked Questions</h2>
         </div>
 
-        <Accordion type="single" collapsible className="w-full">
+        <Accordion className="w-full">
           {faqs.map((faq, i) => (
             <AccordionItem key={i} value={`item-${i}`} className="border-border/50">
               <AccordionTrigger className="text-left text-lg font-semibold hover:text-primary transition-colors">

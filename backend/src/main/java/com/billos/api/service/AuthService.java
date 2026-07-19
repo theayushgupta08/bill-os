@@ -33,7 +33,7 @@ public class AuthService {
     @Transactional
     public String register(String firstName, String lastName, String email, String password, String phone) {
         if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException("Email is already taken!");
+            throw new RuntimeException("Email is already exists. Please Login!");
         }
 
         User user = new User();
