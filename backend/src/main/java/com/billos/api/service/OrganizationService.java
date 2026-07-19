@@ -30,8 +30,9 @@ public class OrganizationService {
     private final UserRepository userRepository;
     private final AccountService accountService;
     private final WarehouseService warehouseService;
+    private final OrganizationSeeder organizationSeeder;
 
-    @Transactional
+    // Removed @Transactional so that the Organization is committed before the seeder starts
     public Organization createOrganization(@NonNull Organization orgDetails) {
         // Get current user
         UserPrincipal principal = (UserPrincipal)
@@ -39,26 +40,26 @@ public class OrganizationService {
         User currentUser =
                 userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Save Organization
-        Organization savedOrg = organizationRepository.save(orgDetails);
+        // Save and flush Organization immediately so it's visible to the seeder's new transaction
+        Organization savedOrg = organizationRepository.saveAndFlush(orgDetails);
 
-        // Assign OWNER role to the creator
-        UserOrgRole userOrgRole = new UserOrgRole();
-        userOrgRole.setUser(currentUser);
-        userOrgRole.setOrganizationId(savedOrg.getId());
-        userOrgRole.setRole("OWNER");
-        userOrgRoleRepository.save(userOrgRole);
-
-        // Seed default Chart of Accounts for the new organization
-        accountService.seedDefaultAccounts(savedOrg.getId());
-
-        // Seed default Main Warehouse
-        warehouseService.seedDefaultWarehouse(savedOrg.getId());
-
-        // Seed default Organization Settings
-        OrganizationSettings defaultSettings = new OrganizationSettings();
-        defaultSettings.setOrganizationId(savedOrg.getId());
-        organizationSettingsRepository.save(defaultSettings);
+        String previousTenant = com.billos.api.tenant.TenantContext.getCurrentTenant();
+        try {
+            com.billos.api.tenant.TenantContext.setCurrentTenant(
+                    savedOrg.getId().toString());
+            // Seed default entities in a new transaction so the tenant context is freshly resolved
+            organizationSeeder.seedNewOrganization(savedOrg.getId(), currentUser);
+        } catch (Exception e) {
+            // Rollback the organization creation manually since we aren't in a single transaction
+            organizationRepository.delete(savedOrg);
+            throw e;
+        } finally {
+            if (previousTenant != null) {
+                com.billos.api.tenant.TenantContext.setCurrentTenant(previousTenant);
+            } else {
+                com.billos.api.tenant.TenantContext.clear();
+            }
+        }
 
         return savedOrg;
     }
