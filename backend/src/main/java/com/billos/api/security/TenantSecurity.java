@@ -17,7 +17,7 @@ public class TenantSecurity {
 
     private final UserOrgRoleRepository userOrgRoleRepository;
 
-    private static final List<String> ROLE_HIERARCHY = List.of("OWNER", "ADMIN", "MANAGER", "USER");
+    private static final List<String> ROLE_HIERARCHY = List.of("OWNER", "ADMIN", "MANAGER", "USER", "VIEWER");
 
     public boolean hasRole(String requiredRole) {
         String currentTenant = TenantContext.getCurrentTenant();
@@ -53,6 +53,6 @@ public class TenantSecurity {
     }
 
     public boolean isMember() {
-        return hasRole("USER"); // Lowest role implies membership
+        return hasRole("VIEWER"); // Lowest role implies membership
     }
 }

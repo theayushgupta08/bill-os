@@ -25,6 +25,7 @@ import {
   UserCheck,
   UserPlus,
   Filter,
+  UserX,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -34,7 +35,7 @@ interface TeamMember {
   firstName?: string;
   lastName?: string;
   role: string;
-  status: string;
+  status: string; // ACTIVE, INACTIVE, or INVITED
 }
 
 export function TeamTable() {
@@ -42,16 +43,28 @@ export function TeamTable() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
-
-  // We assume the user has admin/owner rights to see role action dropdowns.
-  // In reality, this should come from auth state or userOrgRole endpoints.
-  const currentUserRole = "ADMIN";
+  const [currentUserRole, setCurrentUserRole] = useState<string>("USER");
 
   const fetchTeam = async () => {
     try {
       setLoading(true);
       const data: any = await api.get("/team");
       setMembers(data);
+
+      // Resolve current user's role from token
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const email = payload.sub; // subject is email
+          const currentMember = data.find((m: any) => m.email.toLowerCase() === email.toLowerCase());
+          if (currentMember) {
+            setCurrentUserRole(currentMember.role);
+          }
+        } catch (e) {
+          console.error("Failed to decode token for role resolution", e);
+        }
+      }
     } catch (err: any) {
       toast.error("Failed to load team members");
     } finally {
@@ -141,6 +154,7 @@ export function TeamTable() {
   const totalCount = members.length;
   const activeCount = members.filter((m) => m.status === "ACTIVE").length;
   const pendingCount = members.filter((m) => m.status === "INVITED").length;
+  const inactiveCount = members.filter((m) => m.status === "INACTIVE").length;
 
   if (loading) {
     return (
@@ -153,7 +167,7 @@ export function TeamTable() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Banner / Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm">
           <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-lg">
             <Users className="w-5 h-5" />
@@ -172,9 +186,21 @@ export function TeamTable() {
           </div>
           <div>
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-              Active Members
+              Active
             </p>
             <p className="text-2xl font-bold text-white">{activeCount}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm">
+          <div className="p-3 bg-rose-500/10 text-rose-450 rounded-lg">
+            <UserX className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+              Inactive
+            </p>
+            <p className="text-2xl font-bold text-rose-400">{inactiveCount}</p>
           </div>
         </div>
 
@@ -195,10 +221,10 @@ export function TeamTable() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight">
-            Team Settings
+            Team Management
           </h2>
           <p className="text-slate-400 text-sm">
-            Manage your organization's members, assign roles, and track active statuses.
+            Manage your organization's members, assign roles, and toggle user active statuses.
           </p>
         </div>
         <div>
@@ -293,9 +319,14 @@ export function TeamTable() {
                   <TableCell>{getRoleBadge(member.role)}</TableCell>
                   <TableCell>
                     {member.status === "INVITED" ? (
-                      <span className="inline-flex items-center text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>
+                      <span className="inline-flex items-center text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
                         Invited
+                      </span>
+                    ) : member.status === "INACTIVE" ? (
+                      <span className="inline-flex items-center text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
+                        Inactive
                       </span>
                     ) : (
                       <span className="inline-flex items-center text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">

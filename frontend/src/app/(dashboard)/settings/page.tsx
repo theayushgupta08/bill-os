@@ -36,16 +36,8 @@ const settingsSections = [
     hoverBg: "hover:bg-emerald-500/10",
   },
   {
-    title: "Tax Settings",
-    description: "Configure tax inclusive/exclusive pricing and default tax rules.",
-    href: "/settings/tax",
-    icon: Receipt,
-    color: "text-blue-400 border-blue-500/20 bg-blue-500/5",
-    hoverBg: "hover:bg-blue-500/10",
-  },
-  {
-    title: "Tax Rates",
-    description: "Define custom tax rate codes (GST/VAT/Sales Tax) for products and services.",
+    title: "Tax Settings & Rates",
+    description: "Configure default tax behaviors (e.g. inclusive pricing) and manage master tax rate codes.",
     href: "/settings/taxes",
     icon: Percent,
     color: "text-amber-400 border-amber-500/20 bg-amber-500/5",

@@ -17,14 +17,15 @@ public class UserPrincipal implements UserDetails {
     private final String email;
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;
+    private final boolean enabled;
 
     public static UserPrincipal create(User user) {
         return new UserPrincipal(
                 user.getId(),
                 user.getEmail(),
                 user.getPasswordHash(),
-                Collections.emptyList() // Roles are managed per organization, not globally
-                );
+                Collections.emptyList(), // Roles are managed per organization, not globally
+                Boolean.TRUE.equals(user.getIsActive()));
     }
 
     @Override
@@ -59,6 +60,6 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 }

@@ -1,5 +1,5 @@
-import { TaxSettingsForm } from "@/features/settings/components/tax-settings-form";
+import { redirect } from "next/navigation";
 
-export default function TaxSettingsPage() {
-  return <TaxSettingsForm />;
+export default function TaxSettingsRedirectPage() {
+  redirect("/settings/taxes");
 }

@@ -112,7 +112,7 @@ class AuthServiceTest {
         // Act & Assert
         assertThatThrownBy(() -> authService.register("Jane", "Doe", "taken@example.com", "pass", null))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Email is already taken");
+                .hasMessageContaining("Email is already exists");
 
         verify(userRepository, never()).save(any(User.class));
     }

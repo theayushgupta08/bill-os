@@ -3,9 +3,7 @@ package com.billos.api.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.billos.api.entity.Organization;
 import com.billos.api.entity.User;
@@ -48,6 +46,9 @@ class OrganizationServiceTest {
 
     @Mock
     private WarehouseService warehouseService;
+
+    @Mock
+    private OrganizationSeeder organizationSeeder;
 
     @Mock
     private OrganizationSettingsRepository organizationSettingsRepository;
@@ -98,8 +99,8 @@ class OrganizationServiceTest {
         savedOrg.setGstin("29ABCDE1234F1Z5");
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(currentUser));
-        when(organizationRepository.save(orgInput)).thenReturn(savedOrg);
-        when(userOrgRoleRepository.save(any(UserOrgRole.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(organizationRepository.saveAndFlush(orgInput)).thenReturn(savedOrg);
+        doNothing().when(organizationSeeder).seedNewOrganization(any(UUID.class), any(User.class));
 
         // Act
         Organization result = organizationService.createOrganization(orgInput);
@@ -108,12 +109,7 @@ class OrganizationServiceTest {
         assertThat(result.getId()).isEqualTo(orgId);
         assertThat(result.getName()).isEqualTo("Acme Corp");
 
-        verify(userOrgRoleRepository).save(argThat(role -> {
-            assertThat(role.getUser()).isEqualTo(currentUser);
-            assertThat(role.getOrganizationId()).isEqualTo(orgId);
-            assertThat(role.getRole()).isEqualTo("OWNER");
-            return true;
-        }));
+        verify(organizationSeeder).seedNewOrganization(orgId, currentUser);
     }
 
     @Test

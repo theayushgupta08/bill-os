@@ -50,7 +50,7 @@ public class TeamService {
                             user.getFirstName(),
                             user.getLastName(),
                             role.getRole(),
-                            "ACTIVE"));
+                            Boolean.TRUE.equals(user.getIsActive()) ? "ACTIVE" : "INACTIVE"));
                 }
             }
         }
@@ -184,5 +184,51 @@ public class TeamService {
         }
 
         userOrgRoleRepository.delete(role);
+    }
+
+    @Transactional
+    public void toggleUserStatus(UUID targetUserId, boolean active) {
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+
+        // Get caller info
+        UserPrincipal principal = (UserPrincipal)
+                SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        UUID callerId = principal.getId();
+
+        UserOrgRole callerOrgRole = userOrgRoleRepository
+                .findByUserIdAndOrganizationId(callerId, orgId)
+                .orElseThrow(() -> new RuntimeException("Caller is not a member of this organization"));
+
+        UserOrgRole targetOrgRole = userOrgRoleRepository
+                .findByUserIdAndOrganizationId(targetUserId, orgId)
+                .orElseThrow(() -> new RuntimeException("Target user is not a member of this organization"));
+
+        List<String> hierarchy = List.of("OWNER", "ADMIN", "MANAGER", "USER", "VIEWER");
+
+        String callerRole = callerOrgRole.getRole();
+        String targetRole = targetOrgRole.getRole();
+
+        int callerLevel = hierarchy.indexOf(callerRole);
+        int targetLevel = hierarchy.indexOf(targetRole);
+
+        if (callerLevel == -1 || targetLevel == -1) {
+            throw new RuntimeException("Invalid role found");
+        }
+
+        // Only OWNER and ADMIN can perform toggles
+        if (!"OWNER".equals(callerRole) && !"ADMIN".equals(callerRole)) {
+            throw new RuntimeException("Only Owner and Admin have permission to toggle user status");
+        }
+
+        // Can only toggle strictly lower roles
+        if (callerLevel >= targetLevel) {
+            throw new RuntimeException("You do not have permission to change status of user with equal or higher role");
+        }
+
+        User targetUser =
+                userRepository.findById(targetUserId).orElseThrow(() -> new RuntimeException("User not found"));
+
+        targetUser.setIsActive(active);
+        userRepository.save(targetUser);
     }
 }

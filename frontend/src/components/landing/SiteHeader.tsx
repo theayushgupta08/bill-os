@@ -7,11 +7,31 @@ import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/config";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
+import { api } from "@/lib/api-client";
 
 export function SiteHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("");
 
+  const getEmailFromToken = (token: string): string | null => {
+    try {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        window
+          .atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      const payload = JSON.parse(jsonPayload);
+      return payload.sub || null;
+    } catch {
+      return null;
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -20,6 +40,29 @@ export function SiteHeader() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      setIsLoggedIn(!!token);
+      if (token) {
+        const email = getEmailFromToken(token);
+        if (email) {
+          const prefix = email.split("@")[0];
+          setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
+          
+          api.get("/team").then((res: any) => {
+            const current = res.find(
+              (m: any) => m.email.toLowerCase() === email.toLowerCase()
+            );
+            if (current && current.firstName) {
+              setUserName(`${current.firstName} ${current.lastName || ""}`.trim());
+            }
+          }).catch(() => {});
+        }
+      }
+    }
+  }, [isLoggedIn]);
 
   return (
     <>
@@ -122,12 +165,28 @@ export function SiteHeader() {
             </div>
 
             <div className="hidden md:flex items-center gap-4">
-              <Link prefetch={false} href="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Log in
-              </Link>
-              <Button asChild className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
-                <Link prefetch={false} href="/register">Start Free Trial</Link>
-              </Button>
+              {isLoggedIn ? (
+                <>
+                  <Link prefetch={false} href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                    Dashboard
+                  </Link>
+                  <Button asChild className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all gap-2">
+                    <Link prefetch={false} href="/dashboard">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="7" r="4"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/></svg>
+                      {userName || "Dashboard"}
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link prefetch={false} href="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                    Log in
+                  </Link>
+                  <Button asChild className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
+                    <Link prefetch={false} href="/register">Start Free Trial</Link>
+                  </Button>
+                </>
+              )}
             </div>
 
             <button
@@ -153,12 +212,22 @@ export function SiteHeader() {
               <Link href="#product" onClick={() => setIsMobileMenuOpen(false)}>Product</Link>
               <Link href="#solutions" onClick={() => setIsMobileMenuOpen(false)}>Solutions</Link>
               <Link href="/pricing" onClick={() => setIsMobileMenuOpen(false)}>Pricing</Link>
-              <Link href="/login" className="text-muted-foreground" onClick={() => setIsMobileMenuOpen(false)}>Log in</Link>
+              {isLoggedIn ? (
+                <Link href="/dashboard" className="text-primary font-bold" onClick={() => setIsMobileMenuOpen(false)}>Dashboard</Link>
+              ) : (
+                <Link href="/login" className="text-muted-foreground" onClick={() => setIsMobileMenuOpen(false)}>Log in</Link>
+              )}
             </nav>
             <div className="pt-6 border-t border-border">
-              <Button asChild className="w-full rounded-full text-lg h-14" onClick={() => setIsMobileMenuOpen(false)}>
-                <Link href="/register">Start Free Trial <ArrowRight className="ml-2 h-5 w-5" /></Link>
-              </Button>
+              {isLoggedIn ? (
+                <Button asChild className="w-full rounded-full text-lg h-14" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="/dashboard">Go to Dashboard ({userName}) <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                </Button>
+              ) : (
+                <Button asChild className="w-full rounded-full text-lg h-14" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="/register">Start Free Trial <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                </Button>
+              )}
             </div>
           </motion.div>
         )}

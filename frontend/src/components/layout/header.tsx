@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -21,6 +22,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -32,6 +34,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useOrganization, getOrgInitials, getOrgGradient } from "@/lib/use-organization";
+import { api } from "@/lib/api-client";
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -61,6 +64,7 @@ const ROUTE_LABELS: Record<string, string> = {
   settings: "Settings",
   organization: "Organization",
   tax: "Tax Settings",
+  taxes: "Tax Settings",
   invoice: "Invoice Settings",
   preferences: "Preferences",
   new: "New",
@@ -74,9 +78,50 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: org } = useOrganization();
+  const [userName, setUserName] = useState("");
 
   const orgInitials = getOrgInitials(org?.name);
   const orgGradient = getOrgGradient(org?.name);
+
+  const getEmailFromToken = (token: string): string | null => {
+    try {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        window
+          .atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      const payload = JSON.parse(jsonPayload);
+      return payload.sub || null;
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const email = getEmailFromToken(token);
+        if (email) {
+          const prefix = email.split("@")[0];
+          setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
+          
+          api.get("/team").then((res: any) => {
+            const current = res.find(
+              (m: any) => m.email.toLowerCase() === email.toLowerCase()
+            );
+            if (current && current.firstName) {
+              setUserName(`${current.firstName} ${current.lastName || ""}`.trim());
+            }
+          }).catch(() => {});
+        }
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -178,19 +223,14 @@ export function Header() {
 
       {/* Right side: Org pill + Notifications + User menu */}
       <div className="flex items-center gap-2">
-        {/* Active org pill */}
-        {org && (
-          <Link
-            href="/settings/organization"
-            className="hidden lg:flex items-center gap-1.5 bg-muted/60 hover:bg-muted border border-border/60 rounded-full px-2.5 py-1 transition-colors"
+        {/* User name display */}
+        {userName && (
+          <div
+            className="hidden lg:flex items-center gap-1.5 bg-muted/60 border border-border/60 rounded-full px-3 py-1 text-xs font-semibold text-foreground select-none"
           >
-            <div className={`w-4 h-4 rounded-full bg-gradient-to-br ${orgGradient} flex items-center justify-center flex-shrink-0`}>
-              <span className="text-white text-[8px] font-bold">{orgInitials}</span>
-            </div>
-            <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
-              {org.name}
-            </span>
-          </Link>
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-0.5 animate-pulse" />
+            {userName}
+          </div>
         )}
 
         {/* Notifications */}
@@ -209,45 +249,47 @@ export function Header() {
             <span className="sr-only">Toggle user menu</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            {org && (
-              <>
-                <div className="flex items-center gap-2.5 px-3 py-2.5">
-                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${orgGradient} flex items-center justify-center flex-shrink-0`}>
-                    <span className="text-white text-xs font-bold">{orgInitials}</span>
+            <DropdownMenuGroup>
+              {org && (
+                <>
+                  <div className="flex items-center gap-2.5 px-3 py-2.5">
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${orgGradient} flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-white text-xs font-bold">{orgInitials}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{org.name}</p>
+                      {org.gstin && (
+                        <p className="text-xs text-muted-foreground font-mono truncate">{org.gstin}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{org.name}</p>
-                    {org.gstin && (
-                      <p className="text-xs text-muted-foreground font-mono truncate">{org.gstin}</p>
-                    )}
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-              My Account
-            </DropdownMenuLabel>
-            <DropdownMenuItem className="cursor-pointer gap-2" render={<Link href="/settings/organization" />}>
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              Organization Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer gap-2" render={<Link href="/settings/preferences" />}>
-              <Settings className="h-3.5 w-3.5 text-muted-foreground" />
-              Preferences
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer gap-2">
-              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-              Support
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleLogout}
-              className="cursor-pointer gap-2 text-red-500 focus:text-red-500 focus:bg-red-500/10"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign Out
-            </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                My Account
+              </DropdownMenuLabel>
+              <DropdownMenuItem className="cursor-pointer gap-2" render={<Link href="/settings/organization" />}>
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                Organization Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer gap-2" render={<Link href="/settings/preferences" />}>
+                <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                Preferences
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer gap-2">
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                Support
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="cursor-pointer gap-2 text-red-500 focus:text-red-500 focus:bg-red-500/10"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

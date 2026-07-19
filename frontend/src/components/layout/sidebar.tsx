@@ -21,6 +21,7 @@ import {
   TrendingUp,
   IndianRupee,
   ScrollText,
+  Percent,
 } from "lucide-react";
 import { useOrganization, getOrgInitials, getOrgGradient } from "@/lib/use-organization";
 import { useState } from "react";
@@ -104,7 +105,7 @@ const navGroups: NavGroup[] = [
     defaultOpen: false,
     items: [
       { label: "Organization", href: "/settings/organization", icon: Building2 },
-      { label: "Tax Settings", href: "/settings/tax", icon: Receipt },
+      { label: "Tax Settings", href: "/settings/taxes", icon: Percent },
       { label: "Invoice Settings", href: "/settings/invoice", icon: FileText },
       { label: "Preferences", href: "/settings/preferences", icon: Settings },
     ],

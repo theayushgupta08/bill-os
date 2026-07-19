@@ -53,4 +53,16 @@ public class TeamController {
         teamService.removeUser(userId);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{userId}/toggle-status")
+    @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> toggleUserStatus(
+            @PathVariable UUID userId, @RequestBody Map<String, Boolean> payload) {
+        Boolean active = payload.get("active");
+        if (active == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Field 'active' is required"));
+        }
+        teamService.toggleUserStatus(userId, active);
+        return ResponseEntity.ok(Map.of("message", "User status updated successfully"));
+    }
 }
