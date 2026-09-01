@@ -22,6 +22,10 @@ import {
   IndianRupee,
   ScrollText,
   Percent,
+  Banknote,
+  HandCoins,
+  QrCode,
+  Landmark,
 } from "lucide-react";
 import { useOrganization, getOrgInitials, getOrgGradient } from "@/lib/use-organization";
 import { useState } from "react";
@@ -83,6 +87,18 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Chart of Accounts", href: "/accounts", icon: BookOpen },
       { label: "Journal Entries", href: "/journal-entries", icon: ScrollText },
+    ],
+  },
+  {
+    label: "Collections",
+    defaultOpen: false,
+    items: [
+      { label: "Overview", href: "/collections", icon: HandCoins, exact: true },
+      { label: "QR Codes", href: "/collections/qr", icon: QrCode },
+      { label: "Payments", href: "/collections/payments", icon: Banknote },
+      { label: "Expenses", href: "/collections/expenses", icon: Receipt },
+      { label: "Deposits", href: "/collections/deposits", icon: Landmark },
+      { label: "Ledger", href: "/collections/ledger", icon: BookOpen },
     ],
   },
   {
