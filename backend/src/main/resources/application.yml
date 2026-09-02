@@ -37,6 +37,12 @@ spring:
     port: ${SPRING_REDIS_PORT:6379}
     password: ${SPRING_REDIS_PASSWORD:}
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${SUPABASE_JWKS_URL:https://qmqvaljcmcgqsxkoaoxc.supabase.co/auth/v1/.well-known/jwks.json}
+
 server:
   port: 8080
   error:
@@ -44,12 +50,6 @@ server:
     include-binding-errors: always
 
 app:
-  security:
-    supabase:
-      # Supabase dashboard -> Project Settings -> API -> JWT Secret.
-      # Used verbatim (raw UTF-8 bytes) to verify HS256 tokens minted by Supabase Auth.
-      # Required: the application fails fast on startup if this is unset.
-      jwt-secret: ${SUPABASE_JWT_SECRET:}
   frontend:
     url: ${APP_FRONTEND_URL:http://localhost:3000}
   cors:
@@ -60,6 +60,6 @@ app:
 
 logging:
   level:
-    org.springframework.security: DEBUG
+    org.springframework.security: TRACE
     org.springframework.web.cors: DEBUG
     com.billos: DEBUG
