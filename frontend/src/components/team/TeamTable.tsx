@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PageLoader } from "@/components/ui/loader";
 import { api } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { RoleActionMenu } from "./RoleActionMenu";
 import { InviteUserModal } from "./InviteUserModal";
 import { toast } from "sonner";
@@ -51,18 +52,19 @@ export function TeamTable() {
       const data: any = await api.get("/team");
       setMembers(data);
 
-      // Resolve current user's role from token
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (token) {
+      // Resolve current user's role from session
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user?.email) {
         try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          const email = payload.sub; // subject is email
+          const email = session.user.email;
           const currentMember = data.find((m: any) => m.email.toLowerCase() === email.toLowerCase());
           if (currentMember) {
             setCurrentUserRole(currentMember.role);
           }
         } catch (e) {
-          console.error("Failed to decode token for role resolution", e);
+          console.error("Failed to decode session for role resolution", e);
         }
       }
     } catch (err: any) {

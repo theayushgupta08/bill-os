@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api-client';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageLoader } from '@/components/ui/loader';
@@ -12,6 +13,7 @@ function AcceptInviteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const supabase = createClient();
   
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
@@ -26,9 +28,9 @@ function AcceptInviteContent() {
       return;
     }
 
-    const checkAuth = () => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
         setIsAuthenticated(true);
       }
       setLoading(false);

@@ -13,6 +13,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl');
+  const verified = searchParams.get('verified') === 'true';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -75,6 +76,12 @@ export default function LoginPage() {
       {error && (
         <div className="p-3 text-sm font-medium text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md text-center">
           {error}
+        </div>
+      )}
+
+      {verified && !error && (
+        <div className="p-3 text-sm font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md text-center">
+          Email verified successfully. You can now log in.
         </div>
       )}
 

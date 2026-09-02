@@ -26,6 +26,7 @@ import { Plus, Trash, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ProductCombobox } from "./product-combobox";
 
 interface LineItem {
   id: string;
@@ -266,20 +267,11 @@ export function InvoiceForm() {
                     return (
                       <TableRow key={line.id}>
                         <TableCell>
-                          <Select 
-                            value={line.productId} 
-                            onValueChange={(val: any) => handleLineChange(line.id, "productId", val)}
-                            required
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select product" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {products.map((p: any) => (
-                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <ProductCombobox 
+                            products={products}
+                            value={line.productId}
+                            onChange={(val: string) => handleLineChange(line.id, "productId", val)}
+                          />
                         </TableCell>
                         <TableCell>
                           <Select 

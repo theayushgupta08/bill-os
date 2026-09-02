@@ -29,6 +29,7 @@ export const metadata: Metadata = {
 };
 
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
+import { AuthInterceptor } from "@/components/layout/AuthInterceptor";
 
 export default function RootLayout({
   children,
@@ -40,8 +41,21 @@ export default function RootLayout({
       lang="en"
       className={`${fontSans.variable} ${fontHeading.variable} ${fontMono.variable} h-full antialiased dark`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (window.location.hash.includes('type=signup')) {
+                window.sessionStorage.setItem('verify_redirect', 'true');
+                window.history.replaceState(null, '', window.location.pathname);
+              }
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground overflow-x-hidden font-sans">
         <Providers>
+          <AuthInterceptor />
           {children}
           <Toaster />
           <ScrollToTop />

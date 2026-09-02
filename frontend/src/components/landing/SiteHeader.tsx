@@ -8,45 +8,22 @@ import { siteConfig } from "@/lib/config";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 
 export function SiteHeader() {
+  const supabase = createClient();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
 
-  const getEmailFromToken = (token: string): string | null => {
+  const getUserData = async () => {
     try {
-      const base64Url = token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
-        window
-          .atob(base64)
-          .split("")
-          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-          .join("")
-      );
-      const payload = JSON.parse(jsonPayload);
-      return payload.sub || null;
-    } catch {
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      setIsLoggedIn(!!token);
-      if (token) {
-        const email = getEmailFromToken(token);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setIsLoggedIn(true);
+        const email = session.user.email;
         if (email) {
           const prefix = email.split("@")[0];
           setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
@@ -60,9 +37,41 @@ export function SiteHeader() {
             }
           }).catch(() => {});
         }
+      } else {
+        setIsLoggedIn(false);
       }
+    } catch (e) {
+      setIsLoggedIn(false);
     }
-  }, [isLoggedIn]);
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Also remove the old legacy token so it doesn't pollute the browser
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+    }
+    
+    getUserData();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+      if (session) {
+        getUserData();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <>

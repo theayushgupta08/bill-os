@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useOrganization, getOrgInitials, getOrgGradient } from "@/lib/use-organization";
 import { api } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { useNotifications, useMarkNotificationRead } from "@/features/collections/hooks/use-collections";
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -81,6 +82,7 @@ export function Header() {
   const pathname = usePathname();
   const { data: org } = useOrganization();
   const [userName, setUserName] = useState("");
+  const supabase = createClient();
 
   const orgInitials = getOrgInitials(org?.name);
   const orgGradient = getOrgGradient(org?.name);
@@ -94,29 +96,11 @@ export function Header() {
     await markReadMutation.mutateAsync(id);
   };
 
-  const getEmailFromToken = (token: string): string | null => {
+  const getUserData = async () => {
     try {
-      const base64Url = token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
-        window
-          .atob(base64)
-          .split("")
-          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-          .join("")
-      );
-      const payload = JSON.parse(jsonPayload);
-      return payload.sub || null;
-    } catch {
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (token) {
-        const email = getEmailFromToken(token);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const email = session.user.email;
         if (email) {
           const prefix = email.split("@")[0];
           setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
@@ -131,12 +115,22 @@ export function Header() {
           }).catch(() => {});
         }
       }
+    } catch (e) {
+      // Ignored
     }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+    }
+    getUserData();
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem("token");
     localStorage.removeItem("active_org_id");
+    await supabase.auth.signOut();
     router.push("/login");
   };
 
