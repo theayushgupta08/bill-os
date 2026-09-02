@@ -16,10 +16,6 @@ export function SiteFooter() {
             <p className="text-sm text-muted-foreground max-w-xs mb-6">
               {siteConfig.description}
             </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              All systems operational
-            </div>
           </div>
 
           {/* Links */}
