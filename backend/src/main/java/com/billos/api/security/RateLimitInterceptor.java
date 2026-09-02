@@ -24,19 +24,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     private final RateLimitingService rateLimitingService;
 
-    // Rate Limit Definitions
-    private static final Bandwidth LIMIT_LOGIN = Bandwidth.builder()
-            .capacity(5)
-            .refillIntervally(5, Duration.ofMinutes(1))
-            .build();
-    private static final Bandwidth LIMIT_REGISTER = Bandwidth.builder()
-            .capacity(3)
-            .refillIntervally(3, Duration.ofHours(1))
-            .build();
-    private static final Bandwidth LIMIT_REFRESH = Bandwidth.builder()
-            .capacity(20)
-            .refillIntervally(20, Duration.ofMinutes(1))
-            .build();
+    // Rate Limit Definitions.
+    // Note: login/register/password-reset throttling now lives in Supabase Auth, which serves those
+    // endpoints directly — the browser never routes them through this API.
     private static final Bandwidth LIMIT_DASHBOARD = Bandwidth.builder()
             .capacity(60)
             .refillIntervally(60, Duration.ofMinutes(1))
@@ -98,20 +88,12 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     }
 
     private RateLimitConfig determineLimit(HttpServletRequest request, String path) {
-        String ip = getClientIp(request);
-        String userKey = getAuthenticatedUserKey().orElse("anonymous");
+        // Fall back to the caller's IP rather than a shared "anonymous" key, so one unauthenticated
+        // caller cannot drain the bucket for every other unauthenticated caller.
+        String userKey = getAuthenticatedUserKey().orElseGet(() -> "ip:" + getClientIp(request));
         String tenantKey = TenantContext.getCurrentTenant() != null ? TenantContext.getCurrentTenant() : "no-tenant";
 
-        if (path.equals("/api/v1/auth/login")) {
-            return new RateLimitConfig("rl:login:" + ip, LIMIT_LOGIN);
-        } else if (path.equals("/api/v1/auth/register")) {
-            return new RateLimitConfig("rl:register:" + ip, LIMIT_REGISTER);
-        } else if (path.startsWith("/api/v1/auth/forgot-password")) {
-            return new RateLimitConfig(
-                    "rl:forgot-password:" + ip, LIMIT_REGISTER); // Uses same limit Bandwidth as register
-        } else if (path.startsWith("/api/v1/auth/refresh")) {
-            return new RateLimitConfig("rl:refresh:" + userKey, LIMIT_REFRESH);
-        } else if (path.startsWith("/api/v1/dashboard")) {
+        if (path.startsWith("/api/v1/dashboard")) {
             return new RateLimitConfig("rl:dashboard:" + userKey, LIMIT_DASHBOARD);
         } else if (path.startsWith("/api/v1/reports")) {
             return new RateLimitConfig("rl:reports:" + userKey, LIMIT_REPORTS);

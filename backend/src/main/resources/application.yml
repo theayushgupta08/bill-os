@@ -45,11 +45,13 @@ server:
 
 app:
   security:
-    jwt:
-      # Must be at least 256 bits (32 bytes)
-      secret: ${JWT_SECRET:supersecretkeythatisverylongandsecurefortestingonlydoinproduction}
-      expiration: 86400000 # 1 day in milliseconds
-      refresh-expiration: 604800000 # 7 days in milliseconds
+    supabase:
+      # Supabase dashboard -> Project Settings -> API -> JWT Secret.
+      # Used verbatim (raw UTF-8 bytes) to verify HS256 tokens minted by Supabase Auth.
+      # Required: the application fails fast on startup if this is unset.
+      jwt-secret: ${SUPABASE_JWT_SECRET:}
+  frontend:
+    url: ${APP_FRONTEND_URL:http://localhost:3000}
   cors:
     allowed-origins:
       - http://localhost:3000

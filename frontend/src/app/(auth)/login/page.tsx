@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api-client';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,9 +30,15 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const data = await api.post<{ accessToken: string }>('/auth/login', formData);
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
 
-      localStorage.setItem('token', data.accessToken);
+      if (signInError) {
+        throw new Error(signInError.message);
+      }
       
       if (returnUrl) {
         router.push(returnUrl);

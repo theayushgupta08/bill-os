@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api } from '@/lib/api-client';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const returnUrl = searchParams.get('returnUrl');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -32,13 +33,33 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const data = await api.post<{ accessToken: string }>('/auth/register', formData);
-      localStorage.setItem('token', data.accessToken);
-      
-      if (returnUrl) {
-        router.push(returnUrl);
+      const supabase = createClient();
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone: formData.phone,
+          }
+        }
+      });
+
+      if (signUpError) {
+        throw new Error(signUpError.message);
+      }
+
+      // If email confirmation is required, session will be null
+      if (data.user && !data.session) {
+        setSuccess(true);
       } else {
-        router.push('/setup');
+        // Auto-logged in (email confirmation disabled)
+        if (returnUrl) {
+          router.push(returnUrl);
+        } else {
+          router.push('/setup');
+        }
       }
 
     } catch (err: unknown) {
@@ -49,6 +70,23 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  if (success) {
+    return (
+      <div className="w-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out text-center">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">Check your email</h1>
+          <p className="text-sm text-muted-foreground">
+            We've sent a verification link to <strong>{formData.email}</strong>.
+            Please verify your email address to activate your account.
+          </p>
+        </div>
+        <Button variant="outline" className="w-full h-10 mt-2" onClick={() => router.push('/login')}>
+          Return to Login
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">

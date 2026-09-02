@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { createClient } from './supabase/client';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -12,10 +13,14 @@ const apiClient = axios.create({
 
 // Request interceptor to attach tokens and organization ID
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
       const orgId = localStorage.getItem('active_org_id');
+
+      // Fetch the active session from Supabase
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -37,12 +42,12 @@ apiClient.interceptors.response.use(
     // Axios wraps the response in a `data` object. We return just the data.
     return response.data;
   },
-  (error) => {
-    // If we get a 401 Unauthorized, we might want to log them out or refresh token in the future
+  async (error) => {
+    // If we get a 401 Unauthorized, we might want to log them out
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      // Optional: automatically redirect to login or clear token
-      // localStorage.removeItem('token');
-      // window.location.href = '/login';
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = '/login';
     }
 
     // Standardize the error message
@@ -93,4 +98,3 @@ export const api = {
 };
 
 export default apiClient;
-
