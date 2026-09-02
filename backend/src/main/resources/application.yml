@@ -57,6 +57,7 @@ app:
     allowed-origins:
       - http://localhost:3000
       - http://localhost:3001
+      - ${APP_FRONTEND_URL:https://bill-os-nine.vercel.app}
 
 
 logging:
