@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { HelpCircle, Percent, Settings, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { TaxRate } from "@/types";
 
 function Tooltip({ text }: { text: string }) {
   return (
@@ -52,7 +53,7 @@ export default function TaxSettingsAndRatesPage() {
     queryKey: ["tax-rates"],
     queryFn: async () => {
       const data = await api.get<TaxRate[]>("/tax-rates");
-      return data as any[];
+      return data as TaxRate[];
     }
   });
 

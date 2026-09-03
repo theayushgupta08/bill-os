@@ -24,6 +24,20 @@ import {
 } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+interface Account {
+  id: string;
+  accountCode: string;
+  name: string;
+}
+
+interface JournalLine {
+  id: string;
+  accountId: string;
+  debitAmount: number | string;
+  creditAmount: number | string;
+  description: string;
+}
+
 export function JournalEntryForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -39,10 +53,10 @@ export function JournalEntryForm() {
     { id: "2", accountId: "", debitAmount: 0, creditAmount: 0, description: "" },
   ]);
 
-  const { data: accounts = [] as unknown[], isLoading: loadingAccounts } = useQuery({
+  const { data: accounts = [] as Account[], isLoading: loadingAccounts } = useQuery({
     queryKey: ["accounts"],
     queryFn: async () => {
-      const res = await api.get<unknown[]>("/accounts");
+      const res = await api.get<Account[]>("/accounts");
       return res;
     }
   });
@@ -101,8 +115,8 @@ export function JournalEntryForm() {
     setLines(lines.map(l => {
       if (l.id === id) {
         const updated = { ...l, [field]: value };
-        if (field === 'debitAmount' && value > 0) updated.creditAmount = 0;
-        if (field === 'creditAmount' && value > 0) updated.debitAmount = 0;
+        if (field === 'debitAmount' && Number(value) > 0) updated.creditAmount = 0;
+        if (field === 'creditAmount' && Number(value) > 0) updated.debitAmount = 0;
         return updated;
       }
       return l;
@@ -164,7 +178,7 @@ export function JournalEntryForm() {
                 <TableCell>
                   <Select 
                     value={line.accountId} 
-                    onValueChange={(val: string) => updateLine(line.id, 'accountId', val)}
+                    onValueChange={(val: string | null) => val && updateLine(line.id, 'accountId', val)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select account" />

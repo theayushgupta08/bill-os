@@ -91,7 +91,7 @@ export function PurchaseBillList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {bills.map((bill: PurchaseOrder) => (
+            {bills.map((bill: any) => (
               <TableRow key={bill.id}>
                 <TableCell className="font-medium">{bill.billNumber}</TableCell>
                 <TableCell>{bill.billDate}</TableCell>

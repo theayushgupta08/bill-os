@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,13 +76,14 @@ export default function SetupOrganizationPage() {
     setError(null);
     try {
       const response = await api.post<{ id: string }>("/organizations", formData);
-      const orgId = response.data?.id || response.id;
+      const orgId = response.id;
       localStorage.setItem("active_org_id", orgId);
       router.push("/dashboard");
     } catch (err: unknown) {
       console.error("Failed to create organization", err);
+      const axiosErr = err as AxiosError<{message: string}>;
       setError(
-        err?.response?.data?.message ||
+        axiosErr.response?.data?.message ||
           "Failed to create organization. Please try again."
       );
     } finally {

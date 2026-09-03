@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,8 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
       router.refresh();
     } catch (error: unknown) {
       console.error("Failed to save warehouse", error);
-      alert(error.response?.data?.message || "Failed to save warehouse. See console.");
+      const err = error as AxiosError<{message: string}>;
+      alert(err.response?.data?.message || "Failed to save warehouse. See console.");
     } finally {
       setLoading(false);
     }

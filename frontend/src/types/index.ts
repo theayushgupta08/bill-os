@@ -44,6 +44,8 @@ export interface PreferencesSettings extends BaseEntity {
 export interface InvoiceSettings extends BaseEntity {
   organizationId: string;
   invoicePrefix?: string;
+  invoiceNumberFormat?: string;
+  invoiceTerms?: string;
   termsAndConditions?: string;
   bankDetails?: string;
   notes?: string;
@@ -56,6 +58,12 @@ export interface Supplier extends BaseEntity {
   email?: string;
   phone?: string;
   address?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
   gstin?: string;
   pan?: string;
   defaultCreditPeriod?: number;
@@ -77,27 +85,47 @@ export interface Customer extends BaseEntity {
   email?: string;
   phone?: string;
   gstin?: string;
+  outstandingBalance?: number;
 }
 
 export interface Product extends BaseEntity {
   name: string;
   sku: string;
-  price: number;
+  price?: number;
+  basePrice?: number;
   taxRate?: number | string;
   taxRateId?: string;
   type?: string;
   description?: string;
+  hsnSac?: string;
+  unitOfMeasure?: string;
+  categoryId?: string;
+}
+
+export interface ProductCategory extends BaseEntity {
+  name: string;
+  description?: string;
+  parentId?: string;
 }
 
 export interface TaxRate extends BaseEntity {
   name: string;
   rate: number;
   type?: string;
+  isActive?: boolean;
 }
 
 export interface Warehouse extends BaseEntity {
   name: string;
+  code?: string;
   location?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+  isActive?: boolean;
 }
 
 export interface LineItem {

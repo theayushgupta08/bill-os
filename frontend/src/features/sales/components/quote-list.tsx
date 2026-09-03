@@ -47,7 +47,7 @@ export function QuoteList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {quotes.map((q: Quotation) => (
+            {quotes.map((q: any) => (
               <TableRow key={q.id}>
                 <TableCell className="font-medium">{q.quoteNumber}</TableCell>
                 <TableCell>{q.quoteDate}</TableCell>

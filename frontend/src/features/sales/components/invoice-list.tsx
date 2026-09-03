@@ -72,7 +72,7 @@ export function InvoiceList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {invoices.map((inv: Invoice) => (
+            {invoices.map((inv: any) => (
               <TableRow key={inv.id}>
                 <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                 <TableCell>{inv.invoiceDate}</TableCell>

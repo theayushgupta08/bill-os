@@ -10,7 +10,19 @@ import { useQueryState } from 'nuqs';
 
 interface GSTR3BData {
   totalSales: number;
+  outwardTaxableValue?: number;
+  outwardCgst?: number;
+  outwardSgst?: number;
+  outwardIgst?: number;
+  outwardTotalTax?: number;
+  
   totalPurchases: number;
+  inwardTaxableValue?: number;
+  inwardCgst?: number;
+  inwardSgst?: number;
+  inwardIgst?: number;
+  inwardTotalTax?: number;
+  
   outputTax: {
     cgst: number;
     sgst: number;

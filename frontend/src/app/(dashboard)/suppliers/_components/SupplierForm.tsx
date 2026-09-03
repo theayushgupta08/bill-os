@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Supplier } from "@/types";
 
 interface SupplierFormProps {
   supplierId?: string; // If provided, it's in edit mode

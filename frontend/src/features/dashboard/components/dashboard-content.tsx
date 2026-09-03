@@ -33,7 +33,17 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
+import { useOrganization } from "@/lib/use-organization";
 import { useRouter } from "next/navigation";
+
+interface DashboardSummary {
+  totalRevenueMtd?: number;
+  totalExpensesMtd?: number;
+  outstandingReceivables?: number;
+  outstandingPayables?: number;
+  recentInvoices?: any[];
+  recentBills?: any[];
+}
 
 function formatCurrency(amount: number) {
   if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
@@ -106,7 +116,7 @@ export function DashboardContent() {
   } = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: async () => {
-      const res = await api.get<unknown>("/dashboard/summary");
+      const res = await api.get<DashboardSummary>("/dashboard/summary");
       return res;
     },
   });
@@ -307,7 +317,7 @@ export function DashboardContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summary.recentInvoices?.map((inv: Invoice) => (
+                {summary.recentInvoices?.map((inv: any) => (
                   <TableRow
                     key={inv.id}
                     className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border/30"
@@ -371,7 +381,7 @@ export function DashboardContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summary.recentBills?.map((bill: PurchaseOrder) => (
+                {summary.recentBills?.map((bill: any) => (
                   <TableRow
                     key={bill.id}
                     className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border/30"

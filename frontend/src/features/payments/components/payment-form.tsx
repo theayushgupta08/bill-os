@@ -52,7 +52,8 @@ export function PaymentForm() {
 
   const initialLoading = loadingInvoices || loadingBills;
 
-  const handleDocumentChange = (docId: string) => {
+  const handleDocumentChange = (docId: string | null) => {
+    if (!docId) return;
     setFormData(prev => ({ ...prev, allocatedDocumentId: docId }));
     
     if (formData.paymentType === "RECEIPT") {
@@ -142,7 +143,7 @@ export function PaymentForm() {
               <Label>Payment Type</Label>
               <Select 
                 value={formData.paymentType} 
-                onValueChange={(val: string) => setFormData(prev => ({ ...prev, paymentType: val, allocatedDocumentId: "", amount: "" }))}
+                onValueChange={(val: string | null) => val && setFormData(prev => ({ ...prev, paymentType: val, allocatedDocumentId: "", amount: "" }))}
                 required
               >
                 <SelectTrigger>
@@ -167,12 +168,12 @@ export function PaymentForm() {
                 <SelectContent>
                   <SelectItem value="none">No specific document</SelectItem>
                   {formData.paymentType === "RECEIPT" 
-                    ? invoices.map((i: Invoice) => (
+                    ? invoices.map((i: any) => (
                         <SelectItem key={i.id} value={i.id}>
                           {i.invoiceNumber} - {i.customerName} (₹{i.totalAmount})
                         </SelectItem>
                       ))
-                    : bills.map((b: PurchaseOrder) => (
+                    : bills.map((b: any) => (
                         <SelectItem key={b.id} value={b.id}>
                           {b.billNumber} - {b.supplierName} (₹{b.totalAmount})
                         </SelectItem>

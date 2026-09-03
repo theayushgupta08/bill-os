@@ -49,7 +49,7 @@ export function TeamTable() {
   const fetchTeam = async () => {
     try {
       setLoading(true);
-      const data = await api.get<{email: string; role: string}[]>("/team");
+      const data = await api.get<TeamMember[]>("/team");
       setMembers(data);
 
       // Resolve current user's role from session

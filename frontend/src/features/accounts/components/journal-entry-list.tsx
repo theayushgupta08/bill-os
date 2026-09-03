@@ -19,9 +19,11 @@ import { useQueryState } from 'nuqs';
 interface JournalEntry {
   id: string;
   entryDate: string;
-  reference?: string;
+  referenceNumber?: string;
   description: string;
   totalAmount: number;
+  status?: string;
+  lines?: unknown[];
 }
 
 export function JournalEntryList() {
@@ -31,7 +33,7 @@ export function JournalEntryList() {
     queryKey: ["journal-entries", page],
     queryFn: async () => {
       // Changed fetchApi to apiClient.get for consistency
-      const res = await api.get<unknown[]>("/journal-entries");
+      const res = await api.get<JournalEntry[]>("/journal-entries");
       return res;
     },
   });

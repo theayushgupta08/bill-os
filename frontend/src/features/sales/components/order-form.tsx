@@ -54,7 +54,7 @@ export function OrderForm() {
   const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
-      const res = await api.get<Customer[]>("/customers");
+      const res = await api.get<any[]>("/customers");
       return res;
     }
   });
@@ -62,7 +62,7 @@ export function OrderForm() {
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.get<Product[]>("/products");
+      const res = await api.get<any[]>("/products");
       return res;
     }
   });
@@ -70,7 +70,7 @@ export function OrderForm() {
   const { data: taxes = [], isLoading: loadingTaxes } = useQuery({
     queryKey: ["tax-rates"],
     queryFn: async () => {
-      const res = await api.get<TaxRate[]>("/tax-rates");
+      const res = await api.get<any[]>("/tax-rates");
       return res;
     }
   });
@@ -92,11 +92,11 @@ export function OrderForm() {
       if (line.id === id) {
         const updatedLine = { ...line, [field]: value };
         if (field === "productId") {
-          const product = products.find((p: Product) => p.id === value);
+          const product = products.find((p: any) => p.id === value);
           if (product) {
             updatedLine.unitPrice = product.price || 0;
             if (product.taxRate) {
-              const matchedTax = taxes.find((t: TaxRate) => Number(t.rate) === Number(product.taxRate));
+              const matchedTax = taxes.find((t: any) => Number(t.rate) === Number(product.taxRate));
               if (matchedTax) {
                 updatedLine.taxRateId = matchedTax.id;
               }
@@ -117,7 +117,7 @@ export function OrderForm() {
       const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
       subtotal += lineSub;
       if (line.taxRateId) {
-        const tax = taxes.find((t: TaxRate) => t.id === line.taxRateId);
+        const tax = taxes.find((t: any) => t.id === line.taxRateId);
         if (tax) {
           taxTotal += (lineSub * (tax.rate || 0)) / 100;
         }
@@ -136,9 +136,9 @@ export function OrderForm() {
       router.push("/sales/orders");
       router.refresh();
     },
-    onError: (error: unknown) => {
+    onError: (error: any) => {
       console.error(error);
-      alert((error as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create Sales Order");
+      alert(error.response?.data?.message || "Failed to create Sales Order");
     }
   });
 
@@ -182,14 +182,14 @@ export function OrderForm() {
               <Label>Customer *</Label>
               <Select 
                 value={formData.customerId} 
-                onValueChange={(val: string) => setFormData(prev => ({ ...prev, customerId: val }))}
+                onValueChange={(val: string | null) => val && setFormData(prev => ({ ...prev, customerId: val }))}
                 required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {customers.map((c: Customer) => (
+                  {customers.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -234,7 +234,7 @@ export function OrderForm() {
                     const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
                     let lineTax = 0;
                     if (line.taxRateId) {
-                      const tax = taxes.find((t: TaxRate) => t.id === line.taxRateId);
+                      const tax = taxes.find((t: any) => t.id === line.taxRateId);
                       if (tax) lineTax = (lineSub * (tax.rate || 0)) / 100;
                     }
                     const lineTotal = lineSub + lineTax;
@@ -244,14 +244,14 @@ export function OrderForm() {
                         <TableCell>
                           <Select 
                             value={line.productId} 
-                            onValueChange={(val: string) => handleLineChange(line.id, "productId", val)}
+                            onValueChange={(val: string | null) => val && handleLineChange(line.id, "productId", val)}
                             required
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select product" />
                             </SelectTrigger>
                             <SelectContent>
-                              {products.map((p: Product) => (
+                              {products.map((p: any) => (
                                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                               ))}
                             </SelectContent>
@@ -280,14 +280,14 @@ export function OrderForm() {
                         <TableCell>
                           <Select 
                             value={line.taxRateId || ""} 
-                            onValueChange={(val: string) => handleLineChange(line.id, "taxRateId", val === "none" ? "" : val)}
+                            onValueChange={(val: string | null) => val && handleLineChange(line.id, "taxRateId", val === "none" ? "" : val)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="None" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">None</SelectItem>
-                              {taxes.map((t: TaxRate) => (
+                              {taxes.map((t: any) => (
                                 <SelectItem key={t.id} value={t.id}>{t.name} ({t.rate}%)</SelectItem>
                               ))}
                             </SelectContent>

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Warehouse, Product } from "@/types";
 
 export function InventoryAdjustForm() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export function InventoryAdjustForm() {
   const { data: warehouses = [] as Warehouse[], isLoading: loadingWarehouses } = useQuery({
     queryKey: ["warehouses"],
     queryFn: async () => {
-      const res = await api.get<unknown[]>("/warehouses");
+      const res = await api.get<Warehouse[]>("/warehouses");
       return res;
     }
   });
@@ -39,7 +40,7 @@ export function InventoryAdjustForm() {
   const { data: products = [] as Product[], isLoading: loadingProducts } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.get<unknown[]>("/products");
+      const res = await api.get<Product[]>("/products");
       return res;
     }
   });
@@ -85,7 +86,7 @@ export function InventoryAdjustForm() {
             <Label>Warehouse *</Label>
             <Select 
               value={formData.warehouseId} 
-              onValueChange={(val: string) => setFormData(prev => ({ ...prev, warehouseId: val }))}
+              onValueChange={(val: string | null) => val && setFormData(prev => ({ ...prev, warehouseId: val }))}
               required
             >
               <SelectTrigger>
@@ -103,7 +104,7 @@ export function InventoryAdjustForm() {
             <Label>Product *</Label>
             <Select 
               value={formData.productId} 
-              onValueChange={(val: string) => setFormData(prev => ({ ...prev, productId: val }))}
+              onValueChange={(val: string | null) => val && setFormData(prev => ({ ...prev, productId: val }))}
               required
             >
               <SelectTrigger>

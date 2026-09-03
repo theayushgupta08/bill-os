@@ -20,6 +20,7 @@ interface InventoryLevel {
   id: string;
   productName: string;
   sku?: string;
+  productCode?: string;
   warehouseName: string;
   quantity: number;
   minQuantity?: number;

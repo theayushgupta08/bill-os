@@ -59,7 +59,7 @@ export function RoleActionMenu({
       toast.success(`Role updated to ${newRole}`);
       onRefresh();
     } catch (err: unknown) {
-      toast.error(err.message || 'Failed to update role');
+      toast.error((err as Error).message || 'Failed to update role');
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export function RoleActionMenu({
       toast.success(`User has been ${isActivating ? 'activated' : 'deactivated'} successfully`);
       onRefresh();
     } catch (err: unknown) {
-      toast.error(err.message || `Failed to ${actionText} user`);
+      toast.error((err as Error).message || `Failed to ${actionText} user`);
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export function RoleActionMenu({
       toast.success('User removed from organization');
       onRefresh();
     } catch (err: unknown) {
-      toast.error(err.message || 'Failed to remove user');
+      toast.error((err as Error).message || 'Failed to remove user');
     } finally {
       setLoading(false);
     }

@@ -17,6 +17,8 @@ interface PaymentRecord {
   paymentMethod: string;
   amount: number;
   entityName?: string;
+  paymentType?: string;
+  referenceNumber?: string;
 }
 
 export function PaymentList() {

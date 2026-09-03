@@ -105,7 +105,7 @@ export function SalesReport() {
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-12 text-slate-500">Loading invoice entries...</TableCell>
               </TableRow>
-            ) : invoices.map((inv: Invoice) => (
+            ) : invoices.map((inv: any) => (
               <TableRow key={inv.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">{inv.invoiceDate}</TableCell>
                 <TableCell className="font-semibold text-white">{inv.invoiceNumber}</TableCell>

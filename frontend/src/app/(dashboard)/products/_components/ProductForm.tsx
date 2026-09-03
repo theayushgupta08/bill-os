@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ProductCategory, Product } from "@/types";
 
 interface ProductFormProps {
   productId?: string; // If provided, it's in edit mode
@@ -52,7 +53,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
         sku: product.sku || "",
         hsnSac: product.hsnSac || "",
         basePrice: product.basePrice || 0,
-        taxRate: product.taxRate || 0,
+        taxRate: Number(product.taxRate) || 0,
         unitOfMeasure: product.unitOfMeasure || "",
         categoryId: product.categoryId || "",
       });

@@ -46,7 +46,7 @@ export function OrderList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map((so: SalesOrder) => (
+            {orders.map((so: any) => (
               <TableRow key={so.id}>
                 <TableCell className="font-medium">{so.soNumber}</TableCell>
                 <TableCell>{so.orderDate}</TableCell>

@@ -17,6 +17,17 @@ import {
 } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+interface Account {
+  id: string;
+  accountCode: string;
+  name: string;
+  description?: string;
+  type: string;
+  balance?: number;
+  isActive?: boolean;
+  parentId?: string;
+}
+
 interface AccountFormProps {
   id?: string;
 }
@@ -38,7 +49,7 @@ export function AccountForm({ id }: AccountFormProps) {
   const { data: accountsData } = useQuery({
     queryKey: ["accounts"],
     queryFn: async () => {
-      const res = await api.get<unknown>("/accounts");
+      const res = await api.get<Account[]>("/accounts");
       return res;
     }
   });
@@ -47,7 +58,7 @@ export function AccountForm({ id }: AccountFormProps) {
     queryKey: ["account", id],
     queryFn: async () => {
       if (!id) return null;
-      const res = await api.get<unknown>(`/accounts/${id}`);
+      const res = await api.get<Account>(`/accounts/${id}`);
       return res;
     },
     enabled: !!id
@@ -141,7 +152,7 @@ export function AccountForm({ id }: AccountFormProps) {
           <Label htmlFor="type">Account Type *</Label>
           <Select 
             value={formData.type} 
-            onValueChange={(val: string) => setFormData(prev => ({ ...prev, type: val }))}
+            onValueChange={(val: string | null) => val && setFormData(prev => ({ ...prev, type: val }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select type" />
@@ -159,7 +170,7 @@ export function AccountForm({ id }: AccountFormProps) {
           <Label htmlFor="parentId">Parent Account (Optional)</Label>
           <Select 
             value={formData.parentId} 
-            onValueChange={(val: string) => setFormData(prev => ({ ...prev, parentId: val === "none" ? "" : val }))}
+            onValueChange={(val: string | null) => val && setFormData(prev => ({ ...prev, parentId: val === "none" ? "" : val }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select parent account" />

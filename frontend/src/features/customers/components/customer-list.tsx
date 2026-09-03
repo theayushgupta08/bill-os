@@ -14,6 +14,7 @@ import {
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { Customer } from "@/types";
 
 export function CustomerList() {
   const queryClient = useQueryClient();
@@ -24,7 +25,7 @@ export function CustomerList() {
   const { data: customers = [] as Customer[], isLoading } = useQuery({
     queryKey: ["customers", page],
     queryFn: async () => {
-      const res = await api.get<unknown[]>("/customers");
+      const res = await api.get<Customer[]>("/customers");
       return res;
     },
   });

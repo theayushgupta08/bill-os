@@ -14,6 +14,7 @@ import {
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { Product } from "@/types";
 
 export function ProductList() {
   const queryClient = useQueryClient();
@@ -22,7 +23,7 @@ export function ProductList() {
   const { data: products = [] as Product[], isLoading } = useQuery({
     queryKey: ["products", page],
     queryFn: async () => {
-      const res = await api.get<unknown[]>("/products");
+      const res = await api.get<Product[]>("/products");
       return res;
     },
   });

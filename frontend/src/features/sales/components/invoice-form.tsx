@@ -61,7 +61,7 @@ export function InvoiceForm() {
   const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
-      const res = await api.get<Customer[]>("/customers");
+      const res = await api.get<any[]>("/customers");
       return res;
     }
   });
@@ -69,7 +69,7 @@ export function InvoiceForm() {
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.get<Product[]>("/products");
+      const res = await api.get<any[]>("/products");
       return res;
     }
   });
@@ -77,7 +77,7 @@ export function InvoiceForm() {
   const { data: taxes = [], isLoading: loadingTaxes } = useQuery({
     queryKey: ["tax-rates"],
     queryFn: async () => {
-      const res = await api.get<TaxRate[]>("/tax-rates");
+      const res = await api.get<any[]>("/tax-rates");
       return res;
     }
   });
@@ -85,7 +85,7 @@ export function InvoiceForm() {
   const { data: warehouses = [], isLoading: loadingWarehouses } = useQuery({
     queryKey: ["warehouses"],
     queryFn: async () => {
-      const res = await api.get<Warehouse[]>("/warehouses");
+      const res = await api.get<any[]>("/warehouses");
       return res;
     }
   });
@@ -107,7 +107,7 @@ export function InvoiceForm() {
       if (line.id === id) {
         const updatedLine = { ...line, [field]: value };
         if (field === "productId") {
-          const product = products.find((p: Product) => p.id === value);
+          const product = products.find((p: any) => p.id === value);
           if (product) {
             updatedLine.unitPrice = Number(product.price) || 0;
             if (product.taxRateId) {
@@ -129,7 +129,7 @@ export function InvoiceForm() {
       const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
       subtotal += lineSub;
       if (line.taxRateId) {
-        const tax = taxes.find((t: TaxRate) => t.id === line.taxRateId);
+        const tax = taxes.find((t: any) => t.id === line.taxRateId);
         if (tax) {
           taxTotal += (lineSub * (Number(tax.rate) || 0)) / 100;
         }
@@ -196,14 +196,14 @@ export function InvoiceForm() {
               <Label>Customer *</Label>
               <Select 
                 value={formData.customerId} 
-                onValueChange={(val: string) => setFormData(prev => ({ ...prev, customerId: val }))}
+                onValueChange={(val: string | null) => val && setFormData(prev => ({ ...prev, customerId: val }))}
                 required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {customers.map((c: Customer) => (
+                  {customers.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -258,7 +258,7 @@ export function InvoiceForm() {
                     const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
                     let lineTax = 0;
                     if (line.taxRateId) {
-                      const tax = taxes.find((t: TaxRate) => t.id === line.taxRateId);
+                      const tax = taxes.find((t: any) => t.id === line.taxRateId);
                       if (tax) lineTax = (lineSub * (Number(tax.rate) || 0)) / 100;
                     }
                     const lineTotal = lineSub + lineTax;
@@ -275,14 +275,14 @@ export function InvoiceForm() {
                         <TableCell>
                           <Select 
                             value={line.warehouseId} 
-                            onValueChange={(val: string) => handleLineChange(line.id, "warehouseId", val)}
+                            onValueChange={(val: string | null) => val && handleLineChange(line.id, "warehouseId", val)}
                             required
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select warehouse" />
                             </SelectTrigger>
                             <SelectContent>
-                              {warehouses.map((w: Warehouse) => (
+                              {warehouses.map((w: any) => (
                                 <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
                               ))}
                             </SelectContent>
@@ -311,14 +311,14 @@ export function InvoiceForm() {
                         <TableCell>
                           <Select 
                             value={line.taxRateId || ""} 
-                            onValueChange={(val: string) => handleLineChange(line.id, "taxRateId", val === "none" ? "" : val)}
+                            onValueChange={(val: string | null) => val && handleLineChange(line.id, "taxRateId", val === "none" ? "" : val)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="None" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">None</SelectItem>
-                              {taxes.map((t: TaxRate) => (
+                              {taxes.map((t: any) => (
                                 <SelectItem key={t.id} value={t.id}>{t.name} ({t.rate}%)</SelectItem>
                               ))}
                             </SelectContent>

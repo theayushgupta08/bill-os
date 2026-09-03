@@ -106,7 +106,7 @@ export function PurchasesReport() {
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-12 text-slate-500">Loading purchase entries...</TableCell>
               </TableRow>
-            ) : bills.map((bill: PurchaseOrder) => (
+            ) : bills.map((bill: any) => (
               <TableRow key={bill.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">{bill.billDate}</TableCell>
                 <TableCell className="font-semibold text-white">{bill.billNumber}</TableCell>

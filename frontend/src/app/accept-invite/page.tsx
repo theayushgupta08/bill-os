@@ -54,7 +54,7 @@ function AcceptInviteContent() {
         router.push('/dashboard');
       }, 2000);
     } catch (err: unknown) {
-      setError(err.message || 'Failed to accept invitation. It may have expired.');
+      setError((err as Error).message || 'Failed to accept invitation. It may have expired.');
     } finally {
       setAccepting(false);
     }

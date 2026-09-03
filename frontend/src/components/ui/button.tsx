@@ -52,12 +52,12 @@ function Button({
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { asChild?: boolean; isLoading?: boolean }) {
   if (asChild) {
-    const { children: renderChildren, ...rest } = props as unknown;
+    const { children: renderChildren, ...rest } = props as { children?: React.ReactNode | Function };
     return (
       <ButtonPrimitive
         data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
-        render={renderChildren || children}
+        render={(renderChildren || children) as any}
         disabled={isLoading || disabled}
         nativeButton={false}
         {...rest}

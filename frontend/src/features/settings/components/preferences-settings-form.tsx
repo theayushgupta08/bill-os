@@ -105,7 +105,7 @@ export function PreferencesSettingsForm() {
               </div>
               <Select 
                 value={(settings as PreferencesSettings).theme || "light"} 
-                onValueChange={(val: string) => handleSelectChange("theme", val)}
+                onValueChange={(val: string | null) => val && handleSelectChange("theme", val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a theme" />
@@ -125,7 +125,7 @@ export function PreferencesSettingsForm() {
               </div>
               <Select 
                 value={settings.language || "en"} 
-                onValueChange={(val: string) => handleSelectChange("language", val)}
+                onValueChange={(val: string | null) => val && handleSelectChange("language", val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a language" />
@@ -145,7 +145,7 @@ export function PreferencesSettingsForm() {
               </div>
               <Select 
                 value={settings.timezone || "Asia/Kolkata"} 
-                onValueChange={(val: string) => handleSelectChange("timezone", val)}
+                onValueChange={(val: string | null) => val && handleSelectChange("timezone", val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a timezone" />
@@ -165,7 +165,7 @@ export function PreferencesSettingsForm() {
               </div>
               <Select 
                 value={settings.dateFormat || "DD/MM/YYYY"} 
-                onValueChange={(val: string) => handleSelectChange("dateFormat", val)}
+                onValueChange={(val: string | null) => val && handleSelectChange("dateFormat", val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a date format" />

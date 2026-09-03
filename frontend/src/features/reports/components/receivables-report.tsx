@@ -9,6 +9,7 @@ interface ReceivableRecord {
   id: string;
   name: string;
   gstin?: string;
+  phone?: string;
   outstandingBalance: number;
 }
 

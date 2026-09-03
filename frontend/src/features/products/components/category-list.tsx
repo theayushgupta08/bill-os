@@ -14,6 +14,7 @@ import {
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { ProductCategory } from "@/types";
 
 export function CategoryList() {
   const queryClient = useQueryClient();
@@ -22,7 +23,7 @@ export function CategoryList() {
   const { data: categories = [] as ProductCategory[], isLoading } = useQuery({
     queryKey: ["product-categories", page],
     queryFn: async () => {
-      const res = await api.get<unknown[]>("/product-categories");
+      const res = await api.get<ProductCategory[]>("/product-categories");
       return res;
     },
   });
