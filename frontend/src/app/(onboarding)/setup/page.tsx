@@ -14,6 +14,8 @@ import {
   ChevronRight,
   Sparkles,
   CheckCircle2,
+  Plus,
+  X,
 } from "lucide-react";
 
 const steps = [
@@ -32,6 +34,7 @@ export default function SetupOrganizationPage() {
     legalName: "",
     gstin: "",
     phone: "",
+    secondaryPhones: [] as string[],
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,6 +47,26 @@ export default function SetupOrganizationPage() {
 
   const handleBack = () => {
     if (step > 1) setStep(step - 1);
+  };
+
+  const handleSecondaryPhoneChange = (index: number, value: string) => {
+    const updated = [...formData.secondaryPhones];
+    updated[index] = value;
+    setFormData({ ...formData, secondaryPhones: updated });
+  };
+
+  const addSecondaryPhone = () => {
+    if (formData.secondaryPhones.length < 5) {
+      setFormData({
+        ...formData,
+        secondaryPhones: [...formData.secondaryPhones, ""],
+      });
+    }
+  };
+
+  const removeSecondaryPhone = (index: number) => {
+    const updated = formData.secondaryPhones.filter((_, i) => i !== index);
+    setFormData({ ...formData, secondaryPhones: updated });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -288,11 +311,56 @@ export default function SetupOrganizationPage() {
                   <Input
                     id="phone"
                     type="tel"
+                    required
+                    pattern="^\+\d{1,4} \d{4,14}$"
+                    title="Format: Country Code + Phone (e.g. +91 9876543210)"
                     placeholder="+91 9876543210"
                     value={formData.phone}
                     onChange={handleChange}
                     className="bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:ring-emerald-500/20 h-11 rounded-xl"
                   />
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-slate-300 text-sm font-medium">
+                      Secondary Phones
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={addSecondaryPhone}
+                      disabled={formData.secondaryPhones.length >= 5}
+                      className="h-8 px-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 text-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1" />
+                      Add Phone
+                    </Button>
+                  </div>
+                  {formData.secondaryPhones.map((sp, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        type="tel"
+                        required
+                        pattern="^\+\d{1,4} \d{4,14}$"
+                        title="Format: Country Code + Phone (e.g. +91 9876543210)"
+                        placeholder="+91 9876543210"
+                        value={sp}
+                        onChange={(e) => handleSecondaryPhoneChange(index, e.target.value)}
+                        className="bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-indigo-500/20 h-10 rounded-lg flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeSecondaryPhone(index)}
+                        className="h-10 w-10 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
 
                 {error && (

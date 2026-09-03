@@ -146,11 +146,14 @@ export default function RegisterPage() {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="phone">Phone Number (Optional)</Label>
+          <Label htmlFor="phone">Phone Number</Label>
           <Input
             id="phone"
             name="phone"
             type="tel"
+            required
+            pattern="^\+\d{1,4} \d{4,14}$"
+            title="Format: Country Code + Phone (e.g. +91 9876543210)"
             value={formData.phone}
             onChange={handleChange}
             placeholder="+91 9876543210"

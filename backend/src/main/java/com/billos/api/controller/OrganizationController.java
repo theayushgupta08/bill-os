@@ -3,6 +3,7 @@ package com.billos.api.controller;
 import com.billos.api.dto.OrganizationSettingsDto;
 import com.billos.api.entity.Organization;
 import com.billos.api.service.OrganizationService;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,7 @@ public class OrganizationController {
     private final OrganizationService organizationService;
 
     @PostMapping
-    public ResponseEntity<Organization> createOrganization(@RequestBody Organization organization) {
+    public ResponseEntity<Organization> createOrganization(@Valid @RequestBody Organization organization) {
         Organization createdOrg = organizationService.createOrganization(organization);
         return ResponseEntity.ok(createdOrg);
     }
@@ -48,7 +49,7 @@ public class OrganizationController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Organization> updateOrganization(
-            @PathVariable java.util.UUID id, @RequestBody Organization organization) {
+            @PathVariable java.util.UUID id, @Valid @RequestBody Organization organization) {
         // Assume security handles authorization (e.g. only OWNER/ADMIN can update)
         Organization updatedOrg = organizationService.updateOrganization(id, organization);
         return ResponseEntity.ok(updatedOrg);

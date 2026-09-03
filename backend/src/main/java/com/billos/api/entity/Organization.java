@@ -6,12 +6,17 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "organizations")
@@ -44,7 +49,18 @@ public class Organization extends BaseEntity {
     private String state;
     private String pincode;
     private String country;
+
+    @NotBlank(message = "Primary business phone is required")
+    @Pattern(
+            regexp = "^\\+\\d{1,4} \\d{4,14}$",
+            message = "Phone must be in format: Country Code + Phone (e.g. +91 9876543210)")
+    @Column(nullable = false)
     private String phone;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "secondary_phones", columnDefinition = "jsonb")
+    private List<String> secondaryPhones;
+
     private String email;
 
     @Column(name = "logo_url")
