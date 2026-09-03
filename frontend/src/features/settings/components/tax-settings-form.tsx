@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { HelpCircle } from "lucide-react";
+import { TaxSettings, Organization } from "@/types";
 
 function Tooltip({ text }: { text: string }) {
   return (
@@ -25,12 +26,12 @@ function Tooltip({ text }: { text: string }) {
 export function TaxSettingsForm() {
   const queryClient = useQueryClient();
   const [orgId, setOrgId] = useState<string | null>(null);
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<TaxSettings | null>(null);
 
   const { data: orgs, isLoading: loadingOrgs } = useQuery({
     queryKey: ["organizations"],
     queryFn: async () => {
-      const res = await api.get<any>(`/organizations`);
+      const res = await api.get<Organization[]>(`/organizations`);
       return res;
     }
   });
@@ -39,7 +40,7 @@ export function TaxSettingsForm() {
     queryKey: ["taxSettings", orgId],
     queryFn: async () => {
       if (!orgId) return null;
-      const res = await api.get<any>(`/organizations/${orgId}/settings`);
+      const res = await api.get<TaxSettings>(`/organizations/${orgId}/settings`);
       return res;
     },
     enabled: !!orgId
@@ -60,7 +61,7 @@ export function TaxSettingsForm() {
   }, [taxSettings]);
 
   const updateMutation = useMutation({
-    mutationFn: (payload: any) => api.put(`/organizations/${orgId}/settings`, payload),
+    mutationFn: (payload: Partial<TaxSettings>) => api.put<TaxSettings>(`/organizations/${orgId}/settings`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taxSettings", orgId] });
       alert("Tax settings updated successfully!");
@@ -79,10 +80,10 @@ export function TaxSettingsForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setSettings((prev: any) => ({ 
+    setSettings((prev: TaxSettings | null) => prev ? ({ 
       ...prev, 
       [name]: type === 'checkbox' ? checked : value 
-    }));
+    }) : prev);
   };
 
   if (loadingOrgs || (orgId && loadingSettings)) return <div className="p-8">Loading settings...</div>;
@@ -123,7 +124,7 @@ export function TaxSettingsForm() {
                 id="taxInclusivePricing" 
                 name="taxInclusivePricing"
                 checked={settings.taxInclusivePricing || false}
-                onCheckedChange={(checked) => setSettings((p:any) => ({...p, taxInclusivePricing: checked}))}
+                onCheckedChange={(checked: boolean) => setSettings((p: TaxSettings | null) => p ? ({...p, taxInclusivePricing: checked}) : p)}
               />
               <div className="flex items-center">
                 <Label htmlFor="taxInclusivePricing" className="font-normal cursor-pointer">

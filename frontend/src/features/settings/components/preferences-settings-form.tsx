@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { HelpCircle } from "lucide-react";
+import { PreferencesSettings, Organization } from "@/types";
 
 function Tooltip({ text }: { text: string }) {
   return (
@@ -24,12 +25,12 @@ function Tooltip({ text }: { text: string }) {
 export function PreferencesSettingsForm() {
   const queryClient = useQueryClient();
   const [orgId, setOrgId] = useState<string | null>(null);
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<PreferencesSettings | null>(null);
 
   const { data: orgs, isLoading: loadingOrgs } = useQuery({
     queryKey: ["organizations"],
     queryFn: async () => {
-      const res = await api.get<any>(`/organizations`);
+      const res = await api.get<Organization[]>(`/organizations`);
       return res;
     }
   });
@@ -38,7 +39,7 @@ export function PreferencesSettingsForm() {
     queryKey: ["prefSettings", orgId],
     queryFn: async () => {
       if (!orgId) return null;
-      const res = await api.get<any>(`/organizations/${orgId}/settings`);
+      const res = await api.get<PreferencesSettings>(`/organizations/${orgId}/settings`);
       return res;
     },
     enabled: !!orgId
@@ -59,7 +60,7 @@ export function PreferencesSettingsForm() {
   }, [prefSettings]);
 
   const updateMutation = useMutation({
-    mutationFn: (payload: any) => api.put(`/organizations/${orgId}/settings`, payload),
+    mutationFn: (payload: Partial<PreferencesSettings>) => api.put<PreferencesSettings>(`/organizations/${orgId}/settings`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prefSettings", orgId] });
       alert("Preferences updated successfully!");
@@ -76,8 +77,8 @@ export function PreferencesSettingsForm() {
     updateMutation.mutate(settings);
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setSettings((prev: any) => ({ ...prev, [name]: value }));
+  const handleSelectChange = (name: keyof PreferencesSettings | "theme", value: string) => {
+    setSettings((prev: PreferencesSettings | null) => prev ? ({ ...prev, [name]: value }) : prev);
   };
 
   if (loadingOrgs || (orgId && loadingSettings)) return <div className="p-8">Loading settings...</div>;
@@ -103,8 +104,8 @@ export function PreferencesSettingsForm() {
                 <Tooltip text="Choose the appearance theme for your billOS interface (Light, Dark, or sync with System preferences)." />
               </div>
               <Select 
-                value={settings.theme || "light"} 
-                onValueChange={(val: any) => handleSelectChange("theme", val)}
+                value={(settings as PreferencesSettings).theme || "light"} 
+                onValueChange={(val: string) => handleSelectChange("theme", val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a theme" />
@@ -124,7 +125,7 @@ export function PreferencesSettingsForm() {
               </div>
               <Select 
                 value={settings.language || "en"} 
-                onValueChange={(val: any) => handleSelectChange("language", val)}
+                onValueChange={(val: string) => handleSelectChange("language", val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a language" />
@@ -144,7 +145,7 @@ export function PreferencesSettingsForm() {
               </div>
               <Select 
                 value={settings.timezone || "Asia/Kolkata"} 
-                onValueChange={(val: any) => handleSelectChange("timezone", val)}
+                onValueChange={(val: string) => handleSelectChange("timezone", val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a timezone" />
@@ -164,7 +165,7 @@ export function PreferencesSettingsForm() {
               </div>
               <Select 
                 value={settings.dateFormat || "DD/MM/YYYY"} 
-                onValueChange={(val: any) => handleSelectChange("dateFormat", val)}
+                onValueChange={(val: string) => handleSelectChange("dateFormat", val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a date format" />

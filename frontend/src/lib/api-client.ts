@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { createClient } from './supabase/client';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
@@ -65,7 +65,7 @@ export async function downloadPdf(endpoint: string, filename: string) {
       responseType: 'blob', // Important for downloading binary data
     });
 
-    const url = window.URL.createObjectURL(new Blob([response as any])); // response is the blob because of our interceptor returning data
+    const url = window.URL.createObjectURL(new Blob([response as unknown as BlobPart])); // response is the blob because of our interceptor returning data
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
@@ -73,7 +73,7 @@ export async function downloadPdf(endpoint: string, filename: string) {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Failed to download PDF');
   }
 }
@@ -85,15 +85,15 @@ export async function downloadPdf(endpoint: string, filename: string) {
  * These helpers make TypeScript aware of that.
  */
 export const api = {
-  get: <T = any>(url: string, config?: any): Promise<T> =>
+  get: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> =>
     apiClient.get(url, config) as unknown as Promise<T>,
-  post: <T = any>(url: string, data?: any, config?: any): Promise<T> =>
+  post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
     apiClient.post(url, data, config) as unknown as Promise<T>,
-  put: <T = any>(url: string, data?: any, config?: any): Promise<T> =>
+  put: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
     apiClient.put(url, data, config) as unknown as Promise<T>,
-  delete: <T = any>(url: string, config?: any): Promise<T> =>
+  delete: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> =>
     apiClient.delete(url, config) as unknown as Promise<T>,
-  patch: <T = any>(url: string, data?: any, config?: any): Promise<T> =>
+  patch: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
     apiClient.patch(url, data, config) as unknown as Promise<T>,
 };
 

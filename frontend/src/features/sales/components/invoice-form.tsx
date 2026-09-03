@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { Customer, Product, TaxRate, Warehouse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,47 +44,48 @@ export function InvoiceForm() {
   const soId = searchParams.get('soId');
   const queryClient = useQueryClient();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     customerId: "",
     soId: soId || "",
+    warehouseId: "",
     invoiceNumber: "INV-" + Math.floor(Math.random() * 100000),
     invoiceDate: new Date().toISOString().split("T")[0],
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     notes: "",
-  });
+  }));
 
   const [lines, setLines] = useState<LineItem[]>([
     { id: crypto.randomUUID(), productId: "", warehouseId: "", taxRateId: "", quantity: 1, unitPrice: 0 }
   ]);
 
-  const { data: customers = [] as any[], isLoading: loadingCustomers } = useQuery({
+  const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
-      const res = await api.get<any>("/customers");
+      const res = await api.get<Customer[]>("/customers");
       return res;
     }
   });
 
-  const { data: products = [] as any[], isLoading: loadingProducts } = useQuery({
+  const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.get<any>("/products");
+      const res = await api.get<Product[]>("/products");
       return res;
     }
   });
 
-  const { data: taxes = [] as any[], isLoading: loadingTaxes } = useQuery({
+  const { data: taxes = [], isLoading: loadingTaxes } = useQuery({
     queryKey: ["tax-rates"],
     queryFn: async () => {
-      const res = await api.get<any>("/tax-rates");
+      const res = await api.get<TaxRate[]>("/tax-rates");
       return res;
     }
   });
 
-  const { data: warehouses = [] as any[], isLoading: loadingWarehouses } = useQuery({
+  const { data: warehouses = [], isLoading: loadingWarehouses } = useQuery({
     queryKey: ["warehouses"],
     queryFn: async () => {
-      const res = await api.get<any>("/warehouses");
+      const res = await api.get<Warehouse[]>("/warehouses");
       return res;
     }
   });
@@ -96,23 +98,20 @@ export function InvoiceForm() {
 
   const handleRemoveLine = (id: string) => {
     if (lines.length > 1) {
-      setLines(lines.filter((l: any) => l.id !== id));
+      setLines(lines.filter((l: LineItem) => l.id !== id));
     }
   };
 
-  const handleLineChange = (id: string, field: keyof LineItem, value: any) => {
+  const handleLineChange = (id: string, field: keyof LineItem, value: string | number) => {
     setLines(lines.map(line => {
       if (line.id === id) {
         const updatedLine = { ...line, [field]: value };
         if (field === "productId") {
-          const product = products.find((p: any) => p.id === value);
+          const product = products.find((p: Product) => p.id === value);
           if (product) {
-            updatedLine.unitPrice = product.basePrice || 0;
-            if (product.taxRate) {
-              const matchedTax = taxes.find((t: any) => Number(t.rate) === Number(product.taxRate));
-              if (matchedTax) {
-                updatedLine.taxRateId = matchedTax.id;
-              }
+            updatedLine.unitPrice = Number(product.price) || 0;
+            if (product.taxRateId) {
+              updatedLine.taxRateId = product.taxRateId;
             }
           }
         }
@@ -130,9 +129,9 @@ export function InvoiceForm() {
       const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
       subtotal += lineSub;
       if (line.taxRateId) {
-        const tax = taxes.find((t: any) => t.id === line.taxRateId);
+        const tax = taxes.find((t: TaxRate) => t.id === line.taxRateId);
         if (tax) {
-          taxTotal += (lineSub * (tax.rate || 0)) / 100;
+          taxTotal += (lineSub * (Number(tax.rate) || 0)) / 100;
         }
       }
     });
@@ -143,15 +142,15 @@ export function InvoiceForm() {
   const totals = calculateTotals();
 
   const createMutation = useMutation({
-    mutationFn: (payload: any) => api.post("/sales-invoices", payload),
+    mutationFn: (payload: unknown) => api.post("/sales-invoices", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-invoices"] });
       router.push("/sales/invoices");
       router.refresh();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to create Sales Invoice");
+      alert((error as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create Invoice");
     }
   });
 
@@ -197,14 +196,14 @@ export function InvoiceForm() {
               <Label>Customer *</Label>
               <Select 
                 value={formData.customerId} 
-                onValueChange={(val: any) => setFormData(prev => ({ ...prev, customerId: val }))}
+                onValueChange={(val: string) => setFormData(prev => ({ ...prev, customerId: val }))}
                 required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {customers.map((c: any) => (
+                  {customers.map((c: Customer) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -255,12 +254,12 @@ export function InvoiceForm() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {lines.map((line: any) => {
+                  {lines.map((line: LineItem) => {
                     const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
                     let lineTax = 0;
                     if (line.taxRateId) {
-                      const tax = taxes.find((t: any) => t.id === line.taxRateId);
-                      if (tax) lineTax = (lineSub * (tax.rate || 0)) / 100;
+                      const tax = taxes.find((t: TaxRate) => t.id === line.taxRateId);
+                      if (tax) lineTax = (lineSub * (Number(tax.rate) || 0)) / 100;
                     }
                     const lineTotal = lineSub + lineTax;
 
@@ -276,14 +275,14 @@ export function InvoiceForm() {
                         <TableCell>
                           <Select 
                             value={line.warehouseId} 
-                            onValueChange={(val: any) => handleLineChange(line.id, "warehouseId", val)}
+                            onValueChange={(val: string) => handleLineChange(line.id, "warehouseId", val)}
                             required
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select warehouse" />
                             </SelectTrigger>
                             <SelectContent>
-                              {warehouses.map((w: any) => (
+                              {warehouses.map((w: Warehouse) => (
                                 <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
                               ))}
                             </SelectContent>
@@ -311,15 +310,15 @@ export function InvoiceForm() {
                         </TableCell>
                         <TableCell>
                           <Select 
-                            value={line.taxRateId} 
-                            onValueChange={(val: any) => handleLineChange(line.id, "taxRateId", val === "none" ? "" : val)}
+                            value={line.taxRateId || ""} 
+                            onValueChange={(val: string) => handleLineChange(line.id, "taxRateId", val === "none" ? "" : val)}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="No Tax" />
+                              <SelectValue placeholder="None" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">No Tax</SelectItem>
-                              {taxes.map((t: any) => (
+                              <SelectItem value="none">None</SelectItem>
+                              {taxes.map((t: TaxRate) => (
                                 <SelectItem key={t.id} value={t.id}>{t.name} ({t.rate}%)</SelectItem>
                               ))}
                             </SelectContent>

@@ -8,14 +8,15 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { Quotation } from "@/types";
 
 export function QuoteList() {
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: quotes = [] as any[], isLoading } = useQuery({
+  const { data: quotes = [], isLoading } = useQuery({
     queryKey: ["quotations", page],
     queryFn: async () => {
-      const res = await api.get<any>("/quotations");
+      const res = await api.get<Quotation[]>("/quotations");
       return res;
     },
   });
@@ -46,7 +47,7 @@ export function QuoteList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {quotes.map((q: any) => (
+            {quotes.map((q: Quotation) => (
               <TableRow key={q.id}>
                 <TableCell className="font-medium">{q.quoteNumber}</TableCell>
                 <TableCell>{q.quoteDate}</TableCell>

@@ -8,14 +8,15 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { SalesOrder } from "@/types";
 
 export function OrderList() {
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: orders = [] as any[], isLoading } = useQuery({
+  const { data: orders = [], isLoading } = useQuery({
     queryKey: ["sales-orders", page],
     queryFn: async () => {
-      const res = await api.get<any>("/sales-orders");
+      const res = await api.get<SalesOrder[]>("/sales-orders");
       return res;
     },
   });
@@ -45,7 +46,7 @@ export function OrderList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map((so: any) => (
+            {orders.map((so: SalesOrder) => (
               <TableRow key={so.id}>
                 <TableCell className="font-medium">{so.soNumber}</TableCell>
                 <TableCell>{so.orderDate}</TableCell>

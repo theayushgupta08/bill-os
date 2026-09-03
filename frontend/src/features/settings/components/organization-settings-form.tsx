@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { HelpCircle, Plus, X } from "lucide-react";
+import { Organization } from "@/types";
 
 function Tooltip({ text }: { text: string }) {
   return (
@@ -23,19 +24,19 @@ function Tooltip({ text }: { text: string }) {
 
 export function OrganizationSettingsForm() {
   const queryClient = useQueryClient();
-  const [org, setOrg] = useState<any>(null);
+  const [org, setOrg] = useState<Organization | null>(null);
 
   const { data: orgData, isLoading } = useQuery({
     queryKey: ["organizations"],
     queryFn: async () => {
-      const res = await api.get<any>(`/organizations`);
+      const res = await api.get<Organization[]>(`/organizations`);
       return res;
     }
   });
 
   useEffect(() => {
     if (orgData && orgData.length > 0) {
-      const fetchedOrg = orgData[0];
+      const fetchedOrg = { ...orgData[0] };
       if (!fetchedOrg.secondaryPhones) {
         fetchedOrg.secondaryPhones = [];
       }
@@ -45,7 +46,7 @@ export function OrganizationSettingsForm() {
   }, [orgData]);
 
   const updateMutation = useMutation({
-    mutationFn: (payload: any) => api.put(`/organizations/${payload.id}`, payload),
+    mutationFn: (payload: Partial<Organization>) => api.put<Organization>(`/organizations/${payload.id}`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
       alert("Organization details updated successfully!");
@@ -64,11 +65,12 @@ export function OrganizationSettingsForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setOrg((prev: any) => ({ ...prev, [name]: value }));
+    setOrg((prev: Organization | null) => prev ? ({ ...prev, [name]: value }) : prev);
   };
 
   const handleSecondaryPhoneChange = (index: number, value: string) => {
-    setOrg((prev: any) => {
+    setOrg((prev: Organization | null) => {
+      if (!prev) return prev;
       const updated = [...(prev.secondaryPhones || [])];
       updated[index] = value;
       return { ...prev, secondaryPhones: updated };
@@ -76,7 +78,8 @@ export function OrganizationSettingsForm() {
   };
 
   const addSecondaryPhone = () => {
-    setOrg((prev: any) => {
+    setOrg((prev: Organization | null) => {
+      if (!prev) return prev;
       const current = prev.secondaryPhones || [];
       if (current.length < 5) {
         return { ...prev, secondaryPhones: [...current, ""] };
@@ -86,8 +89,9 @@ export function OrganizationSettingsForm() {
   };
 
   const removeSecondaryPhone = (index: number) => {
-    setOrg((prev: any) => {
-      const updated = (prev.secondaryPhones || []).filter((_: any, i: number) => i !== index);
+    setOrg((prev: Organization | null) => {
+      if (!prev) return prev;
+      const updated = (prev.secondaryPhones || []).filter((_, i: number) => i !== index);
       return { ...prev, secondaryPhones: updated };
     });
   };

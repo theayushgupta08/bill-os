@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Info, HelpCircle } from "lucide-react";
+import { HelpCircle } from "lucide-react";
+import { InvoiceSettings, Organization } from "@/types";
 
 interface BankDetails {
   bankName: string;
@@ -33,7 +34,7 @@ function Tooltip({ text }: { text: string }) {
 export function InvoiceSettingsForm() {
   const queryClient = useQueryClient();
   const [orgId, setOrgId] = useState<string | null>(null);
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<InvoiceSettings | null>(null);
   const [bankFields, setBankFields] = useState<BankDetails>({
     bankName: "",
     accountNumber: "",
@@ -45,7 +46,7 @@ export function InvoiceSettingsForm() {
   const { data: orgs, isLoading: loadingOrgs } = useQuery({
     queryKey: ["organizations"],
     queryFn: async () => {
-      const res = await api.get<any>(`/organizations`);
+      const res = await api.get<Organization[]>(`/organizations`);
       return res;
     }
   });
@@ -54,7 +55,7 @@ export function InvoiceSettingsForm() {
     queryKey: ["invoiceSettings", orgId],
     queryFn: async () => {
       if (!orgId) return null;
-      const res = await api.get<any>(`/organizations/${orgId}/settings`);
+      const res = await api.get<InvoiceSettings>(`/organizations/${orgId}/settings`);
       return res;
     },
     enabled: !!orgId
@@ -102,7 +103,7 @@ export function InvoiceSettingsForm() {
       console.error("Failed to update invoice settings", error);
       alert("Failed to update invoice settings.");
     },
-    mutationFn: (payload: any) => api.put(`/organizations/${orgId}/settings`, payload),
+    mutationFn: (payload: Partial<InvoiceSettings>) => api.put<InvoiceSettings>(`/organizations/${orgId}/settings`, payload),
   });
 
   const handleSave = (e: React.FormEvent) => {
@@ -113,7 +114,7 @@ export function InvoiceSettingsForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setSettings((prev: any) => ({ ...prev, [name]: value }));
+    setSettings((prev: InvoiceSettings | null) => prev ? ({ ...prev, [name]: value }) : prev);
   };
 
   const handleBankFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,10 +123,10 @@ export function InvoiceSettingsForm() {
     setBankFields(updatedBank);
     
     // Serialize to JSON string for database storage
-    setSettings((prev: any) => ({
+    setSettings((prev: InvoiceSettings | null) => prev ? ({
       ...prev,
       bankDetails: JSON.stringify(updatedBank),
-    }));
+    }) : prev);
   };
 
   if (loadingOrgs || (orgId && loadingSettings)) return <div className="p-8">Loading settings...</div>;

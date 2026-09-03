@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { ChevronDownIcon, Search, Check } from "lucide-react";
+import { ChevronDownIcon, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Product {
@@ -10,7 +10,6 @@ interface Product {
   name: string;
   basePrice?: number;
   taxRate?: number;
-  [key: string]: any;
 }
 
 interface ProductComboboxProps {

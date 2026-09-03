@@ -14,15 +14,16 @@ import {
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { Supplier } from "@/types";
 
 export function SupplierList() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: suppliers = [] as any[], isLoading } = useQuery({
+  const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers", page],
     queryFn: async () => {
-      const res = await api.get<any>("/suppliers");
+      const res = await api.get<Supplier[]>("/suppliers");
       return res;
     },
   });
@@ -80,7 +81,7 @@ export function SupplierList() {
                 </TableCell>
               </TableRow>
             ) : (
-              suppliers.map((supplier: any) => (
+              suppliers.map((supplier: Supplier) => (
                 <TableRow key={supplier.id}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell>{supplier.email || "-"}</TableCell>

@@ -8,21 +8,22 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { Invoice } from "@/types";
 
 export function InvoiceList() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: invoices = [] as any[], isLoading } = useQuery({
+  const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["sales-invoices", page],
     queryFn: async () => {
-      const res = await api.get<any>("/sales-invoices");
+      const res = await api.get<Invoice[]>("/sales-invoices");
       return res;
     },
   });
 
   const payMutation = useMutation({
-    mutationFn: (inv: any) => {
+    mutationFn: (inv: Invoice) => {
       const payload = {
         paymentDate: new Date().toISOString().split('T')[0],
         amount: inv.totalAmount,
@@ -71,7 +72,7 @@ export function InvoiceList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {invoices.map((inv: any) => (
+            {invoices.map((inv: Invoice) => (
               <TableRow key={inv.id}>
                 <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                 <TableCell>{inv.invoiceDate}</TableCell>
