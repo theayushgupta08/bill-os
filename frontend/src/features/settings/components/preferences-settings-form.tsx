@@ -46,12 +46,14 @@ export function PreferencesSettingsForm() {
 
   useEffect(() => {
     if (orgs && orgs.length > 0) {
+      // eslint-disable-next-line
       setOrgId(orgs[0].id);
     }
   }, [orgs]);
 
   useEffect(() => {
     if (prefSettings) {
+      // eslint-disable-next-line
       setSettings(prefSettings);
     }
   }, [prefSettings]);

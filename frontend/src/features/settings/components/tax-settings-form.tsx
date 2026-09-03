@@ -47,12 +47,14 @@ export function TaxSettingsForm() {
 
   useEffect(() => {
     if (orgs && orgs.length > 0) {
+      // eslint-disable-next-line
       setOrgId(orgs[0].id);
     }
   }, [orgs]);
 
   useEffect(() => {
     if (taxSettings) {
+      // eslint-disable-next-line
       setSettings(taxSettings);
     }
   }, [taxSettings]);

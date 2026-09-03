@@ -39,6 +39,7 @@ export function OrganizationSettingsForm() {
       if (!fetchedOrg.secondaryPhones) {
         fetchedOrg.secondaryPhones = [];
       }
+      // eslint-disable-next-line
       setOrg(fetchedOrg);
     }
   }, [orgData]);
