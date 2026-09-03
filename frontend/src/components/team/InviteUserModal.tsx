@@ -43,7 +43,7 @@ export function InviteUserModal({ onRefresh }: { onRefresh: () => void }) {
       setOpen(false);
       setFormData({ email: '', role: 'USER' });
       onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || 'Failed to send invitation');
     } finally {
       setLoading(false);

@@ -28,24 +28,24 @@ export function InventoryAdjustForm() {
     referenceType: "MANUAL",
   });
 
-  const { data: warehouses = [] as any[], isLoading: loadingWarehouses } = useQuery({
+  const { data: warehouses = [] as Warehouse[], isLoading: loadingWarehouses } = useQuery({
     queryKey: ["warehouses"],
     queryFn: async () => {
-      const res = await api.get<any>("/warehouses");
+      const res = await api.get<unknown[]>("/warehouses");
       return res;
     }
   });
 
-  const { data: products = [] as any[], isLoading: loadingProducts } = useQuery({
+  const { data: products = [] as Product[], isLoading: loadingProducts } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.get<any>("/products");
+      const res = await api.get<unknown[]>("/products");
       return res;
     }
   });
 
   const adjustMutation = useMutation({
-    mutationFn: (payload: any) => api.post("/inventory/adjust", payload),
+    mutationFn: (payload: unknown) => api.post("/inventory/adjust", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-levels"] });
       router.push("/inventory");
@@ -85,14 +85,14 @@ export function InventoryAdjustForm() {
             <Label>Warehouse *</Label>
             <Select 
               value={formData.warehouseId} 
-              onValueChange={(val: any) => setFormData(prev => ({ ...prev, warehouseId: val }))}
+              onValueChange={(val: string) => setFormData(prev => ({ ...prev, warehouseId: val }))}
               required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select warehouse" />
               </SelectTrigger>
               <SelectContent>
-                {warehouses.map((w: any) => (
+                {warehouses.map((w: Warehouse) => (
                   <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -103,14 +103,14 @@ export function InventoryAdjustForm() {
             <Label>Product *</Label>
             <Select 
               value={formData.productId} 
-              onValueChange={(val: any) => setFormData(prev => ({ ...prev, productId: val }))}
+              onValueChange={(val: string) => setFormData(prev => ({ ...prev, productId: val }))}
               required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select product" />
               </SelectTrigger>
               <SelectContent>
-                {products.map((p: any) => (
+                {products.map((p: Product) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
               </SelectContent>

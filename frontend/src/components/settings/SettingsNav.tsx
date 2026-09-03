@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { Building2, Users, Percent, Receipt, FileText, Settings } from "lucide-react";
+import { Building2, Users, Percent, FileText, Settings } from "lucide-react";
 
 const sidebarNavItems = [
   {

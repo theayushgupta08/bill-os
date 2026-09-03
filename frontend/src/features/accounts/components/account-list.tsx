@@ -27,12 +27,12 @@ interface Account {
 
 export function AccountList() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: accounts = [] as any[], isLoading } = useQuery({
+  const { data: accounts = [] as Account[], isLoading } = useQuery({
     queryKey: ["accounts", page],
     queryFn: async () => {
-      const res = await api.get<any>("/accounts");
+      const res = await api.get<unknown[]>("/accounts");
       return res as Account[];
     },
   });
@@ -88,7 +88,7 @@ export function AccountList() {
                 </TableCell>
               </TableRow>
             ) : (
-              accounts.map((account: any) => (
+              accounts.map((account: Account) => (
                 <TableRow key={account.id}>
                   <TableCell className="font-medium">{account.accountCode}</TableCell>
                   <TableCell>{account.name}</TableCell>

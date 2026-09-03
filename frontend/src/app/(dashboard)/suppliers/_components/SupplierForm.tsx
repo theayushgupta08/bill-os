@@ -32,7 +32,7 @@ export default function SupplierForm({ supplierId }: SupplierFormProps) {
   const { data: supplier, isLoading: isFetching } = useQuery({
     queryKey: ["supplier", supplierId],
     queryFn: async () => {
-      const data: any = await api.get(`/suppliers/${supplierId}`);
+      const data = await api.get<Supplier>(`/suppliers/${supplierId}`);
       return data;
     },
     enabled: !!supplierId,

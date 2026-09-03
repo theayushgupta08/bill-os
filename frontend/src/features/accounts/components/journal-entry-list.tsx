@@ -16,14 +16,22 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
-export function JournalEntryList() {
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+interface JournalEntry {
+  id: string;
+  entryDate: string;
+  reference?: string;
+  description: string;
+  totalAmount: number;
+}
 
-  const { data: entries = [] as any[], isLoading } = useQuery({
+export function JournalEntryList() {
+  const [page] = useQueryState('page', { defaultValue: '1' });
+
+  const { data: entries = [] as JournalEntry[], isLoading } = useQuery({
     queryKey: ["journal-entries", page],
     queryFn: async () => {
       // Changed fetchApi to apiClient.get for consistency
-      const res = await api.get<any>("/journal-entries");
+      const res = await api.get<unknown[]>("/journal-entries");
       return res;
     },
   });
@@ -62,7 +70,7 @@ export function JournalEntryList() {
                 </TableCell>
               </TableRow>
             ) : (
-              entries.map((entry: any) => (
+              entries.map((entry: JournalEntry) => (
                 <TableRow key={entry.id}>
                   <TableCell className="font-medium">{entry.entryDate}</TableCell>
                   <TableCell>{entry.referenceNumber || "-"}</TableCell>

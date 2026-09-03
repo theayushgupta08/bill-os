@@ -19,12 +19,12 @@ export function CustomerList() {
   const queryClient = useQueryClient();
   
   // Using nuqs for URL state (e.g. ?page=1) - we can expand this to search later
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: customers = [] as any[], isLoading } = useQuery({
+  const { data: customers = [] as Customer[], isLoading } = useQuery({
     queryKey: ["customers", page],
     queryFn: async () => {
-      const res = await api.get<any>("/customers");
+      const res = await api.get<unknown[]>("/customers");
       return res;
     },
   });
@@ -82,7 +82,7 @@ export function CustomerList() {
                 </TableCell>
               </TableRow>
             ) : (
-              customers.map((customer: any) => (
+              customers.map((customer: Customer) => (
                 <TableRow key={customer.id}>
                   <TableCell className="font-medium">{customer.name}</TableCell>
                   <TableCell>{customer.email || "-"}</TableCell>

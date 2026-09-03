@@ -58,7 +58,7 @@ export function RoleActionMenu({
       await api.put(`/team/${member.userId}/role`, { role: newRole });
       toast.success(`Role updated to ${newRole}`);
       onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || 'Failed to update role');
     } finally {
       setLoading(false);
@@ -75,7 +75,7 @@ export function RoleActionMenu({
       await api.put(`/team/${member.userId}/toggle-status`, { active: isActivating });
       toast.success(`User has been ${isActivating ? 'activated' : 'deactivated'} successfully`);
       onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || `Failed to ${actionText} user`);
     } finally {
       setLoading(false);
@@ -89,7 +89,7 @@ export function RoleActionMenu({
       await api.delete(`/team/${member.userId}`);
       toast.success('User removed from organization');
       onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || 'Failed to remove user');
     } finally {
       setLoading(false);

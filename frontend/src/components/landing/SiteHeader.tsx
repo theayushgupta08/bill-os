@@ -28,9 +28,9 @@ export function SiteHeader() {
           const prefix = email.split("@")[0];
           setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
           
-          api.get("/team").then((res: any) => {
+          api.get<{email: string; firstName?: string; lastName?: string}[]>("/team").then((res) => {
             const current = res.find(
-              (m: any) => m.email.toLowerCase() === email.toLowerCase()
+              (m) => m.email.toLowerCase() === email.toLowerCase()
             );
             if (current && current.firstName) {
               setUserName(`${current.firstName} ${current.lastName || ""}`.trim());

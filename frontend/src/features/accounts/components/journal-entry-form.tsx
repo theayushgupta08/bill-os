@@ -39,10 +39,10 @@ export function JournalEntryForm() {
     { id: "2", accountId: "", debitAmount: 0, creditAmount: 0, description: "" },
   ]);
 
-  const { data: accounts = [] as any[], isLoading: loadingAccounts } = useQuery({
+  const { data: accounts = [] as unknown[], isLoading: loadingAccounts } = useQuery({
     queryKey: ["accounts"],
     queryFn: async () => {
-      const res = await api.get<any>("/accounts");
+      const res = await api.get<unknown[]>("/accounts");
       return res;
     }
   });
@@ -52,7 +52,7 @@ export function JournalEntryForm() {
   const isBalanced = totalDebits === totalCredits && totalDebits > 0;
 
   const createMutation = useMutation({
-    mutationFn: (payload: any) => api.post("/journal-entries", payload),
+    mutationFn: (payload: unknown) => api.post("/journal-entries", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
       router.push("/journal-entries");
@@ -73,7 +73,7 @@ export function JournalEntryForm() {
 
     const payload = {
       ...formData,
-      lines: lines.filter((l: any) => l.accountId !== "").map(l => ({
+      lines: lines.filter((l: JournalLine) => l.accountId !== "").map(l => ({
         accountId: l.accountId,
         debitAmount: Number(l.debitAmount) || 0,
         creditAmount: Number(l.creditAmount) || 0,
@@ -94,10 +94,10 @@ export function JournalEntryForm() {
   };
 
   const removeLine = (id: string) => {
-    setLines(lines.filter((l: any) => l.id !== id));
+    setLines(lines.filter((l: JournalLine) => l.id !== id));
   };
 
-  const updateLine = (id: string, field: string, value: any) => {
+  const updateLine = (id: string, field: string, value: string | number) => {
     setLines(lines.map(l => {
       if (l.id === id) {
         const updated = { ...l, [field]: value };
@@ -159,18 +159,18 @@ export function JournalEntryForm() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {lines.map((line: any) => (
+            {lines.map((line: JournalLine) => (
               <TableRow key={line.id}>
                 <TableCell>
                   <Select 
                     value={line.accountId} 
-                    onValueChange={(val: any) => updateLine(line.id, 'accountId', val)}
+                    onValueChange={(val: string) => updateLine(line.id, 'accountId', val)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select account" />
                     </SelectTrigger>
                     <SelectContent>
-                      {accounts.map((acc: any) => (
+                      {accounts.map((acc: Account) => (
                         <SelectItem key={acc.id} value={acc.id}>
                           {acc.accountCode} - {acc.name}
                         </SelectItem>

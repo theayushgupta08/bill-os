@@ -73,7 +73,7 @@ export async function downloadPdf(endpoint: string, filename: string) {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
-  } catch (_error) {
+  } catch {
     throw new Error('Failed to download PDF');
   }
 }

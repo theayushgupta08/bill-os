@@ -49,7 +49,7 @@ export function TeamTable() {
   const fetchTeam = async () => {
     try {
       setLoading(true);
-      const data: any = await api.get("/team");
+      const data = await api.get<{email: string; role: string}[]>("/team");
       setMembers(data);
 
       // Resolve current user's role from session
@@ -59,7 +59,7 @@ export function TeamTable() {
       if (session?.user?.email) {
         try {
           const email = session.user.email;
-          const currentMember = data.find((m: any) => m.email.toLowerCase() === email.toLowerCase());
+          const currentMember = data.find((m: {email: string; role: string}) => m.email.toLowerCase() === email.toLowerCase());
           if (currentMember) {
             setCurrentUserRole(currentMember.role);
           }
@@ -67,7 +67,7 @@ export function TeamTable() {
           console.error("Failed to decode session for role resolution", e);
         }
       }
-    } catch (err: any) {
+    } catch {
       toast.error("Failed to load team members");
     } finally {
       setLoading(false);
@@ -75,6 +75,7 @@ export function TeamTable() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchTeam();
   }, []);
 

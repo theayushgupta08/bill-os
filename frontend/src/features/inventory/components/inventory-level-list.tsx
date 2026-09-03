@@ -16,13 +16,22 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
-export function InventoryLevelList() {
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+interface InventoryLevel {
+  id: string;
+  productName: string;
+  sku?: string;
+  warehouseName: string;
+  quantity: number;
+  minQuantity?: number;
+}
 
-  const { data: levels = [] as any[], isLoading } = useQuery({
+export function InventoryLevelList() {
+  const [page] = useQueryState('page', { defaultValue: '1' });
+
+  const { data: levels = [], isLoading } = useQuery({
     queryKey: ["inventory-levels", page],
     queryFn: async () => {
-      const res = await api.get<any>("/inventory/levels");
+      const res = await api.get<InventoryLevel[]>("/inventory/levels");
       return res;
     },
   });
@@ -61,7 +70,7 @@ export function InventoryLevelList() {
                 </TableCell>
               </TableRow>
             ) : (
-              levels.map((level: any) => (
+              levels.map((level: InventoryLevel) => (
                 <TableRow key={level.id}>
                   <TableCell className="font-medium">{level.productName}</TableCell>
                   <TableCell>{level.productCode || "-"}</TableCell>

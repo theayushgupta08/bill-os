@@ -51,7 +51,7 @@ export default function TaxSettingsAndRatesPage() {
   const { data: taxes = [], isLoading: loadingTaxes, refetch: refetchTaxes } = useQuery({
     queryKey: ["tax-rates"],
     queryFn: async () => {
-      const data: any = await api.get("/tax-rates");
+      const data = await api.get<TaxRate[]>("/tax-rates");
       return data as any[];
     }
   });
@@ -69,12 +69,12 @@ export default function TaxSettingsAndRatesPage() {
 
   // Save Settings Mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: (payload: any) => api.put(`/organizations/${orgId}/settings`, payload),
+    mutationFn: (payload: unknown) => api.put(`/organizations/${orgId}/settings`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taxSettings", orgId] });
       toast.success("Tax configurations updated successfully!");
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("Failed to update tax settings", error);
       toast.error("Failed to save tax configurations.");
     }
@@ -122,7 +122,7 @@ export default function TaxSettingsAndRatesPage() {
       setNewTaxRate("");
       toast.success("Tax rate added successfully!");
       refetchTaxes();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to add tax rate", error);
       toast.error("Failed to add tax rate.");
     } finally {

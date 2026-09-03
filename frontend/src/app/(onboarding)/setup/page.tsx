@@ -74,11 +74,11 @@ export default function SetupOrganizationPage() {
     setLoading(true);
     setError(null);
     try {
-      const response: any = await api.post("/organizations", formData);
+      const response = await api.post<{ id: string }>("/organizations", formData);
       const orgId = response.data?.id || response.id;
       localStorage.setItem("active_org_id", orgId);
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to create organization", err);
       setError(
         err?.response?.data?.message ||

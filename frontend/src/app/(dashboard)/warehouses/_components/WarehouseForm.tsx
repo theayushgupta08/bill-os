@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
+import { Warehouse } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,7 +33,7 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
     const init = async () => {
       if (id) {
         try {
-          const data: any = await api.get(`/warehouses/${id}`);
+          const data = await api.get<Warehouse>(`/warehouses/${id}`);
           setFormData({
             name: data.name || "",
             code: data.code || "",
@@ -69,7 +70,7 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
       
       router.push("/warehouses");
       router.refresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save warehouse", error);
       alert(error.response?.data?.message || "Failed to save warehouse. See console.");
     } finally {

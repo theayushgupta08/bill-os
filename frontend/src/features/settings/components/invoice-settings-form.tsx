@@ -63,12 +63,14 @@ export function InvoiceSettingsForm() {
 
   useEffect(() => {
     if (orgs && orgs.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOrgId(orgs[0].id);
     }
   }, [orgs]);
 
   useEffect(() => {
     if (invoiceSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSettings(invoiceSettings);
       
       // Parse bankDetails string

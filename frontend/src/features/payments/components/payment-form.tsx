@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Invoice, PurchaseOrder } from "@/types";
 
 export function PaymentForm() {
   const router = useRouter();
@@ -32,34 +34,34 @@ export function PaymentForm() {
     allocatedDocumentId: "", // ID of Sales Invoice or Purchase Bill
   });
 
-  const { data: invoices = [] as any[], isLoading: loadingInvoices } = useQuery({
+  const { data: invoices = [] as Invoice[], isLoading: loadingInvoices } = useQuery({
     queryKey: ["sales-invoices-unpaid"],
     queryFn: async () => {
-      const res = await api.get<any>("/sales-invoices");
-      return (res as any[]).filter((i: any) => i.status !== 'PAID');
+      const res = await api.get<Invoice[]>("/invoices?status=SENT,PARTIAL");
+      return res.filter((i: Invoice) => i.status !== 'PAID');
     }
   });
 
-  const { data: bills = [] as any[], isLoading: loadingBills } = useQuery({
+  const { data: bills = [] as PurchaseOrder[], isLoading: loadingBills } = useQuery({
     queryKey: ["purchase-bills-unpaid"],
     queryFn: async () => {
-      const res = await api.get<any>("/purchase-bills");
-      return (res as any[]).filter((b: any) => b.status !== 'PAID');
+      const res = await api.get<PurchaseOrder[]>("/purchase-bills?status=PENDING,PARTIAL");
+      return res.filter((b: PurchaseOrder) => b.status !== 'PAID');
     }
   });
 
   const initialLoading = loadingInvoices || loadingBills;
 
-  const handleDocumentChange = (docId: any) => {
+  const handleDocumentChange = (docId: string) => {
     setFormData(prev => ({ ...prev, allocatedDocumentId: docId }));
     
     if (formData.paymentType === "RECEIPT") {
-      const inv = invoices.find((i: any) => i.id === docId);
+      const inv = invoices.find((i: Invoice) => i.id === docId);
       if (inv) {
         setFormData(prev => ({ ...prev, amount: inv.totalAmount.toString() }));
       }
     } else {
-      const bill = bills.find((b: any) => b.id === docId);
+      const bill = bills.find((b: PurchaseOrder) => b.id === docId);
       if (bill) {
         setFormData(prev => ({ ...prev, amount: bill.totalAmount.toString() }));
       }
@@ -67,7 +69,7 @@ export function PaymentForm() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (payload: any) => {
+    mutationFn: (payload: unknown) => {
       const endpoint = formData.paymentType === "RECEIPT" ? "/payments/receipts" : "/payments/vouchers";
       return api.post(endpoint, payload);
     },
@@ -78,9 +80,10 @@ export function PaymentForm() {
       router.push("/payments");
       router.refresh();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to record payment");
+      const err = error as AxiosError<{message: string}>;
+      alert(err.response?.data?.message || "Failed to record payment");
     }
   });
 
@@ -96,7 +99,7 @@ export function PaymentForm() {
       amount: Number(formData.amount),
       referenceNumber: formData.referenceNumber,
       notes: formData.notes,
-      allocations: [] as any[]
+      allocations: [] as unknown[]
     };
 
     if (formData.allocatedDocumentId) {
@@ -139,7 +142,7 @@ export function PaymentForm() {
               <Label>Payment Type</Label>
               <Select 
                 value={formData.paymentType} 
-                onValueChange={(val: any) => setFormData(prev => ({ ...prev, paymentType: val, allocatedDocumentId: "", amount: "" }))}
+                onValueChange={(val: string) => setFormData(prev => ({ ...prev, paymentType: val, allocatedDocumentId: "", amount: "" }))}
                 required
               >
                 <SelectTrigger>
@@ -164,12 +167,12 @@ export function PaymentForm() {
                 <SelectContent>
                   <SelectItem value="none">No specific document</SelectItem>
                   {formData.paymentType === "RECEIPT" 
-                    ? invoices.map((i: any) => (
+                    ? invoices.map((i: Invoice) => (
                         <SelectItem key={i.id} value={i.id}>
                           {i.invoiceNumber} - {i.customerName} (₹{i.totalAmount})
                         </SelectItem>
                       ))
-                    : bills.map((b: any) => (
+                    : bills.map((b: PurchaseOrder) => (
                         <SelectItem key={b.id} value={b.id}>
                           {b.billNumber} - {b.supplierName} (₹{b.totalAmount})
                         </SelectItem>

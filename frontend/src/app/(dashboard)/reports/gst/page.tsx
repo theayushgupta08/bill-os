@@ -17,7 +17,7 @@ export default function GstReportsPage() {
 
   const loadHsnSummary = async () => {
     try {
-      const data: any = await api.get("/reports/gst/hsn-summary");
+      const data = await api.get<unknown[]>("/reports/gst/hsn-summary");
       setHsnSummary(data);
     } catch (error) {
       console.error("Failed to load HSN summary", error);
@@ -29,7 +29,7 @@ export default function GstReportsPage() {
   const downloadEInvoiceJson = async (invoiceId: string) => {
     setDownloadingJson(true);
     try {
-      const res: any = await api.get(`/reports/gst/einvoice/${invoiceId}`, { responseType: 'blob' });
+      const res = await api.get<Blob>(`/reports/gst/einvoice/${invoiceId}`, { responseType: 'blob' });
       const blob = new Blob([res]);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

@@ -30,7 +30,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
   const { data: categories = [] } = useQuery({
     queryKey: ["product-categories"],
     queryFn: async () => {
-      const data: any = await api.get("/product-categories");
+      const data = await api.get<ProductCategory[]>("/product-categories");
       return data;
     },
   });
@@ -38,7 +38,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
   const { data: product, isLoading: isFetching } = useQuery({
     queryKey: ["product", productId],
     queryFn: async () => {
-      const data: any = await api.get(`/products/${productId}`);
+      const data = await api.get<Product>(`/products/${productId}`);
       return data;
     },
     enabled: !!productId,
@@ -130,7 +130,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="">None</option>
-            {categories.map((c: any) => (
+            {categories.map((c: ProductCategory) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>

@@ -8,21 +8,32 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { PurchaseOrder } from "@/types";
+
+interface PurchaseBill {
+  id: string;
+  billNumber: string;
+  billDate: string;
+  totalAmount: number;
+  status: string;
+  supplier?: { name: string };
+  supplierName?: string;
+}
 
 export function PurchaseBillList() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: bills = [] as any[], isLoading } = useQuery({
+  const { data: bills = [] as PurchaseBill[], isLoading } = useQuery({
     queryKey: ["purchase-bills", page],
     queryFn: async () => {
-      const res = await api.get<any>("/purchase-bills");
+      const res = await api.get<PurchaseBill[]>("/purchase-bills");
       return res;
     },
   });
 
   const payMutation = useMutation({
-    mutationFn: (bill: any) => {
+    mutationFn: (bill: PurchaseBill) => {
       const payload = {
         paymentDate: new Date().toISOString().split('T')[0],
         amount: bill.totalAmount,
@@ -80,7 +91,7 @@ export function PurchaseBillList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {bills.map((bill: any) => (
+            {bills.map((bill: PurchaseOrder) => (
               <TableRow key={bill.id}>
                 <TableCell className="font-medium">{bill.billNumber}</TableCell>
                 <TableCell>{bill.billDate}</TableCell>

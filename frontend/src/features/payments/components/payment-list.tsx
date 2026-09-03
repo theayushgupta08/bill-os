@@ -9,13 +9,23 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
-export function PaymentList() {
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+interface PaymentRecord {
+  id: string;
+  paymentDate: string;
+  paymentNumber: string;
+  type: string;
+  paymentMethod: string;
+  amount: number;
+  entityName?: string;
+}
 
-  const { data: payments = [] as any[], isLoading } = useQuery({
+export function PaymentList() {
+  const [page] = useQueryState('page', { defaultValue: '1' });
+
+  const { data: payments = [], isLoading } = useQuery({
     queryKey: ["payments", page],
     queryFn: async () => {
-      const res = await api.get<any>("/payments");
+      const res = await api.get<PaymentRecord[]>("/payments");
       return res;
     },
   });
@@ -45,7 +55,7 @@ export function PaymentList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {payments.map((p: any) => (
+            {payments.map((p: PaymentRecord) => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.paymentNumber}</TableCell>
                 <TableCell>{p.paymentDate}</TableCell>

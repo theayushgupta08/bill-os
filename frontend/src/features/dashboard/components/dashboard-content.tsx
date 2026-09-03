@@ -31,7 +31,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -107,7 +106,7 @@ export function DashboardContent() {
   } = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: async () => {
-      const res = await api.get<any>("/dashboard/summary");
+      const res = await api.get<unknown>("/dashboard/summary");
       return res;
     },
   });
@@ -308,7 +307,7 @@ export function DashboardContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summary.recentInvoices?.map((inv: any) => (
+                {summary.recentInvoices?.map((inv: Invoice) => (
                   <TableRow
                     key={inv.id}
                     className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border/30"
@@ -372,7 +371,7 @@ export function DashboardContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summary.recentBills?.map((bill: any) => (
+                {summary.recentBills?.map((bill: PurchaseOrder) => (
                   <TableRow
                     key={bill.id}
                     className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border/30"

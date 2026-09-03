@@ -15,15 +15,16 @@ import { Plus, Edit, Trash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { Warehouse } from "@/types";
 
 export function WarehouseList() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: warehouses = [] as any[], isLoading } = useQuery({
+  const { data: warehouses = [] as Warehouse[], isLoading } = useQuery({
     queryKey: ["warehouses", page],
     queryFn: async () => {
-      const res = await api.get<any>("/warehouses");
+      const res = await api.get<Warehouse[]>("/inventory/warehouses");
       return res;
     },
   });
@@ -78,7 +79,7 @@ export function WarehouseList() {
                 </TableCell>
               </TableRow>
             ) : (
-              warehouses.map((warehouse: any) => (
+              warehouses.map((warehouse: Warehouse) => (
                 <TableRow key={warehouse.id}>
                   <TableCell className="font-medium">{warehouse.code}</TableCell>
                   <TableCell>{warehouse.name}</TableCell>

@@ -40,7 +40,7 @@ export function OrganizationSettingsForm() {
       if (!fetchedOrg.secondaryPhones) {
         fetchedOrg.secondaryPhones = [];
       }
-      // eslint-disable-next-line
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOrg(fetchedOrg);
     }
   }, [orgData]);

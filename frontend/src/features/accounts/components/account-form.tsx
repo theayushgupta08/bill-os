@@ -24,7 +24,7 @@ interface AccountFormProps {
 export function AccountForm({ id }: AccountFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [parentAccounts, setParentAccounts] = useState<any[]>([]);
+  const [parentAccounts, setParentAccounts] = useState<Account[]>([]);
   
   const [formData, setFormData] = useState({
     accountCode: "",
@@ -38,7 +38,7 @@ export function AccountForm({ id }: AccountFormProps) {
   const { data: accountsData } = useQuery({
     queryKey: ["accounts"],
     queryFn: async () => {
-      const res = await api.get<any>("/accounts");
+      const res = await api.get<unknown>("/accounts");
       return res;
     }
   });
@@ -47,7 +47,7 @@ export function AccountForm({ id }: AccountFormProps) {
     queryKey: ["account", id],
     queryFn: async () => {
       if (!id) return null;
-      const res = await api.get<any>(`/accounts/${id}`);
+      const res = await api.get<unknown>(`/accounts/${id}`);
       return res;
     },
     enabled: !!id
@@ -55,12 +55,14 @@ export function AccountForm({ id }: AccountFormProps) {
 
   useEffect(() => {
     if (accountsData) {
-      setParentAccounts(accountsData.filter((a: any) => a.id !== id));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setParentAccounts(accountsData.filter((a: Account) => a.id !== id));
     }
   }, [accountsData, id]);
 
   useEffect(() => {
     if (accountData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         accountCode: accountData.accountCode || "",
         name: accountData.name || "",
@@ -73,7 +75,7 @@ export function AccountForm({ id }: AccountFormProps) {
   }, [accountData]);
 
   const mutation = useMutation({
-    mutationFn: (payload: any) => {
+    mutationFn: (payload: unknown) => {
       if (id) {
         return api.put(`/accounts/${id}`, payload);
       }
@@ -139,7 +141,7 @@ export function AccountForm({ id }: AccountFormProps) {
           <Label htmlFor="type">Account Type *</Label>
           <Select 
             value={formData.type} 
-            onValueChange={(val: any) => setFormData(prev => ({ ...prev, type: val }))}
+            onValueChange={(val: string) => setFormData(prev => ({ ...prev, type: val }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select type" />
@@ -157,7 +159,7 @@ export function AccountForm({ id }: AccountFormProps) {
           <Label htmlFor="parentId">Parent Account (Optional)</Label>
           <Select 
             value={formData.parentId} 
-            onValueChange={(val: any) => setFormData(prev => ({ ...prev, parentId: val === "none" ? "" : val }))}
+            onValueChange={(val: string) => setFormData(prev => ({ ...prev, parentId: val === "none" ? "" : val }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select parent account" />
@@ -165,7 +167,7 @@ export function AccountForm({ id }: AccountFormProps) {
             <SelectContent>
               <SelectItem value="none">-- None --</SelectItem>
               {parentAccounts
-                .filter((a: any) => a.type === formData.type) // Parent should ideally be same type
+                .filter((a: Account) => a.type === formData.type) // Parent should ideally be same type
                 .map(acc => (
                 <SelectItem key={acc.id} value={acc.id}>
                   {acc.accountCode} - {acc.name}

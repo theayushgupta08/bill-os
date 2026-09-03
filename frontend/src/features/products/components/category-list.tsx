@@ -17,12 +17,12 @@ import { useQueryState } from 'nuqs';
 
 export function CategoryList() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useQueryState('page', { defaultValue: '1' });
+  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: categories = [] as any[], isLoading } = useQuery({
+  const { data: categories = [] as ProductCategory[], isLoading } = useQuery({
     queryKey: ["product-categories", page],
     queryFn: async () => {
-      const res = await api.get<any>("/product-categories");
+      const res = await api.get<unknown[]>("/product-categories");
       return res;
     },
   });
@@ -77,8 +77,8 @@ export function CategoryList() {
                 </TableCell>
               </TableRow>
             ) : (
-              categories.map((category: any) => (
-                <TableRow key={category.id}>
+              categories.map((category: ProductCategory) => (
+                <TableRow key={category.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell>{category.description || "-"}</TableCell>
                   <TableCell className="text-right">
