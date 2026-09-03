@@ -57,7 +57,7 @@ public class SupabaseUserProvisioningService {
         user.setEmail(identity.email());
         user.setFirstName(identity.firstName());
         user.setLastName(identity.lastName());
-        user.setPhone(identity.phone());
+        user.setPhone(identity.phone() != null ? identity.phone() : "+91 0000000000");
         user.setIsActive(true);
         // Supabase will not mint an access token until the address is confirmed (when confirmation
         // is enabled), so a token in hand means the address is good.
