@@ -143,3 +143,12 @@ export interface Invoice extends BaseEntity {
   terms?: string;
   customer?: Customer;
 }
+
+export interface PurchaseOrder extends BaseEntity {
+  poNumber: string;
+  supplierId: string;
+  supplierName?: string;
+  orderDate: string;
+  status: string;
+  totalAmount: number;
+}

@@ -5,16 +5,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { IndianRupee, ArrowDownRight, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
+interface PayableRecord {
+  id: string;
+  name: string;
+  gstin?: string;
+  outstandingBalance: number;
+}
+
 export function PayablesReport() {
-  const { data: suppliers = [] as any[], isLoading } = useQuery({
+  const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["outstanding-payables"],
     queryFn: async () => {
-      const res = await api.get<any>(`/reports/outstanding-payables`);
+      const res = await api.get<PayableRecord[]>(`/reports/outstanding-payables`);
       return res;
     }
   });
 
-  const totalOutstanding = suppliers.reduce((acc: number, curr: any) => acc + (curr.outstandingBalance || 0), 0);
+  const totalOutstanding = suppliers.reduce((acc: number, curr: PayableRecord) => acc + (curr.outstandingBalance || 0), 0);
 
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-6xl mx-auto">
@@ -57,7 +64,7 @@ export function PayablesReport() {
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-12 text-slate-500">Loading outstanding ledger...</TableCell>
               </TableRow>
-            ) : suppliers.map((s: any, idx: number) => (
+            ) : suppliers.map((s: PayableRecord, idx: number) => (
               <TableRow key={idx} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="font-semibold text-white pl-6 py-4">{s.name}</TableCell>
                 <TableCell className="text-slate-300 font-mono text-xs">{s.gstin || "—"}</TableCell>

@@ -8,6 +8,26 @@ import { ArrowDownRight, ArrowUpRight, FileText, IndianRupee } from "lucide-reac
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
+interface GSTR3BData {
+  totalSales: number;
+  totalPurchases: number;
+  outputTax: {
+    cgst: number;
+    sgst: number;
+    igst: number;
+  };
+  inputTaxCredit: {
+    cgst: number;
+    sgst: number;
+    igst: number;
+  };
+  taxPayable: {
+    cgst: number;
+    sgst: number;
+    igst: number;
+  };
+}
+
 export function Gstr3bReport() {
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
@@ -19,8 +39,8 @@ export function Gstr3bReport() {
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       
-      const response = await api.get<any>(`/reports/gstr3b?${params.toString()}`);
-      return response as any;
+      const response = await api.get<GSTR3BData>(`/reports/gstr3b?${params.toString()}`);
+      return response;
     }
   });
 

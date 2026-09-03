@@ -8,19 +8,20 @@ import { Label } from "@/components/ui/label";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 import { FileText, IndianRupee } from "lucide-react";
+import { Invoice } from "@/types";
 
 export function SalesReport() {
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
 
-  const { data: invoices = [] as any[], isLoading } = useQuery({
+  const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["sales-register", startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       
-      const res = await api.get<any>(`/reports/sales-register?${params.toString()}`);
+      const res = await api.get<Invoice[]>(`/reports/sales-register?${params.toString()}`);
       return res;
     }
   });
@@ -38,7 +39,7 @@ export function SalesReport() {
     }
   };
 
-  const totalAmount = invoices.reduce((sum: number, inv: any) => sum + (inv.totalAmount || 0), 0);
+  const totalAmount = invoices.reduce((sum: number, inv: Invoice) => sum + (inv.totalAmount || 0), 0);
 
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-6xl mx-auto">
@@ -104,7 +105,7 @@ export function SalesReport() {
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-12 text-slate-500">Loading invoice entries...</TableCell>
               </TableRow>
-            ) : invoices.map((inv: any) => (
+            ) : invoices.map((inv: Invoice) => (
               <TableRow key={inv.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">{inv.invoiceDate}</TableCell>
                 <TableCell className="font-semibold text-white">{inv.invoiceNumber}</TableCell>

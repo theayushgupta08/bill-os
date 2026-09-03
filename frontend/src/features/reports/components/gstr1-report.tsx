@@ -9,19 +9,31 @@ import { useQueryState } from 'nuqs';
 import { Badge } from "@/components/ui/badge";
 import { Building2, IndianRupee } from "lucide-react";
 
+interface GSTR1Record {
+  customerGstin?: string;
+  customerName: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  taxableValue: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  totalAmount: number;
+}
+
 export function Gstr1Report() {
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
 
-  const { data = [] as any[], isLoading } = useQuery({
+  const { data = [], isLoading } = useQuery({
     queryKey: ["gstr1", startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       
-      const response = await api.get<any>(`/reports/gstr1?${params.toString()}`);
-      return response as any[];
+      const response = await api.get<GSTR1Record[]>(`/reports/gstr1?${params.toString()}`);
+      return response;
     }
   });
 
@@ -108,7 +120,7 @@ export function Gstr1Report() {
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-12 text-slate-500">Loading GSTR-1 entries...</TableCell>
               </TableRow>
-            ) : data.map((row: any, idx: number) => (
+            ) : data.map((row: GSTR1Record, idx: number) => (
               <TableRow key={idx} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="font-semibold text-white pl-6 py-4">
                   {row.customerGstin ? (

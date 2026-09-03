@@ -4,9 +4,15 @@ import { api } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { IndianRupee, TrendingDown, TrendingUp, BarChart3, Filter } from "lucide-react";
+import { IndianRupee, TrendingDown, TrendingUp, BarChart3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+
+interface PnLData {
+  totalRevenue: number;
+  totalPurchases: number;
+  netProfit: number;
+}
 
 export function PnlReport() {
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
@@ -19,7 +25,7 @@ export function PnlReport() {
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       
-      const res = await api.get<any>(`/reports/pnl?${params.toString()}`);
+      const res = await api.get<PnLData>(`/reports/pnl?${params.toString()}`);
       return res;
     }
   });

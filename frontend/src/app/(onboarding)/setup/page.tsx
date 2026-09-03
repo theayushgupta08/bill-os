@@ -405,7 +405,8 @@ export default function SetupOrganizationPage() {
                     )}
                   </Button>
                 </div>
-            </div>
+              </div>
+            )}
           </form>
         </div>
 

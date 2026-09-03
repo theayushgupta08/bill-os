@@ -5,16 +5,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useQuery } from "@tanstack/react-query";
 import { Package, Inbox } from "lucide-react";
 
+interface StockRecord {
+  productName: string;
+  sku?: string;
+  warehouseName: string;
+  quantity: number;
+}
+
 export function StockReport() {
-  const { data: stock = [] as any[], isLoading } = useQuery({
+  const { data: stock = [], isLoading } = useQuery({
     queryKey: ["stock-summary"],
     queryFn: async () => {
-      const res = await api.get<any>(`/reports/stock-summary`);
+      const res = await api.get<StockRecord[]>(`/reports/stock-summary`);
       return res;
     }
   });
 
-  const totalQuantity = stock.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+  const totalQuantity = stock.reduce((sum: number, item: StockRecord) => sum + (item.quantity || 0), 0);
 
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-6xl mx-auto">
@@ -56,7 +63,7 @@ export function StockReport() {
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-12 text-slate-500">Loading stock inventory...</TableCell>
               </TableRow>
-            ) : stock.map((item: any, idx: number) => (
+            ) : stock.map((item: StockRecord, idx: number) => (
               <TableRow key={idx} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="font-semibold text-white pl-6 py-4">{item.productName}</TableCell>
                 <TableCell className="text-slate-350 font-mono text-xs">{item.sku || "—"}</TableCell>

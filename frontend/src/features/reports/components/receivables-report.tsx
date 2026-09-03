@@ -5,16 +5,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { IndianRupee, ArrowUpRight, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
+interface ReceivableRecord {
+  id: string;
+  name: string;
+  gstin?: string;
+  outstandingBalance: number;
+}
+
 export function ReceivablesReport() {
-  const { data: customers = [] as any[], isLoading } = useQuery({
+  const { data: customers = [], isLoading } = useQuery({
     queryKey: ["outstanding-receivables"],
     queryFn: async () => {
-      const res = await api.get<any>(`/reports/outstanding-receivables`);
+      const res = await api.get<ReceivableRecord[]>(`/reports/outstanding-receivables`);
       return res;
     }
   });
 
-  const totalOutstanding = customers.reduce((acc: number, curr: any) => acc + (curr.outstandingBalance || 0), 0);
+  const totalOutstanding = customers.reduce((acc: number, curr: ReceivableRecord) => acc + (curr.outstandingBalance || 0), 0);
 
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-6xl mx-auto">
@@ -57,7 +64,7 @@ export function ReceivablesReport() {
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-12 text-slate-500">Loading outstanding ledger...</TableCell>
               </TableRow>
-            ) : customers.map((c: any, idx: number) => (
+            ) : customers.map((c: ReceivableRecord, idx: number) => (
               <TableRow key={idx} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="font-semibold text-white pl-6 py-4">{c.name}</TableCell>
                 <TableCell className="text-slate-300 font-mono text-xs">{c.gstin || "—"}</TableCell>

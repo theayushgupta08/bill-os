@@ -9,18 +9,20 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 import { ShoppingBag, IndianRupee } from "lucide-react";
 
+import { PurchaseOrder } from "@/types";
+
 export function PurchasesReport() {
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
 
-  const { data: bills = [] as any[], isLoading } = useQuery({
+  const { data: bills = [], isLoading } = useQuery({
     queryKey: ["purchase-register", startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       
-      const res = await api.get<any>(`/reports/purchase-register?${params.toString()}`);
+      const res = await api.get<PurchaseOrder[]>(`/reports/purchase-register?${params.toString()}`);
       return res;
     }
   });
@@ -38,7 +40,7 @@ export function PurchasesReport() {
     }
   };
 
-  const totalAmount = bills.reduce((sum: number, bill: any) => sum + (bill.totalAmount || 0), 0);
+  const totalAmount = bills.reduce((sum: number, bill: PurchaseOrder) => sum + (bill.totalAmount || 0), 0);
 
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-6xl mx-auto">
@@ -104,7 +106,7 @@ export function PurchasesReport() {
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-12 text-slate-500">Loading purchase entries...</TableCell>
               </TableRow>
-            ) : bills.map((bill: any) => (
+            ) : bills.map((bill: PurchaseOrder) => (
               <TableRow key={bill.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">{bill.billDate}</TableCell>
                 <TableCell className="font-semibold text-white">{bill.billNumber}</TableCell>

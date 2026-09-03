@@ -6,11 +6,21 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Terminal } from "lucide-react";
 
+interface AuditLogRecord {
+  id: string;
+  createdAt: string;
+  action: string;
+  entityType: string;
+  userName?: string;
+  userId: string;
+  details?: string;
+}
+
 export function AuditLogsReport() {
-  const { data: logs = [] as any[], isLoading } = useQuery({
+  const { data: logs = [], isLoading } = useQuery({
     queryKey: ["audit-logs"],
     queryFn: async () => {
-      const res = await api.get<any>("/audit-logs");
+      const res = await api.get<AuditLogRecord[]>("/audit-logs");
       return res;
     }
   });
@@ -56,7 +66,7 @@ export function AuditLogsReport() {
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-12 text-slate-500">Loading system logs...</TableCell>
               </TableRow>
-            ) : logs.map((log: any) => (
+            ) : logs.map((log: AuditLogRecord) => (
               <TableRow key={log.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">
                   {new Date(log.createdAt).toLocaleString()}
