@@ -233,13 +233,18 @@ export function TeamTable() {
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Title Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
-          <Users className="w-6 h-6" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-white">Team Management</h2>
+            <p className="text-sm text-slate-400">Manage your organization team members, roles, and access status.</p>
+          </div>
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Team Management</h2>
-          <p className="text-sm text-slate-400">Manage your organization team members, roles, and access status.</p>
+          <InviteUserModal onRefresh={fetchTeam} />
         </div>
       </div>
 
@@ -294,20 +299,6 @@ export function TeamTable() {
         </div>
       </div>
 
-      {/* Main Section Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">
-            Team Management
-          </h2>
-          <p className="text-slate-400 text-sm">
-            Manage your organization's members, assign roles, and toggle user active statuses.
-          </p>
-        </div>
-        <div>
-          <InviteUserModal onRefresh={fetchTeam} />
-        </div>
-      </div>
 
       {/* Table Filters & Controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between p-4 bg-slate-900/60 border border-slate-700/50 rounded-xl">
