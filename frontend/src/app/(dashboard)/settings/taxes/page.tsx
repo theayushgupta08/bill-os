@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, Percent, Settings, Plus, Loader2 } from "lucide-react";
+import { HelpCircle, Percent, Settings, Plus } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { TaxRate } from "@/types";
 
@@ -150,9 +151,7 @@ export default function TaxSettingsAndRatesPage() {
 
   if (loadingOrgs || loadingTaxes || (orgId && loadingSettings)) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-      </div>
+      <BrandLoader size="lg" text="Loading tax settings..." variant="card" />
     );
   }
 

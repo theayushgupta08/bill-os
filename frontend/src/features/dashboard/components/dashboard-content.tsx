@@ -17,11 +17,11 @@ import {
   ShoppingCart,
   Package,
   CreditCard,
-  Loader2,
   AlertCircle,
   BarChart3,
   Activity,
 } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 import { api } from "@/lib/api-client";
 import {
   Table,
@@ -124,12 +124,7 @@ export function DashboardContent() {
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-          <p className="text-muted-foreground text-sm">
-            Loading your dashboard...
-          </p>
-        </div>
+        <BrandLoader size="lg" text="Loading your dashboard" variant="card" />
       </div>
     );
   }

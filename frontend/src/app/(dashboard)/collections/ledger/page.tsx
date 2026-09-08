@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 import { useCollectionLedger } from "@/features/collections/hooks/use-collections";
 
 function formatCurrency(amount: number) {
@@ -31,9 +31,7 @@ export default function LedgerPage() {
       <Card className="bg-slate-900/50 border-slate-800/60">
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center h-48">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
-            </div>
+            <BrandLoader size="lg" text="Loading ledger..." variant="card" className="h-48" />
           ) : (
             <Table>
               <TableHeader>

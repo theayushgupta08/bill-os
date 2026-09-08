@@ -28,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 import {
   useCollectionExpenses,
   useRecordExpense,
@@ -168,9 +169,7 @@ export default function ExpensesPage() {
       <Card className="bg-slate-900/50 border-slate-800/60">
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center h-48">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
-            </div>
+            <BrandLoader size="lg" text="Loading expenses..." variant="card" className="h-48" />
           ) : (
             <Table>
               <TableHeader>

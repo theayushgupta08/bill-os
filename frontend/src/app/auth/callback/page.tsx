@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { api } from "@/lib/api-client";
-import { Loader2 } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 
 function AuthCallbackContent() {
   const router = useRouter();
@@ -97,13 +97,13 @@ function AuthCallbackContent() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        <p className="text-muted-foreground text-sm">
-          Setting up your workspace...
-        </p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <BrandLoader
+        size="xl"
+        showBrandText
+        text="Setting up your workspace"
+        variant="card"
+      />
     </div>
   );
 }
@@ -112,11 +112,8 @@ export default function AuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-background">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <p className="text-muted-foreground text-sm">Loading...</p>
-          </div>
+        <div className="flex min-h-screen items-center justify-center bg-background p-4">
+          <BrandLoader size="xl" showBrandText text="Loading" variant="card" />
         </div>
       }
     >

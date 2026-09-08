@@ -14,8 +14,8 @@ import {
   Receipt,
   Users,
   AlertTriangle,
-  Loader2,
 } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 import {
   useOwnerDashboard,
   useUserDashboard,
@@ -40,9 +40,7 @@ function OwnerDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
-      </div>
+      <BrandLoader size="lg" text="Loading collections..." variant="card" />
     );
   }
 
@@ -195,9 +193,7 @@ function UserDashboardSection() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-32">
-        <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
-      </div>
+      <BrandLoader size="default" text="Loading metrics..." variant="card" className="min-h-[140px]" />
     );
   }
 
