@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.dto.UpdateProfileRequest;
 import com.billos.api.dto.UserProfileDto;
 import com.billos.api.entity.User;
 import com.billos.api.repository.UserRepository;
@@ -22,6 +23,21 @@ public class UserService {
     public UserProfileDto getCurrentUserProfile() {
         User user = getCurrentUser();
         return toDto(user);
+    }
+
+    @Transactional
+    public UserProfileDto updateProfile(UpdateProfileRequest request) {
+        User user = getCurrentUser();
+        user.setFirstName(request.getFirstName().trim());
+        user.setLastName(request.getLastName().trim());
+        if (request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
+            user.setPhone(request.getPhone().trim());
+        } else if (request.getPhone() != null && request.getPhone().trim().isEmpty()) {
+            user.setPhone(null);
+        }
+        User saved = userRepository.save(user);
+        log.info("Updated personal profile for user {}", saved.getId());
+        return toDto(saved);
     }
 
     @Transactional

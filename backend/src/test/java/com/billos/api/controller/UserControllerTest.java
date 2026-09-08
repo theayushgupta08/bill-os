@@ -1,5 +1,6 @@
 package com.billos.api.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -86,6 +87,37 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phone").value("+91 9876543210"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/users/me should update profile when valid")
+    void shouldUpdateProfileWhenValid() throws Exception {
+        UserProfileDto dto = UserProfileDto.builder()
+                .id(USER_ID)
+                .email("user@example.com")
+                .firstName("Ayush")
+                .lastName("Gupta")
+                .phone("+91 9876543210")
+                .isActive(true)
+                .isEmailVerified(true)
+                .build();
+
+        when(userService.updateProfile(any(com.billos.api.dto.UpdateProfileRequest.class)))
+                .thenReturn(dto);
+
+        com.billos.api.dto.UpdateProfileRequest req = com.billos.api.dto.UpdateProfileRequest.builder()
+                .firstName("Ayush")
+                .lastName("Gupta")
+                .phone("+91 9876543210")
+                .build();
+
+        mockMvc.perform(put("/api/v1/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Ayush"))
+                .andExpect(jsonPath("$.lastName").value("Gupta"))
                 .andExpect(jsonPath("$.phone").value("+91 9876543210"));
     }
 }

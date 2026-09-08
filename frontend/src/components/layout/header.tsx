@@ -13,6 +13,7 @@ import {
   Settings,
   Building2,
   HelpCircle,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,7 @@ import { api } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { useNotifications, useMarkNotificationRead } from "@/features/collections/hooks/use-collections";
 import { CollectPaymentModal } from "@/features/collections/components/collect-payment-modal";
+import { UpdateProfileDialog } from "@/components/user/update-profile-dialog";
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -85,6 +87,7 @@ export function Header() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userAvatar, setUserAvatar] = useState("");
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const supabase = createClient();
 
   const orgInitials = getOrgInitials(org?.name);
@@ -432,6 +435,13 @@ export function Header() {
               <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
                 My Account
               </DropdownMenuLabel>
+              <DropdownMenuItem
+                className="cursor-pointer gap-2"
+                onClick={() => setProfileDialogOpen(true)}
+              >
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                Update Profile
+              </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer gap-2" render={<Link href="/settings/organization" />}>
                 <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                 Organization Settings
@@ -455,6 +465,13 @@ export function Header() {
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <UpdateProfileDialog
+          open={profileDialogOpen}
+          onOpenChange={setProfileDialogOpen}
+          userAvatar={userAvatar}
+          onProfileUpdated={(updated) => setUserName(updated.fullName)}
+        />
       </div>
     </header>
   );

@@ -84,6 +84,22 @@ export interface User extends BaseEntity {
   organizationId?: string;
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string | null;
+  isActive?: boolean;
+  isEmailVerified?: boolean;
+}
+
+export interface UpdateProfileRequest {
+  firstName: string;
+  lastName: string;
+  phone?: string | null;
+}
+
 export interface Customer extends BaseEntity {
   name: string;
   email?: string;

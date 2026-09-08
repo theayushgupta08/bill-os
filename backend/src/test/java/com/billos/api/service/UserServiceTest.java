@@ -83,6 +83,26 @@ class UserServiceTest {
     }
 
     @Test
+    @DisplayName("should update personal profile for current user")
+    void shouldUpdateProfile() {
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        com.billos.api.dto.UpdateProfileRequest request = com.billos.api.dto.UpdateProfileRequest.builder()
+                .firstName("Ayush")
+                .lastName("Gupta")
+                .phone("+91 9876543210")
+                .build();
+
+        UserProfileDto updated = userService.updateProfile(request);
+
+        assertThat(updated.getFirstName()).isEqualTo("Ayush");
+        assertThat(updated.getLastName()).isEqualTo("Gupta");
+        assertThat(updated.getPhone()).isEqualTo("+91 9876543210");
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
     @DisplayName("should throw when no authentication is present")
     void shouldThrowWhenUnauthenticated() {
         SecurityContextHolder.clearContext();

@@ -1,6 +1,7 @@
 package com.billos.api.controller;
 
 import com.billos.api.dto.UpdatePhoneRequest;
+import com.billos.api.dto.UpdateProfileRequest;
 import com.billos.api.dto.UserProfileDto;
 import com.billos.api.service.UserService;
 import jakarta.validation.Valid;
@@ -22,6 +23,11 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserProfileDto> getMyProfile() {
         return ResponseEntity.ok(userService.getCurrentUserProfile());
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserProfileDto> updateMyProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(userService.updateProfile(request));
     }
 
     @PutMapping("/me/phone")
