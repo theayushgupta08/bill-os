@@ -27,4 +27,8 @@ public class CustomerDto {
     private String shippingCountry;
 
     private BigDecimal outstandingBalance;
+    private UUID organizationId;
+    private Boolean isShared;
+    private UUID originatingOrgId;
+    private String originatingBranchName;
 }

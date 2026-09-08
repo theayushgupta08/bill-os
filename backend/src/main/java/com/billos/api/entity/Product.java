@@ -15,7 +15,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
-import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "products")
@@ -29,9 +28,11 @@ public class Product extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @TenantId
     @Column(name = "organization_id", nullable = false)
     private UUID organizationId;
+
+    @Column(name = "is_shared", nullable = false)
+    private Boolean isShared = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")

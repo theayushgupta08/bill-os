@@ -12,6 +12,18 @@ export interface Organization {
   website?: string;
   city?: string;
   state?: string;
+  pincode?: string;
+  country?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  parentOrganizationId?: string;
+  isPrimary?: boolean;
+  branchCode?: string;
+}
+
+export interface OrganizationTree {
+  primaryOrganization: Organization;
+  branches: Organization[];
 }
 
 async function fetchOrganization(): Promise<Organization | null> {
@@ -33,6 +45,43 @@ export function useOrganization() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
   });
+}
+
+export function useMyOrganizations() {
+  return useQuery<Organization[]>({
+    queryKey: ["my-organizations"],
+    queryFn: async () => {
+      try {
+        const orgs = await api.get<Organization[]>("/organizations");
+        return orgs || [];
+      } catch {
+        return [];
+      }
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useOrganizationTree() {
+  return useQuery<OrganizationTree[]>({
+    queryKey: ["organization-tree"],
+    queryFn: async () => {
+      try {
+        const tree = await api.get<OrganizationTree[]>("/organizations/tree");
+        return tree || [];
+      } catch {
+        return [];
+      }
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+export function switchActiveOrganization(orgId: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("active_org_id", orgId);
+    window.location.reload();
+  }
 }
 
 /** Generates up to 2 initials from an org name */

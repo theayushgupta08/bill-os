@@ -3,7 +3,6 @@ package com.billos.api.entity;
 import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
-import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "collection_qr_codes")
@@ -17,9 +16,11 @@ public class CollectionQrCode extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @TenantId
     @Column(name = "organization_id", nullable = false)
     private UUID organizationId;
+
+    @Column(name = "is_shared", nullable = false)
+    private Boolean isShared = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

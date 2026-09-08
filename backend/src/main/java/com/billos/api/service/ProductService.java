@@ -22,24 +22,57 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final ProductMapper productMapper;
+    private final OrganizationService organizationService;
 
     @Transactional(readOnly = true)
     public List<ProductDto> getAllProducts() {
-        return productRepository.findAll().stream().map(productMapper::toDto).collect(Collectors.toList());
+        String currentTenant = TenantContext.getCurrentTenant();
+        if (currentTenant == null) {
+            return java.util.Collections.emptyList();
+        }
+        UUID currentOrgId = UUID.fromString(currentTenant);
+        UUID primaryOrgId = organizationService.resolvePrimaryOrgId(currentOrgId);
+
+        List<Product> products = productRepository.findAccessibleProducts(currentOrgId, primaryOrgId);
+
+        return products.stream()
+                .map(p -> {
+                    ProductDto dto = productMapper.toDto(p);
+                    boolean isMasterShared = !p.getOrganizationId().equals(currentOrgId);
+                    dto.setIsMasterShared(isMasterShared);
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public ProductDto getProductById(UUID id) {
-        return productRepository
-                .findById(id)
-                .map(productMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+        String currentTenant = TenantContext.getCurrentTenant();
+        UUID currentOrgId = currentTenant != null ? UUID.fromString(currentTenant) : null;
+        UUID primaryOrgId = currentOrgId != null ? organizationService.resolvePrimaryOrgId(currentOrgId) : null;
+
+        Product product = (currentOrgId != null && primaryOrgId != null)
+                ? productRepository
+                        .findAccessibleById(id, currentOrgId, primaryOrgId)
+                        .orElseThrow(() -> new RuntimeException("Product not found"))
+                : productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+
+        ProductDto dto = productMapper.toDto(product);
+        if (currentOrgId != null) {
+            dto.setIsMasterShared(!product.getOrganizationId().equals(currentOrgId));
+        }
+        return dto;
     }
 
     @Transactional
     public ProductDto createProduct(ProductDto dto) {
         Product product = productMapper.toEntity(dto);
         product.setOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()));
+        if (dto.getIsShared() != null) {
+            product.setIsShared(dto.getIsShared());
+        } else {
+            product.setIsShared(true);
+        }
 
         if (dto.getCategoryId() != null) {
             ProductCategory category = productCategoryRepository
@@ -54,8 +87,17 @@ public class ProductService {
 
     @Transactional
     public ProductDto updateProduct(UUID id, ProductDto dto) {
+        String currentTenant = TenantContext.getCurrentTenant();
+        UUID currentOrgId = UUID.fromString(currentTenant);
+
         Product existingProduct =
                 productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+
+        // Fixed price enforcement: Secondary organizations cannot alter master product pricing
+        if (!existingProduct.getOrganizationId().equals(currentOrgId)) {
+            throw new RuntimeException(
+                    "Branch cannot modify master products owned by the Primary Organization. Product prices are fixed to the Primary Master Price.");
+        }
 
         productMapper.updateEntityFromDto(dto, existingProduct);
 
@@ -74,7 +116,15 @@ public class ProductService {
 
     @Transactional
     public void deleteProduct(UUID id) {
+        String currentTenant = TenantContext.getCurrentTenant();
+        UUID currentOrgId = UUID.fromString(currentTenant);
+
         Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+
+        if (!product.getOrganizationId().equals(currentOrgId)) {
+            throw new RuntimeException("Branch cannot delete master products owned by the Primary Organization.");
+        }
+
         productRepository.delete(product);
     }
 }

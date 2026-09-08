@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -15,9 +15,13 @@ import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 import { Customer } from "@/types";
+import { useState } from "react";
+import { ConsolidatedCustomerLedgerDialog } from "./consolidated-customer-ledger-dialog";
 
 export function CustomerList() {
   const queryClient = useQueryClient();
+  const [ledgerCustomerId, setLedgerCustomerId] = useState<string | null>(null);
+  const [ledgerCustomerName, setLedgerCustomerName] = useState<string>("");
   
   // Using nuqs for URL state (e.g. ?page=1) - we can expand this to search later
   const [page] = useQueryState('page', { defaultValue: '1' });
@@ -91,16 +95,29 @@ export function CustomerList() {
                   <TableCell>{customer.gstin || "-"}</TableCell>
                   <TableCell>₹{customer.outstandingBalance?.toFixed(2) || "0.00"}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="View Consolidated Corporate Ledger"
+                        onClick={() => {
+                          setLedgerCustomerId(customer.id);
+                          setLedgerCustomerName(customer.name);
+                        }}
+                        className="h-8 w-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                      </Button>
                       <Link href={`/customers/${customer.id}`}>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" title="Edit Customer" className="h-8 w-8 text-slate-400 hover:text-slate-200">
                           <Edit className="h-4 w-4" />
                         </Button>
                       </Link>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-destructive"
+                        title="Delete Customer"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
                         onClick={() => handleDelete(customer.id)}
                         disabled={deleteMutation.isPending}
                       >
@@ -114,6 +131,18 @@ export function CustomerList() {
           </TableBody>
         </Table>
       </div>
+
+      <ConsolidatedCustomerLedgerDialog
+        customerId={ledgerCustomerId}
+        customerName={ledgerCustomerName}
+        open={!!ledgerCustomerId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLedgerCustomerId(null);
+            setLedgerCustomerName("");
+          }
+        }}
+      />
     </div>
   );
 }

@@ -12,7 +12,6 @@ import com.billos.api.repository.UserRepository;
 import com.billos.api.security.UserPrincipal;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,6 +38,12 @@ public class OrganizationService {
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User currentUser =
                 userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (orgDetails.getParentOrganizationId() == null) {
+            orgDetails.setIsPrimary(true);
+        } else if (orgDetails.getIsPrimary() == null) {
+            orgDetails.setIsPrimary(false);
+        }
 
         // Save and flush Organization immediately so it's visible to the seeder's new transaction
         Organization savedOrg = organizationRepository.saveAndFlush(orgDetails);
@@ -85,6 +90,7 @@ public class OrganizationService {
         org.setSecondaryPhones(request.getSecondaryPhones());
         org.setWebsite(request.getWebsite());
         org.setLogoUrl(request.getLogoUrl());
+        org.setIsPrimary(true);
         org.setFinancialYearStart(
                 java.time.LocalDate.of(java.time.LocalDate.now().getYear(), 4, 1));
 
@@ -112,6 +118,73 @@ public class OrganizationService {
         return savedOrg;
     }
 
+    public Organization createBranch(
+            @NonNull UUID parentOrgId, @NonNull com.billos.api.dto.CreateBranchRequest request) {
+        UserPrincipal principal = (UserPrincipal)
+                SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser =
+                userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+
+        Organization parentOrg = organizationRepository
+                .findById(parentOrgId)
+                .orElseThrow(() -> new RuntimeException("Primary parent organization not found"));
+
+        // Validate user is authorized on parent organization
+        java.util.Optional<UserOrgRole> parentRoleOpt =
+                userOrgRoleRepository.findByUserIdAndOrganizationId(currentUser.getId(), parentOrgId);
+        if (parentRoleOpt.isEmpty()
+                || (!"OWNER".equalsIgnoreCase(parentRoleOpt.get().getRole())
+                        && !"ADMIN".equalsIgnoreCase(parentRoleOpt.get().getRole()))) {
+            throw new RuntimeException("Only an OWNER or ADMIN of the parent organization can create branches");
+        }
+
+        Organization branch = new Organization();
+        branch.setName(request.getName());
+        branch.setLegalName(request.getLegalName() != null ? request.getLegalName() : parentOrg.getLegalName());
+        branch.setBranchCode(request.getBranchCode());
+        branch.setGstin(request.getGstin());
+        branch.setPhone(request.getPhone());
+        branch.setSecondaryPhones(request.getSecondaryPhones());
+        branch.setEmail(request.getEmail() != null ? request.getEmail() : parentOrg.getEmail());
+        branch.setAddressLine1(request.getAddressLine1());
+        branch.setAddressLine2(request.getAddressLine2());
+        branch.setCity(request.getCity());
+        branch.setState(request.getState());
+        branch.setPincode(request.getPincode());
+        branch.setCountry(request.getCountry() != null ? request.getCountry() : parentOrg.getCountry());
+        branch.setWebsite(request.getWebsite() != null ? request.getWebsite() : parentOrg.getWebsite());
+        branch.setLogoUrl(request.getLogoUrl() != null ? request.getLogoUrl() : parentOrg.getLogoUrl());
+        branch.setFinancialYearStart(
+                parentOrg.getFinancialYearStart() != null
+                        ? parentOrg.getFinancialYearStart()
+                        : java.time.LocalDate.of(java.time.LocalDate.now().getYear(), 4, 1));
+        branch.setParentOrganizationId(parentOrg.getId());
+        branch.setIsPrimary(false);
+
+        // Save branch organization
+        Organization savedBranch = organizationRepository.saveAndFlush(branch);
+
+        String previousTenant = com.billos.api.tenant.TenantContext.getCurrentTenant();
+        try {
+            com.billos.api.tenant.TenantContext.setCurrentTenant(
+                    savedBranch.getId().toString());
+            // Seed default branch setup: user as OWNER/ADMIN in branch, chart of accounts, default warehouse, and
+            // settings
+            organizationSeeder.seedNewOrganization(savedBranch.getId(), currentUser);
+        } catch (Exception e) {
+            organizationRepository.delete(savedBranch);
+            throw e;
+        } finally {
+            if (previousTenant != null) {
+                com.billos.api.tenant.TenantContext.setCurrentTenant(previousTenant);
+            } else {
+                com.billos.api.tenant.TenantContext.clear();
+            }
+        }
+
+        return savedBranch;
+    }
+
     @Transactional(readOnly = true)
     public List<Organization> getMyOrganizations() {
         UserPrincipal principal = (UserPrincipal)
@@ -119,12 +192,77 @@ public class OrganizationService {
 
         List<UserOrgRole> roles = userOrgRoleRepository.findByUserId(principal.getId());
 
-        return roles.stream()
-                .map(role -> organizationRepository
-                        .findById(role.getOrganizationId())
-                        .orElse(null))
-                .filter(org -> org != null)
-                .collect(Collectors.toList());
+        java.util.Map<UUID, Organization> orgMap = new java.util.LinkedHashMap<>();
+        for (UserOrgRole role : roles) {
+            organizationRepository.findById(role.getOrganizationId()).ifPresent(org -> {
+                orgMap.put(org.getId(), org);
+                // If this is a primary org or has branches, include its branches automatically
+                List<Organization> branches = organizationRepository.findByParentOrganizationId(org.getId());
+                for (Organization branch : branches) {
+                    orgMap.put(branch.getId(), branch);
+                }
+            });
+        }
+
+        return new java.util.ArrayList<>(orgMap.values());
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.billos.api.dto.OrganizationTreeDto> getOrganizationTree() {
+        List<Organization> myOrgs = getMyOrganizations();
+        java.util.Map<UUID, com.billos.api.dto.OrganizationTreeDto> treeMap = new java.util.LinkedHashMap<>();
+
+        // 1. Put all primary orgs first
+        for (Organization org : myOrgs) {
+            if (Boolean.TRUE.equals(org.getIsPrimary()) || org.getParentOrganizationId() == null) {
+                treeMap.put(
+                        org.getId(),
+                        com.billos.api.dto.OrganizationTreeDto.builder()
+                                .primaryOrganization(org)
+                                .branches(new java.util.ArrayList<>())
+                                .build());
+            }
+        }
+
+        // 2. Attach branches
+        for (Organization org : myOrgs) {
+            if (org.getParentOrganizationId() != null) {
+                com.billos.api.dto.OrganizationTreeDto parentTree = treeMap.get(org.getParentOrganizationId());
+                if (parentTree != null) {
+                    parentTree.getBranches().add(org);
+                } else {
+                    java.util.Optional<Organization> parentOpt =
+                            organizationRepository.findById(org.getParentOrganizationId());
+                    if (parentOpt.isPresent()) {
+                        Organization parent = parentOpt.get();
+                        com.billos.api.dto.OrganizationTreeDto newTree =
+                                com.billos.api.dto.OrganizationTreeDto.builder()
+                                        .primaryOrganization(parent)
+                                        .branches(new java.util.ArrayList<>(List.of(org)))
+                                        .build();
+                        treeMap.put(parent.getId(), newTree);
+                    } else {
+                        treeMap.put(
+                                org.getId(),
+                                com.billos.api.dto.OrganizationTreeDto.builder()
+                                        .primaryOrganization(org)
+                                        .branches(new java.util.ArrayList<>())
+                                        .build());
+                    }
+                }
+            }
+        }
+
+        return new java.util.ArrayList<>(treeMap.values());
+    }
+
+    @Transactional(readOnly = true)
+    public UUID resolvePrimaryOrgId(UUID currentOrgId) {
+        if (currentOrgId == null) return null;
+        return organizationRepository
+                .findById(currentOrgId)
+                .map(org -> org.getParentOrganizationId() != null ? org.getParentOrganizationId() : org.getId())
+                .orElse(currentOrgId);
     }
 
     @Transactional
@@ -145,6 +283,8 @@ public class OrganizationService {
         if (updatedDetails.getPincode() != null) org.setPincode(updatedDetails.getPincode());
         if (updatedDetails.getLogoUrl() != null) org.setLogoUrl(updatedDetails.getLogoUrl());
         if (updatedDetails.getWebsite() != null) org.setWebsite(updatedDetails.getWebsite());
+        if (updatedDetails.getBranchCode() != null) org.setBranchCode(updatedDetails.getBranchCode());
+        if (updatedDetails.getIsPrimary() != null) org.setIsPrimary(updatedDetails.getIsPrimary());
 
         return organizationRepository.save(org);
     }

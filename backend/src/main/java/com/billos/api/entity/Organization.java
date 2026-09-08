@@ -71,4 +71,13 @@ public class Organization extends BaseEntity {
 
     @Column(name = "financial_year_start")
     private LocalDate financialYearStart;
+
+    @Column(name = "parent_organization_id")
+    private UUID parentOrganizationId;
+
+    @Column(name = "is_primary", nullable = false)
+    private Boolean isPrimary = false;
+
+    @Column(name = "branch_code")
+    private String branchCode;
 }

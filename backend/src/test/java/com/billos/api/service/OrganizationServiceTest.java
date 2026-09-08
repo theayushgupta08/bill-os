@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.billos.api.dto.CreateBranchRequest;
+import com.billos.api.dto.OrganizationTreeDto;
 import com.billos.api.entity.Organization;
 import com.billos.api.entity.User;
 import com.billos.api.entity.UserOrgRole;
@@ -202,5 +204,146 @@ class OrganizationServiceTest {
         // Assert
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getName()).isEqualTo("Existing Org");
+    }
+
+    @Test
+    @DisplayName("createBranch - should create and seed branch when user is OWNER of parent")
+    void createBranch_shouldCreateAndSeedBranchWhenUserIsOwner() {
+        UUID parentOrgId = UUID.randomUUID();
+        Organization parentOrg = new Organization();
+        parentOrg.setId(parentOrgId);
+        parentOrg.setName("Parent HQ");
+        parentOrg.setIsPrimary(true);
+        parentOrg.setCountry("India");
+
+        CreateBranchRequest request = new CreateBranchRequest();
+        request.setName("Mumbai Branch");
+        request.setBranchCode("BOM-01");
+        request.setPhone("+91 9876543210");
+        request.setGstin("27AAAAA0000A1Z5");
+
+        UserOrgRole parentRole = new UserOrgRole();
+        parentRole.setOrganizationId(parentOrgId);
+        parentRole.setUser(currentUser);
+        parentRole.setRole("OWNER");
+
+        UUID branchId = UUID.randomUUID();
+        Organization savedBranch = new Organization();
+        savedBranch.setId(branchId);
+        savedBranch.setName("Mumbai Branch");
+        savedBranch.setBranchCode("BOM-01");
+        savedBranch.setParentOrganizationId(parentOrgId);
+        savedBranch.setIsPrimary(false);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(currentUser));
+        when(organizationRepository.findById(parentOrgId)).thenReturn(Optional.of(parentOrg));
+        when(userOrgRoleRepository.findByUserIdAndOrganizationId(userId, parentOrgId))
+                .thenReturn(Optional.of(parentRole));
+        when(organizationRepository.saveAndFlush(any(Organization.class))).thenReturn(savedBranch);
+        doNothing().when(organizationSeeder).seedNewOrganization(eq(branchId), any(User.class));
+
+        Organization result = organizationService.createBranch(parentOrgId, request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(branchId);
+        assertThat(result.getParentOrganizationId()).isEqualTo(parentOrgId);
+        assertThat(result.getIsPrimary()).isFalse();
+        verify(organizationSeeder).seedNewOrganization(branchId, currentUser);
+    }
+
+    @Test
+    @DisplayName("createBranch - should throw when user is not OWNER or ADMIN of parent")
+    void createBranch_shouldThrowWhenUserNotAuthorized() {
+        UUID parentOrgId = UUID.randomUUID();
+        Organization parentOrg = new Organization();
+        parentOrg.setId(parentOrgId);
+        parentOrg.setName("Parent HQ");
+
+        CreateBranchRequest request = new CreateBranchRequest();
+        request.setName("Delhi Branch");
+        request.setPhone("+91 9876543210");
+
+        UserOrgRole parentRole = new UserOrgRole();
+        parentRole.setOrganizationId(parentOrgId);
+        parentRole.setUser(currentUser);
+        parentRole.setRole("VIEWER");
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(currentUser));
+        when(organizationRepository.findById(parentOrgId)).thenReturn(Optional.of(parentOrg));
+        when(userOrgRoleRepository.findByUserIdAndOrganizationId(userId, parentOrgId))
+                .thenReturn(Optional.of(parentRole));
+
+        assertThatThrownBy(() -> organizationService.createBranch(parentOrgId, request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Only an OWNER or ADMIN");
+    }
+
+    @Test
+    @DisplayName("getOrganizationTree - should group primary and branch organizations correctly")
+    void getOrganizationTree_shouldGroupPrimaryAndBranches() {
+        UUID parentId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+
+        UserOrgRole role = new UserOrgRole();
+        role.setOrganizationId(parentId);
+        role.setUser(currentUser);
+        role.setRole("OWNER");
+
+        Organization parentOrg = new Organization();
+        parentOrg.setId(parentId);
+        parentOrg.setName("Headquarters");
+        parentOrg.setIsPrimary(true);
+
+        Organization branchOrg = new Organization();
+        branchOrg.setId(branchId);
+        branchOrg.setName("Branch 1");
+        branchOrg.setParentOrganizationId(parentId);
+        branchOrg.setIsPrimary(false);
+
+        when(userOrgRoleRepository.findByUserId(userId)).thenReturn(List.of(role));
+        when(organizationRepository.findById(parentId)).thenReturn(Optional.of(parentOrg));
+        when(organizationRepository.findByParentOrganizationId(parentId)).thenReturn(List.of(branchOrg));
+
+        List<OrganizationTreeDto> tree = organizationService.getOrganizationTree();
+
+        assertThat(tree).hasSize(1);
+        assertThat(tree.get(0).getPrimaryOrganization().getId()).isEqualTo(parentId);
+        assertThat(tree.get(0).getBranches()).hasSize(1);
+        assertThat(tree.get(0).getBranches().get(0).getId()).isEqualTo(branchId);
+    }
+
+    @Test
+    @DisplayName("resolvePrimaryOrgId - should return parent ID if current org is branch")
+    void resolvePrimaryOrgId_shouldReturnParentIdForBranch() {
+        UUID parentId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+
+        Organization branch = new Organization();
+        branch.setId(branchId);
+        branch.setParentOrganizationId(parentId);
+        branch.setIsPrimary(false);
+
+        when(organizationRepository.findById(branchId)).thenReturn(Optional.of(branch));
+
+        UUID resolved = organizationService.resolvePrimaryOrgId(branchId);
+
+        assertThat(resolved).isEqualTo(parentId);
+    }
+
+    @Test
+    @DisplayName("resolvePrimaryOrgId - should return self ID if current org is primary")
+    void resolvePrimaryOrgId_shouldReturnSelfForPrimary() {
+        UUID parentId = UUID.randomUUID();
+
+        Organization parent = new Organization();
+        parent.setId(parentId);
+        parent.setParentOrganizationId(null);
+        parent.setIsPrimary(true);
+
+        when(organizationRepository.findById(parentId)).thenReturn(Optional.of(parent));
+
+        UUID resolved = organizationService.resolvePrimaryOrgId(parentId);
+
+        assertThat(resolved).isEqualTo(parentId);
     }
 }

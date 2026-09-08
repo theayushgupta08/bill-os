@@ -19,4 +19,7 @@ public class CollectionQrCodeDto {
     private String qrImageUrl;
     private Boolean isActive;
     private String notes;
+    private UUID organizationId;
+    private Boolean isShared;
+    private Boolean isMasterShared;
 }

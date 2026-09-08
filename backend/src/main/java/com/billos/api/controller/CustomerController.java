@@ -26,6 +26,12 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.getCustomerById(id));
     }
 
+    @GetMapping("/{id}/consolidated-ledger")
+    public ResponseEntity<com.billos.api.dto.ConsolidatedCustomerLedgerDto> getConsolidatedLedger(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(customerService.getConsolidatedLedger(id));
+    }
+
     @PostMapping
     public ResponseEntity<CustomerDto> createCustomer(@RequestBody CustomerDto customerDto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(customerService.createCustomer(customerDto));

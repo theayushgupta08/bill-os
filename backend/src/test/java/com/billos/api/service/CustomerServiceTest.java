@@ -30,6 +30,12 @@ class CustomerServiceTest {
     @Mock
     private CustomerMapper customerMapper;
 
+    @Mock
+    private OrganizationService organizationService;
+
+    @Mock
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @InjectMocks
     private CustomerService customerService;
 
@@ -82,13 +88,16 @@ class CustomerServiceTest {
     void getCustomerById_shouldReturnCustomer() {
         // Arrange
         UUID customerId = UUID.randomUUID();
+        UUID orgUuid = UUID.fromString(tenantId);
         Customer customer = new Customer();
         customer.setId(customerId);
 
         CustomerDto dto = new CustomerDto();
         dto.setId(customerId);
 
-        when(customerRepository.findById(customerId)).thenReturn(Optional.of(customer));
+        when(organizationService.resolvePrimaryOrgId(orgUuid)).thenReturn(orgUuid);
+        when(customerRepository.findAccessibleById(customerId, orgUuid, orgUuid))
+                .thenReturn(Optional.of(customer));
         when(customerMapper.toDto(customer)).thenReturn(dto);
 
         // Act
@@ -103,7 +112,10 @@ class CustomerServiceTest {
     void getCustomerById_shouldThrowIfNotFound() {
         // Arrange
         UUID customerId = UUID.randomUUID();
-        when(customerRepository.findById(customerId)).thenReturn(Optional.empty());
+        UUID orgUuid = UUID.fromString(tenantId);
+        when(organizationService.resolvePrimaryOrgId(orgUuid)).thenReturn(orgUuid);
+        when(customerRepository.findAccessibleById(customerId, orgUuid, orgUuid))
+                .thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> customerService.getCustomerById(customerId))

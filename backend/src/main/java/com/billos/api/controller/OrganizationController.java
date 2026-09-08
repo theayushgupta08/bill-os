@@ -42,6 +42,20 @@ public class OrganizationController {
         return ResponseEntity.ok(organizations);
     }
 
+    @GetMapping("/tree")
+    public ResponseEntity<List<com.billos.api.dto.OrganizationTreeDto>> getOrganizationTree() {
+        List<com.billos.api.dto.OrganizationTreeDto> tree = organizationService.getOrganizationTree();
+        return ResponseEntity.ok(tree);
+    }
+
+    @PostMapping("/{parentOrgId}/branches")
+    public ResponseEntity<Organization> createBranch(
+            @PathVariable java.util.UUID parentOrgId,
+            @Valid @RequestBody com.billos.api.dto.CreateBranchRequest request) {
+        Organization branch = organizationService.createBranch(parentOrgId, request);
+        return ResponseEntity.ok(branch);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Organization> getOrganizationById(@PathVariable java.util.UUID id) {
         // Technically we should check if user belongs to this org,

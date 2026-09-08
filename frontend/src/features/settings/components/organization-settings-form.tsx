@@ -7,15 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Building2 } from "lucide-react";
+import { Plus, X, Building2, GitBranch, Crown, ArrowRight, ShieldCheck } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { Organization } from "@/types";
+import { useOrganizationTree, switchActiveOrganization } from "@/lib/use-organization";
+import { CreateBranchDialog } from "@/components/organization/create-branch-dialog";
 
 export function OrganizationSettingsForm() {
   const queryClient = useQueryClient();
   const [org, setOrg] = useState<Organization | null>(null);
+  const [createBranchOpen, setCreateBranchOpen] = useState(false);
+  const { data: orgTree } = useOrganizationTree();
 
   const { data: orgData, isLoading } = useQuery({
     queryKey: ["organizations"],
@@ -27,7 +31,9 @@ export function OrganizationSettingsForm() {
 
   useEffect(() => {
     if (orgData && orgData.length > 0) {
-      const fetchedOrg = { ...orgData[0] };
+      const activeOrgId = typeof window !== "undefined" ? localStorage.getItem("active_org_id") : null;
+      const matched = orgData.find((o) => o.id === activeOrgId) || orgData[0];
+      const fetchedOrg = { ...matched };
       if (!fetchedOrg.secondaryPhones) {
         fetchedOrg.secondaryPhones = [];
       }
@@ -112,6 +118,179 @@ export function OrganizationSettingsForm() {
           <p className="text-sm text-slate-400">Update your company details, registered addresses, and GST information.</p>
         </div>
       </div>
+
+      {/* Corporate Hierarchy & Branches Card */}
+      <Card className="border border-indigo-500/20 bg-gradient-to-b from-slate-900/90 to-slate-950/90 backdrop-blur-sm shadow-xl overflow-hidden">
+        <CardHeader className="pb-3 border-b border-slate-800/80">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                <GitBranch className="w-4 h-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-white flex items-center gap-2">
+                  Corporate Hierarchy & Branches
+                  {org.isPrimary || !org.parentOrganizationId ? (
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                      👑 Primary Organization
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                      🏢 Subsidiary Branch
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-400">
+                  Manage official branches, shared master pricing, customer accounts, and QR routing.
+                </CardDescription>
+              </div>
+            </div>
+
+            {(org.isPrimary || !org.parentOrganizationId) && (
+              <Button
+                type="button"
+                onClick={() => setCreateBranchOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs h-8 px-3 shadow-sm font-medium"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Add Branch
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-4">
+          {/* Active Sharing Policies Badge Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-slate-200">Fixed Master Price</p>
+                <p className="text-[11px] text-slate-400 leading-tight">Master prices govern all branches without price drift.</p>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-slate-200">Consolidated Ledger</p>
+                <p className="text-[11px] text-slate-400 leading-tight">Shared customers with multi-branch ledger breakdown.</p>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-slate-200">Centralized QR Books</p>
+                <p className="text-[11px] text-slate-400 leading-tight">Collections route into Primary books with branch tags.</p>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-slate-200">Unified Team Access</p>
+                <p className="text-[11px] text-slate-400 leading-tight">Permissions inherited automatically across branches.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* If Branch: Show Parent Link */}
+          {org.parentOrganizationId && (
+            <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Crown className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-slate-200">
+                    Parent Organization:{" "}
+                    {orgTree?.find((t) => t.primaryOrganization.id === org.parentOrganizationId)?.primaryOrganization.name || "Headquarters"}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    This branch operates under the central governance of your Primary Organization.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => org.parentOrganizationId && switchActiveOrganization(org.parentOrganizationId)}
+                className="border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 text-xs h-7"
+              >
+                Switch to Primary <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            </div>
+          )}
+
+          {/* If Primary: List Connected Branches */}
+          {(org.isPrimary || !org.parentOrganizationId) && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-400 px-0.5">
+                <span>CONNECTED BRANCHES & SUBSIDIARIES</span>
+                <span>
+                  {orgTree?.find((t) => t.primaryOrganization.id === org.id)?.branches?.length || 0} registered
+                </span>
+              </div>
+
+              {(() => {
+                const currentTree = orgTree?.find((t) => t.primaryOrganization.id === org.id);
+                const branches = currentTree?.branches || [];
+
+                if (branches.length === 0) {
+                  return (
+                    <div className="text-center py-6 border border-dashed border-slate-800 rounded-lg bg-slate-950/40">
+                      <GitBranch className="w-6 h-6 text-slate-600 mx-auto mb-1.5" />
+                      <p className="text-xs font-medium text-slate-400">No secondary branches created yet.</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Add regional retail stores, depots, or secondary offices to share products, customers, and QRs.
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={() => setCreateBranchOpen(true)}
+                        variant="ghost"
+                        size="sm"
+                        className="mt-3 text-xs text-indigo-400 hover:text-indigo-300"
+                      >
+                        + Create First Branch
+                      </Button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {branches.map((b) => (
+                      <div
+                        key={b.id}
+                        className="p-3 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition-colors flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-xs text-white truncate">{b.name}</span>
+                            {b.branchCode && (
+                              <span className="text-[9px] font-mono px-1 rounded bg-slate-800 text-cyan-300 border border-cyan-500/20">
+                                {b.branchCode}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                            {b.city || b.state ? `${b.city || ""}, ${b.state || ""}` : b.gstin || "Connected Branch"}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => switchActiveOrganization(b.id)}
+                          className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 flex-shrink-0"
+                        >
+                          Switch <ArrowRight className="w-3 h-3 ml-1" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <form onSubmit={handleSave}>
         <Card className="border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm shadow-xl">
@@ -283,6 +462,16 @@ export function OrganizationSettingsForm() {
           </CardContent>
         </Card>
       </form>
+
+      {org && (
+        <CreateBranchDialog
+          open={createBranchOpen}
+          onOpenChange={setCreateBranchOpen}
+          parentOrg={
+            (orgTree?.find((t) => t.primaryOrganization.id === org.id || t.primaryOrganization.id === org.parentOrganizationId)?.primaryOrganization as any) || org
+          }
+        />
+      )}
     </div>
   );
 }

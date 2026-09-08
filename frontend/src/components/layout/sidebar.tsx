@@ -26,7 +26,7 @@ import {
   QrCode,
   Landmark,
 } from "lucide-react";
-import { useOrganization, getOrgInitials, getOrgGradient } from "@/lib/use-organization";
+import { OrganizationSwitcher } from "@/components/organization/organization-switcher";
 import { useState, useEffect } from "react";
 
 interface NavItem {
@@ -202,9 +202,6 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data: org, isLoading } = useOrganization();
-  const initials = getOrgInitials(org?.name);
-  const gradient = getOrgGradient(org?.name);
 
   // Helper to determine which group should be open based on pathname
   const getActiveGroupLabel = (path: string): string | null => {
@@ -242,78 +239,10 @@ export function Sidebar() {
     setOpenGroup((prev) => (prev === label ? null : label));
   };
 
-  const websiteUrl = org?.website?.trim()
-    ? (org.website.startsWith("http://") || org.website.startsWith("https://")
-        ? org.website
-        : `https://${org.website}`)
-    : null;
-
   return (
     <div className="hidden md:flex flex-col h-full border-r border-border/60 bg-slate-950">
-      {/* Brand / Org Identity */}
-      <div className="flex items-center gap-3 h-[60px] px-4 border-b border-border/40 flex-shrink-0">
-        {/* Org Avatar / Logo */}
-        {websiteUrl ? (
-          <a
-            href={websiteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`Visit ${org?.name || "Organization"} (${org?.website})`}
-            className={`w-8 h-8 rounded-lg ${
-              org?.logoUrl
-                ? "bg-slate-900 border border-slate-700/80 p-0.5"
-                : `bg-gradient-to-br ${gradient}`
-            } flex items-center justify-center flex-shrink-0 shadow-md transition-transform hover:scale-105 hover:opacity-90 cursor-pointer overflow-hidden group`}
-          >
-            {org?.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={org.logoUrl}
-                alt={org.name || "Organization Logo"}
-                className="w-full h-full object-contain rounded-md"
-              />
-            ) : (
-              <span className="text-white text-xs font-bold tracking-tight">
-                {isLoading ? "…" : initials}
-              </span>
-            )}
-          </a>
-        ) : (
-          <div
-            className={`w-8 h-8 rounded-lg ${
-              org?.logoUrl
-                ? "bg-slate-900 border border-slate-700/80 p-0.5"
-                : `bg-gradient-to-br ${gradient}`
-            } flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden cursor-default`}
-          >
-            {org?.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={org.logoUrl}
-                alt={org.name || "Organization Logo"}
-                className="w-full h-full object-contain rounded-md"
-              />
-            ) : (
-              <span className="text-white text-xs font-bold tracking-tight">
-                {isLoading ? "…" : initials}
-              </span>
-            )}
-          </div>
-        )}
-        {/* Org Name */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate leading-tight">
-            {isLoading ? (
-              <span className="animate-pulse bg-slate-700 rounded h-3 w-24 inline-block" />
-            ) : (
-              org?.name || "Your Business"
-            )}
-          </p>
-          <p className="text-xs text-slate-500 truncate leading-tight">
-            {org?.gstin ? `GSTIN: ${org.gstin}` : "billOS"}
-          </p>
-        </div>
-      </div>
+      {/* Brand / Org Identity Switcher */}
+      <OrganizationSwitcher />
 
       {/* Nav */}
       <div className="flex-1 overflow-y-auto py-3 px-2 scrollbar-thin">

@@ -68,4 +68,7 @@ public class CollectionPayment extends BaseEntity {
     private OffsetDateTime verifiedAt;
 
     private String remarks;
+
+    @Column(name = "collecting_organization_id")
+    private UUID collectingOrganizationId;
 }

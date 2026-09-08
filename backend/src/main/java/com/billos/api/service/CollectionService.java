@@ -28,12 +28,22 @@ public class CollectionService {
     private final SettlementDepositRepository depositRepository;
     private final CollectionLedgerRepository ledgerRepository;
     private final NotificationService notificationService;
+    private final OrganizationService organizationService;
 
     // --- QR Code Management ---
 
     @Transactional(readOnly = true)
     public List<CollectionQrCodeDto> getQrCodes() {
-        return qrCodeRepository.findAll().stream().map(this::toQrDto).collect(Collectors.toList());
+        String currentTenant = TenantContext.getCurrentTenant();
+        if (currentTenant == null) {
+            return java.util.Collections.emptyList();
+        }
+        UUID currentOrgId = UUID.fromString(currentTenant);
+        UUID primaryOrgId = organizationService.resolvePrimaryOrgId(currentOrgId);
+
+        return qrCodeRepository.findAccessibleQrCodes(currentOrgId, primaryOrgId).stream()
+                .map(this::toQrDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -77,13 +87,15 @@ public class CollectionService {
 
     @Transactional
     public CollectionPaymentDto recordPayment(CollectionPaymentDto dto) {
-        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        UUID currentOrgId = UUID.fromString(TenantContext.getCurrentTenant());
+        UUID primaryOrgId = organizationService.resolvePrimaryOrgId(currentOrgId);
+
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User recorder = userRepository.findById(principal.getId()).orElseThrow();
 
         CollectionQrCode qr = qrCodeRepository
-                .findById(dto.getQrCodeId())
+                .findAccessibleById(dto.getQrCodeId(), currentOrgId, primaryOrgId)
                 .orElseThrow(() -> new RuntimeException("QR Code not found"));
 
         Customer customer = null;
@@ -92,7 +104,10 @@ public class CollectionService {
         }
 
         CollectionPayment payment = new CollectionPayment();
-        payment.setOrganizationId(orgId);
+        // QR Code Collection Routing: Route into the Primary Organization's books (where QR is registered)
+        payment.setOrganizationId(qr.getOrganizationId());
+        // Tag the collecting branch where transaction occurred
+        payment.setCollectingOrganizationId(currentOrgId);
         payment.setCustomer(customer);
         payment.setQrCode(qr);
         payment.setRecordedBy(recorder);
@@ -616,42 +631,55 @@ public class CollectionService {
     }
 
     private CollectionQrCodeDto toQrDto(CollectionQrCode entity) {
-        return new CollectionQrCodeDto(
-                entity.getId(),
-                entity.getUser().getId(),
-                entity.getUser().getEmail(),
-                entity.getUser().getFirstName(),
-                entity.getUser().getLastName(),
-                entity.getPaymentProvider(),
-                entity.getUpiName(),
-                entity.getUpiId(),
-                entity.getNickname(),
-                entity.getQrImageUrl(),
-                entity.getIsActive(),
-                entity.getNotes());
+        String currentTenant = TenantContext.getCurrentTenant();
+        UUID currentOrgId = currentTenant != null ? UUID.fromString(currentTenant) : null;
+        boolean isMasterShared =
+                currentOrgId != null && !entity.getOrganizationId().equals(currentOrgId);
+
+        CollectionQrCodeDto dto = new CollectionQrCodeDto();
+        dto.setId(entity.getId());
+        dto.setUserId(entity.getUser().getId());
+        dto.setUserEmail(entity.getUser().getEmail());
+        dto.setUserFirstName(entity.getUser().getFirstName());
+        dto.setUserLastName(entity.getUser().getLastName());
+        dto.setPaymentProvider(entity.getPaymentProvider());
+        dto.setUpiName(entity.getUpiName());
+        dto.setUpiId(entity.getUpiId());
+        dto.setNickname(entity.getNickname());
+        dto.setQrImageUrl(entity.getQrImageUrl());
+        dto.setIsActive(entity.getIsActive());
+        dto.setNotes(entity.getNotes());
+        dto.setOrganizationId(entity.getOrganizationId());
+        dto.setIsShared(entity.getIsShared());
+        dto.setIsMasterShared(isMasterShared);
+        return dto;
     }
 
     private CollectionPaymentDto toPaymentDto(CollectionPayment entity) {
-        return new CollectionPaymentDto(
-                entity.getId(),
-                entity.getCustomer() != null ? entity.getCustomer().getId() : null,
-                entity.getCustomer() != null ? entity.getCustomer().getName() : null,
-                entity.getQrCode().getId(),
-                entity.getQrCode().getNickname(),
-                entity.getRecordedBy().getId(),
-                entity.getRecordedBy().getEmail(),
-                entity.getQrOwner().getId(),
-                entity.getQrOwner().getEmail(),
-                entity.getAmount(),
-                entity.getPlace(),
-                entity.getRecordedAt(),
-                entity.getUtrNumber(),
-                entity.getReferenceNumber(),
-                entity.getScreenshotUrl(),
-                entity.getStatus(),
-                entity.getVerifiedBy() != null ? entity.getVerifiedBy().getId() : null,
-                entity.getVerifiedAt(),
-                entity.getRemarks());
+        CollectionPaymentDto dto = new CollectionPaymentDto();
+        dto.setId(entity.getId());
+        dto.setCustomerId(entity.getCustomer() != null ? entity.getCustomer().getId() : null);
+        dto.setCustomerName(entity.getCustomer() != null ? entity.getCustomer().getName() : null);
+        dto.setQrCodeId(entity.getQrCode().getId());
+        dto.setQrCodeNickname(entity.getQrCode().getNickname());
+        dto.setRecordedById(entity.getRecordedBy().getId());
+        dto.setRecordedByEmail(entity.getRecordedBy().getEmail());
+        dto.setQrOwnerId(entity.getQrOwner().getId());
+        dto.setQrOwnerEmail(entity.getQrOwner().getEmail());
+        dto.setAmount(entity.getAmount());
+        dto.setPlace(entity.getPlace());
+        dto.setRecordedAt(entity.getRecordedAt());
+        dto.setUtrNumber(entity.getUtrNumber());
+        dto.setReferenceNumber(entity.getReferenceNumber());
+        dto.setScreenshotUrl(entity.getScreenshotUrl());
+        dto.setStatus(entity.getStatus());
+        dto.setVerifiedById(
+                entity.getVerifiedBy() != null ? entity.getVerifiedBy().getId() : null);
+        dto.setVerifiedAt(entity.getVerifiedAt());
+        dto.setRemarks(entity.getRemarks());
+        dto.setOrganizationId(entity.getOrganizationId());
+        dto.setCollectingOrganizationId(entity.getCollectingOrganizationId());
+        return dto;
     }
 
     private CollectionExpenseDto toExpenseDto(CollectionExpense entity) {

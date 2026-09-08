@@ -28,4 +28,7 @@ public class CollectionPaymentDto {
     private UUID verifiedById;
     private OffsetDateTime verifiedAt;
     private String remarks;
+    private UUID organizationId;
+    private UUID collectingOrganizationId;
+    private String collectingBranchName;
 }

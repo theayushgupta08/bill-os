@@ -22,6 +22,9 @@ export interface Organization extends BaseEntity {
   logoUrl?: string;
   website?: string;
   financialYearStart?: string;
+  parentOrganizationId?: string;
+  isPrimary?: boolean;
+  branchCode?: string;
 }
 
 export interface TaxSettings extends BaseEntity {
@@ -87,6 +90,10 @@ export interface Customer extends BaseEntity {
   phone?: string;
   gstin?: string;
   outstandingBalance?: number;
+  organizationId?: string;
+  isShared?: boolean;
+  originatingOrgId?: string;
+  originatingBranchName?: string;
 }
 
 export interface Product extends BaseEntity {
@@ -101,6 +108,9 @@ export interface Product extends BaseEntity {
   hsnSac?: string;
   unitOfMeasure?: string;
   categoryId?: string;
+  organizationId?: string;
+  isShared?: boolean;
+  isMasterShared?: boolean;
 }
 
 export interface ProductCategory extends BaseEntity {

@@ -15,4 +15,7 @@ public class ProductDto {
     private BigDecimal basePrice;
     private BigDecimal taxRate;
     private String unitOfMeasure;
+    private UUID organizationId;
+    private Boolean isShared;
+    private Boolean isMasterShared;
 }
