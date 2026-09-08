@@ -20,6 +20,7 @@ import { InviteUserModal } from "./InviteUserModal";
 import { toast } from "sonner";
 import {
   Users,
+  User,
   Mail,
   Shield,
   ShieldAlert,
@@ -30,6 +31,13 @@ import {
   UserX,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TeamMember {
   userId: string;
@@ -305,18 +313,49 @@ export function TeamTable() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="bg-slate-850 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500/20"
-          >
-            <option value="ALL">All Roles</option>
-            <option value="OWNER">Owner</option>
-            <option value="ADMIN">Admin</option>
-            <option value="MANAGER">Manager</option>
-            <option value="USER">User</option>
-          </select>
+          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+          <Select value={roleFilter} onValueChange={(val) => setRoleFilter(val ?? "ALL")}>
+            <SelectTrigger className="w-[150px] h-9 rounded-xl bg-slate-850 border-slate-700 text-slate-200 text-sm focus:border-indigo-500 focus:ring-indigo-500/20">
+              <SelectValue placeholder="All Roles" />
+            </SelectTrigger>
+            <SelectContent
+              side="bottom"
+              align="end"
+              sideOffset={6}
+              className="w-[180px] rounded-xl border border-slate-800 bg-slate-900/95 backdrop-blur-xl shadow-2xl p-1 z-50 text-slate-200"
+            >
+              <SelectItem value="ALL" className="rounded-lg py-2 px-2.5 cursor-pointer hover:bg-slate-800 focus:bg-slate-800">
+                <div className="flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <span>All Roles</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="OWNER" className="rounded-lg py-2 px-2.5 cursor-pointer hover:bg-slate-800 focus:bg-slate-800">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                  <span>Owner</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="ADMIN" className="rounded-lg py-2 px-2.5 cursor-pointer hover:bg-slate-800 focus:bg-slate-800">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  <span>Admin</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="MANAGER" className="rounded-lg py-2 px-2.5 cursor-pointer hover:bg-slate-800 focus:bg-slate-800">
+                <div className="flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                  <span>Manager</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="USER" className="rounded-lg py-2 px-2.5 cursor-pointer hover:bg-slate-800 focus:bg-slate-800">
+                <div className="flex items-center gap-2">
+                  <User className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                  <span>User</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
