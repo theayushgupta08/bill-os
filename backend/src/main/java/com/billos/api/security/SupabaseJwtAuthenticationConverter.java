@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
@@ -25,7 +27,7 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
         String role = jwt.getClaimAsString("role");
         if (!AUTHENTICATED_ROLE.equals(role)) {
             log.warn("Rejected token with role '{}' — only '{}' may authenticate", role, AUTHENTICATED_ROLE);
-            return null; // Spring Security handles this as unauthenticated
+            throw new BadCredentialsException("Invalid token role: " + role);
         }
 
         UUID supabaseId;
@@ -33,13 +35,13 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
             supabaseId = UUID.fromString(jwt.getSubject());
         } catch (IllegalArgumentException | NullPointerException ex) {
             log.warn("Rejected token with a missing or non-UUID 'sub' claim");
-            return null;
+            throw new BadCredentialsException("Missing or invalid 'sub' claim");
         }
 
         String email = jwt.getClaimAsString("email");
         if (email == null || email.isBlank()) {
             log.warn("Rejected token for {} with no email claim", supabaseId);
-            return null;
+            throw new BadCredentialsException("Missing email claim");
         }
 
         Map<String, Object> metadata = jwt.getClaimAsMap("user_metadata");
@@ -55,12 +57,12 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
             user = userProvisioningService.resolveUser(identity);
         } catch (RuntimeException ex) {
             log.error("Failed to provision local user for Supabase id {}", identity.supabaseId(), ex);
-            return null;
+            throw new BadCredentialsException("Failed to provision local user: " + ex.getMessage(), ex);
         }
 
         if (!Boolean.TRUE.equals(user.getIsActive())) {
             log.warn("Rejected token for deactivated user {}", user.getId());
-            return null;
+            throw new DisabledException("User account is deactivated");
         }
 
         UserPrincipal principal = UserPrincipal.create(user);
@@ -88,7 +90,13 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
 
     private String phoneFrom(Map<String, Object> metadata, Jwt jwt) {
         String phone = string(metadata, "phone");
-        return phone != null ? phone : jwt.getClaimAsString("phone");
+        if (phone != null) return phone;
+
+        String claimPhone = jwt.getClaimAsString("phone");
+        if (claimPhone != null && !claimPhone.isBlank()) {
+            return claimPhone.trim();
+        }
+        return null;
     }
 
     private String[] splitFullName(Map<String, Object> metadata) {

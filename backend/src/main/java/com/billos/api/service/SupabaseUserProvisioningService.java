@@ -5,6 +5,7 @@ import com.billos.api.repository.UserRepository;
 import com.billos.api.security.SupabaseIdentity;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -23,6 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class SupabaseUserProvisioningService {
+
+    public static final String DEFAULT_PHONE = "+91 0000000000";
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+\\d{1,4} ?\\d{4,14}$");
+    private static final Pattern TEN_DIGITS_PATTERN = Pattern.compile("^\\d{10}$");
 
     private final UserRepository userRepository;
 
@@ -55,9 +60,20 @@ public class SupabaseUserProvisioningService {
         User user = new User();
         user.setSupabaseId(identity.supabaseId());
         user.setEmail(identity.email());
-        user.setFirstName(identity.firstName());
-        user.setLastName(identity.lastName());
-        user.setPhone(identity.phone() != null ? identity.phone() : "+91 0000000000");
+
+        String firstName = identity.firstName();
+        if (isBlank(firstName)) {
+            firstName = "User";
+        }
+        user.setFirstName(firstName);
+
+        String lastName = identity.lastName();
+        if (lastName == null) {
+            lastName = "";
+        }
+        user.setLastName(lastName);
+
+        user.setPhone(sanitizePhone(identity.phone()));
         user.setIsActive(true);
         // Supabase will not mint an access token until the address is confirmed (when confirmation
         // is enabled), so a token in hand means the address is good.
@@ -99,19 +115,42 @@ public class SupabaseUserProvisioningService {
             changed = true;
         }
         if (isPlaceholderName(user.getFirstName(), user.getEmail())) {
-            user.setFirstName(identity.firstName());
-            changed = true;
+            if (!isBlank(identity.firstName())) {
+                user.setFirstName(identity.firstName());
+                changed = true;
+            }
         }
-        if (isBlank(user.getLastName()) && !isBlank(identity.lastName())) {
+        if (user.getLastName() == null) {
+            user.setLastName("");
+            changed = true;
+        } else if (isBlank(user.getLastName()) && !isBlank(identity.lastName())) {
             user.setLastName(identity.lastName());
             changed = true;
         }
+
+        // Only populate phone when missing locally and available from Supabase
         if (isBlank(user.getPhone()) && !isBlank(identity.phone())) {
-            user.setPhone(identity.phone());
+            user.setPhone(sanitizePhone(identity.phone()));
             changed = true;
         }
 
         return changed ? userRepository.save(user) : user;
+    }
+
+    public String sanitizePhone(String rawPhone) {
+        if (isBlank(rawPhone)) {
+            return DEFAULT_PHONE;
+        }
+        String trimmed = rawPhone.trim();
+        if (PHONE_PATTERN.matcher(trimmed).matches()) {
+            return trimmed;
+        }
+        if (TEN_DIGITS_PATTERN.matcher(trimmed).matches()) {
+            return "+91 " + trimmed;
+        }
+
+        log.warn("Phone '{}' does not match required format; defaulting to {}", rawPhone, DEFAULT_PHONE);
+        return DEFAULT_PHONE;
     }
 
     private boolean isPlaceholderName(String firstName, String email) {

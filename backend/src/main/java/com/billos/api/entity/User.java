@@ -43,8 +43,8 @@ public class User extends BaseEntity {
 
     @NotBlank(message = "Phone number is required")
     @Pattern(
-            regexp = "^\\+\\d{1,4} \\d{4,14}$",
-            message = "Phone must be in format: Country Code + Phone (e.g. +91 9876543210)")
+            regexp = "^\\+\\d{1,4} ?\\d{4,14}$",
+            message = "Phone must be in format: Country Code + Phone (e.g. +91 XXXXXXXXXX)")
     @Column(nullable = false)
     private String phone;
 
