@@ -31,6 +31,15 @@ public class TaxRate extends BaseEntity {
     @Column(nullable = false)
     private BigDecimal rate;
 
+    @Column(name = "cgst_rate")
+    private BigDecimal cgstRate;
+
+    @Column(name = "sgst_rate")
+    private BigDecimal sgstRate;
+
+    @Column(name = "igst_rate")
+    private BigDecimal igstRate;
+
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 }

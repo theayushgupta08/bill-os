@@ -29,6 +29,13 @@ public class OrganizationController {
         return ResponseEntity.ok(createdOrg);
     }
 
+    @PostMapping("/setup")
+    public ResponseEntity<Organization> setupOrganization(
+            @Valid @RequestBody com.billos.api.dto.SetupOrganizationRequest request) {
+        Organization createdOrg = organizationService.setupOrganization(request);
+        return ResponseEntity.ok(createdOrg);
+    }
+
     @GetMapping
     public ResponseEntity<List<Organization>> getMyOrganizations() {
         List<Organization> organizations = organizationService.getMyOrganizations();

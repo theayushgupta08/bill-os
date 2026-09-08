@@ -64,6 +64,54 @@ public class OrganizationService {
         return savedOrg;
     }
 
+    public Organization setupOrganization(@NonNull com.billos.api.dto.SetupOrganizationRequest request) {
+        // Get current user
+        UserPrincipal principal = (UserPrincipal)
+                SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser =
+                userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+
+        Organization org = new Organization();
+        org.setName(request.getName());
+        org.setLegalName(request.getLegalName());
+        org.setGstin(request.getGstin());
+        org.setAddressLine1(request.getAddressLine1());
+        org.setAddressLine2(request.getAddressLine2());
+        org.setCity(request.getCity());
+        org.setState(request.getState());
+        org.setPincode(request.getPincode());
+        org.setEmail(request.getEmail());
+        org.setPhone(request.getPhone());
+        org.setSecondaryPhones(request.getSecondaryPhones());
+        org.setWebsite(request.getWebsite());
+        org.setLogoUrl(request.getLogoUrl());
+        org.setFinancialYearStart(
+                java.time.LocalDate.of(java.time.LocalDate.now().getYear(), 4, 1));
+
+        // Save and flush Organization immediately so it's visible to the seeder's new transaction
+        Organization savedOrg = organizationRepository.saveAndFlush(org);
+
+        String previousTenant = com.billos.api.tenant.TenantContext.getCurrentTenant();
+        try {
+            com.billos.api.tenant.TenantContext.setCurrentTenant(
+                    savedOrg.getId().toString());
+            // Seed all custom setup entities in a new transaction so the tenant context is freshly resolved
+            organizationSeeder.seedSetupOrganization(savedOrg.getId(), currentUser, request);
+        } catch (Exception e) {
+            // Rollback the organization creation manually since we aren't in a single transaction
+            organizationRepository.delete(savedOrg);
+            throw e;
+        } finally {
+            if (previousTenant != null) {
+                com.billos.api.tenant.TenantContext.setCurrentTenant(previousTenant);
+            } else {
+                com.billos.api.tenant.TenantContext.clear();
+            }
+        }
+
+        return savedOrg;
+    }
+
     @Transactional(readOnly = true)
     public List<Organization> getMyOrganizations() {
         UserPrincipal principal = (UserPrincipal)

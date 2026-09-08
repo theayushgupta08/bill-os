@@ -66,6 +66,9 @@ public class Organization extends BaseEntity {
     @Column(name = "logo_url")
     private String logoUrl;
 
+    @Column(name = "website")
+    private String website;
+
     @Column(name = "financial_year_start")
     private LocalDate financialYearStart;
 }

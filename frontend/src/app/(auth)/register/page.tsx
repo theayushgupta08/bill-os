@@ -20,8 +20,7 @@ export default function RegisterPage() {
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
-    phone: ''
+    password: ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,7 +41,6 @@ export default function RegisterPage() {
           data: {
             first_name: formData.firstName,
             last_name: formData.lastName,
-            phone: formData.phone,
           }
         }
       });
@@ -55,12 +53,8 @@ export default function RegisterPage() {
       if (data.user && !data.session) {
         setSuccess(true);
       } else {
-        // Auto-logged in (email confirmation disabled)
-        if (returnUrl) {
-          router.push(returnUrl);
-        } else {
-          router.push('/setup');
-        }
+        // Auto-logged in -> route to phone verification
+        router.push('/phone');
       }
 
     } catch (err: unknown) {
@@ -167,22 +161,6 @@ export default function RegisterPage() {
             value={formData.email}
             onChange={handleChange}
             placeholder="name@example.com"
-            className="h-10"
-          />
-        </div>
-
-        <div className="grid gap-2">
-          <Label htmlFor="phone">Phone Number</Label>
-          <Input
-            id="phone"
-            name="phone"
-            type="tel"
-            required
-            pattern="^\+\d{1,4} \d{4,14}$"
-            title="Format: Country Code + Phone (e.g. +91 9876543210)"
-            value={formData.phone}
-            onChange={handleChange}
-            placeholder="+91 9876543210"
             className="h-10"
           />
         </div>
