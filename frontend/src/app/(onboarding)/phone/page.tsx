@@ -40,28 +40,35 @@ export default function PhoneOnboardingPage() {
     setError(null);
 
     try {
-      // 1. Update user's phone in the backend database
-      await api.put("/users/me/phone", { phone: fullPhone });
+      // 1. Save directly to Supabase auth user metadata
+      const supabase = createClient();
+      const { error: supabaseErr } = await supabase.auth.updateUser({
+        data: { phone: fullPhone },
+      });
 
-      // 2. Sync to Supabase user metadata
+      if (supabaseErr) {
+        console.error("Supabase phone update error:", supabaseErr);
+        setError(supabaseErr.message || "Failed to update phone number. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Best-effort sync to backend database profile
       try {
-        const supabase = createClient();
-        await supabase.auth.updateUser({
-          data: { phone: fullPhone },
-        });
-      } catch (metaErr) {
-        console.warn("Failed to sync phone to Supabase metadata:", metaErr);
+        await api.put("/users/me/phone", { phone: fullPhone });
+      } catch (backendErr) {
+        console.warn("Backend phone update deferred; saved in Supabase metadata:", backendErr);
       }
 
       // 3. Move to organization setup
       router.push("/setup");
     } catch (err: unknown) {
       console.error("Failed to update phone number:", err);
-      const axiosErr = err as AxiosError<{ message?: string }>;
-      setError(
-        axiosErr.response?.data?.message ||
-          "Failed to save phone number. Please check the format and try again."
-      );
+      const errorMessage =
+        (err as Error)?.message ||
+        (err as AxiosError<{ message?: string }>)?.response?.data?.message ||
+        "Failed to save phone number. Please try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
