@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { PageLoader } from "@/components/ui/loader";
+import { BrandLoader } from "@/components/ui/loader";
 import { api } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { RoleActionMenu } from "./RoleActionMenu";
@@ -226,14 +226,23 @@ export function TeamTable() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <PageLoader />
-      </div>
+      <BrandLoader size="lg" text="Loading team members..." variant="card" showBrandText />
     );
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-4xl">
+      {/* Title Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
+          <Users className="w-6 h-6" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-white">Team Management</h2>
+          <p className="text-sm text-slate-400">Manage your organization team members, roles, and access status.</p>
+        </div>
+      </div>
+
       {/* Top Banner / Summary */}
       <div className="grid gap-4 md:grid-cols-4">
         <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm">

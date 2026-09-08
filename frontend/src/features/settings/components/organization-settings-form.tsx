@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, Plus, X } from "lucide-react";
+import { HelpCircle, Plus, X, Building2 } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
+import { toast } from "sonner";
 import { Organization } from "@/types";
 
 function Tooltip({ text }: { text: string }) {
@@ -49,11 +51,11 @@ export function OrganizationSettingsForm() {
     mutationFn: (payload: Partial<Organization>) => api.put<Organization>(`/organizations/${payload.id}`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      alert("Organization details updated successfully!");
+      toast.success("Organization details updated successfully!");
     },
     onError: (error) => {
       console.error("Failed to update organization", error);
-      alert("Failed to update organization details.");
+      toast.error("Failed to update organization details.");
     }
   });
 
@@ -96,20 +98,36 @@ export function OrganizationSettingsForm() {
     });
   };
 
-  if (isLoading) return <div className="p-8">Loading settings...</div>;
-  if (!org) return <div className="p-8">Organization not found.</div>;
+  if (isLoading) {
+    return <BrandLoader size="lg" text="Loading organization details..." variant="card" showBrandText />;
+  }
+
+  if (!org) {
+    return (
+      <div className="p-8 text-center text-slate-400 border border-slate-800/80 rounded-xl bg-slate-900/40">
+        Organization not found.
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6 max-w-4xl">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Organization Settings</h2>
+    <div className="space-y-6 max-w-4xl">
+      {/* Title Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
+          <Building2 className="w-6 h-6" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-white">Organization Profile</h2>
+          <p className="text-sm text-slate-400">Update your company details, registered addresses, and GST information.</p>
+        </div>
       </div>
 
       <form onSubmit={handleSave}>
-        <Card>
+        <Card className="border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm shadow-xl">
           <CardHeader>
-            <CardTitle>Company Profile</CardTitle>
-            <CardDescription>Update your company details and GST information.</CardDescription>
+            <CardTitle className="text-base font-bold text-white">Company Profile</CardTitle>
+            <CardDescription className="text-xs text-slate-400">Update your company details and GST information.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -246,8 +264,12 @@ export function OrganizationSettingsForm() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4">
-              <Button type="submit" disabled={updateMutation.isPending}>
+            <div className="flex justify-end pt-4 border-t border-slate-800/80">
+              <Button 
+                type="submit" 
+                disabled={updateMutation.isPending}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm transition-colors"
+              >
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>

@@ -49,9 +49,9 @@ export function SettingsNav() {
             className={cn(
               buttonVariants({ variant: "ghost" }),
               isActive
-                ? "bg-indigo-500/10 text-indigo-400 font-semibold hover:bg-indigo-500/15"
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5",
-              "justify-start gap-2.5 rounded-lg px-3 py-2 transition-all duration-150 h-10 w-[80%]"
+                ? "bg-indigo-500/10 text-indigo-400 font-semibold border border-indigo-500/20 hover:bg-indigo-500/15"
+                : "text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent",
+              "justify-start gap-2.5 rounded-lg px-3 py-2 transition-all duration-150 h-10 w-full"
             )}
           >
             <Icon className={cn("h-4 w-4", isActive ? "text-indigo-400" : "text-slate-500")} />

@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Settings } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
+import { toast } from "sonner";
 import { PreferencesSettings, Organization } from "@/types";
 
 function Tooltip({ text }: { text: string }) {
@@ -63,11 +65,11 @@ export function PreferencesSettingsForm() {
     mutationFn: (payload: Partial<PreferencesSettings>) => api.put<PreferencesSettings>(`/organizations/${orgId}/settings`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prefSettings", orgId] });
-      alert("Preferences updated successfully!");
+      toast.success("Preferences updated successfully!");
     },
     onError: (error) => {
       console.error("Failed to update preferences", error);
-      alert("Failed to update preferences.");
+      toast.error("Failed to update preferences.");
     }
   });
 
@@ -81,20 +83,36 @@ export function PreferencesSettingsForm() {
     setSettings((prev: PreferencesSettings | null) => prev ? ({ ...prev, [name]: value }) : prev);
   };
 
-  if (loadingOrgs || (orgId && loadingSettings)) return <div className="p-8">Loading settings...</div>;
-  if (!settings) return <div className="p-8">Settings not found.</div>;
+  if (loadingOrgs || (orgId && loadingSettings)) {
+    return <BrandLoader size="lg" text="Loading preferences..." variant="card" showBrandText />;
+  }
+
+  if (!settings) {
+    return (
+      <div className="p-8 text-center text-slate-400 border border-slate-800/80 rounded-xl bg-slate-900/40">
+        Preferences not found.
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6 max-w-2xl">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Preferences</h2>
+    <div className="space-y-6 max-w-4xl">
+      {/* Title Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
+          <Settings className="w-6 h-6" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-white">Preferences</h2>
+          <p className="text-sm text-slate-400">Customize how BillOS looks and formats data for your organization.</p>
+        </div>
       </div>
 
       <form onSubmit={handleSave}>
-        <Card>
+        <Card className="border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm shadow-xl">
           <CardHeader>
-            <CardTitle>User & System Preferences</CardTitle>
-            <CardDescription>Customize how BillOS looks and formats data for your organization.</CardDescription>
+            <CardTitle className="text-base font-bold text-white">User & System Preferences</CardTitle>
+            <CardDescription className="text-xs text-slate-400">Customize how BillOS looks and formats data for your organization.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             
@@ -178,8 +196,12 @@ export function PreferencesSettingsForm() {
               </Select>
             </div>
 
-            <div className="flex justify-end pt-4 border-t">
-              <Button type="submit" disabled={updateMutation.isPending}>
+            <div className="flex justify-end pt-4 border-t border-slate-800/80">
+              <Button 
+                type="submit" 
+                disabled={updateMutation.isPending}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm transition-colors"
+              >
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>

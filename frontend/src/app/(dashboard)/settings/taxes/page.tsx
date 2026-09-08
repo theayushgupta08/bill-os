@@ -151,14 +151,14 @@ export default function TaxSettingsAndRatesPage() {
 
   if (loadingOrgs || loadingTaxes || (orgId && loadingSettings)) {
     return (
-      <BrandLoader size="lg" text="Loading tax settings..." variant="card" />
+      <BrandLoader size="lg" text="Loading tax settings..." variant="card" showBrandText />
     );
   }
 
   const activeTaxes = taxes.filter(t => t.isActive);
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto p-4 lg:p-6">
+    <div className="space-y-6 max-w-4xl">
       {/* Title Header */}
       <div className="flex items-center gap-3">
         <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">

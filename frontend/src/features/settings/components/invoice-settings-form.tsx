@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, Plus, Trash2 } from "lucide-react";
+import { HelpCircle, Plus, Trash2, FileText } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
+import { toast } from "sonner";
 import { InvoiceSettings, Organization } from "@/types";
 
 interface BankDetails {
@@ -122,11 +124,11 @@ export function InvoiceSettingsForm() {
   const updateMutation = useMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoiceSettings", orgId] });
-      alert("Invoice settings updated successfully!");
+      toast.success("Invoice settings updated successfully!");
     },
     onError: (error) => {
       console.error("Failed to update invoice settings", error);
-      alert("Failed to update invoice settings.");
+      toast.error("Failed to update invoice settings.");
     },
     mutationFn: (payload: Partial<InvoiceSettings>) => api.put<InvoiceSettings>(`/organizations/${orgId}/settings`, payload),
   });
@@ -185,20 +187,36 @@ export function InvoiceSettingsForm() {
     setTermsList((prev) => prev.filter((_, i) => i !== index));
   };
 
-  if (loadingOrgs || (orgId && loadingSettings)) return <div className="p-8">Loading settings...</div>;
-  if (!settings) return <div className="p-8">Settings not found.</div>;
+  if (loadingOrgs || (orgId && loadingSettings)) {
+    return <BrandLoader size="lg" text="Loading invoice settings..." variant="card" showBrandText />;
+  }
+
+  if (!settings) {
+    return (
+      <div className="p-8 text-center text-slate-400 border border-slate-800/80 rounded-xl bg-slate-900/40">
+        Settings not found.
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6 max-w-4xl">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Invoice Settings</h2>
+    <div className="space-y-6 max-w-4xl">
+      {/* Title Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
+          <FileText className="w-6 h-6" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-white">Invoice Settings</h2>
+          <p className="text-sm text-slate-400">Configure prefix, bank deposit details, and bullet terms for your invoices.</p>
+        </div>
       </div>
 
       <form onSubmit={handleSave}>
-        <Card>
+        <Card className="border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm shadow-xl">
           <CardHeader>
-            <CardTitle>Invoice Configuration</CardTitle>
-            <CardDescription>Configure prefix, bank details, and bullet terms for your invoices.</CardDescription>
+            <CardTitle className="text-base font-bold text-white">Invoice Configuration</CardTitle>
+            <CardDescription className="text-xs text-slate-400">Configure prefix, bank details, and bullet terms for your invoices.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             
@@ -373,8 +391,12 @@ export function InvoiceSettingsForm() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t">
-              <Button type="submit" disabled={updateMutation.isPending}>
+            <div className="flex justify-end pt-4 border-t border-slate-800/80">
+              <Button 
+                type="submit" 
+                disabled={updateMutation.isPending}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm transition-colors"
+              >
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>
