@@ -27,7 +27,7 @@ import {
   Landmark,
 } from "lucide-react";
 import { useOrganization, getOrgInitials, getOrgGradient } from "@/lib/use-organization";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface NavItem {
   label: string;
@@ -127,12 +127,17 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: string }) {
-  const hasActive = group.items.some((item) =>
-    item.exact ? pathname === item.href : pathname.startsWith(item.href)
-  );
-  const [open, setOpen] = useState(group.defaultOpen || hasActive);
-
+function NavGroupSection({
+  group,
+  pathname,
+  isOpen,
+  onToggle,
+}: {
+  group: NavGroup;
+  pathname: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
   if (!group.label) {
     // Render unlabeled items flat (Dashboard)
     return (
@@ -147,15 +152,16 @@ function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: strin
   return (
     <div className="mb-1">
       <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-400 transition-colors group"
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-400 transition-colors group cursor-pointer"
       >
         <span>{group.label}</span>
         <ChevronDown
-          className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`}
         />
       </button>
-      {open && (
+      {isOpen && (
         <div className="mt-0.5">
           {group.items.map((item) => (
             <NavLink key={item.href} item={item} pathname={pathname} />
@@ -200,6 +206,42 @@ export function Sidebar() {
   const initials = getOrgInitials(org?.name);
   const gradient = getOrgGradient(org?.name);
 
+  // Helper to determine which group should be open based on pathname
+  const getActiveGroupLabel = (path: string): string | null => {
+    const matched = navGroups.find(
+      (g) =>
+        g.label &&
+        g.items.some((item) =>
+          item.exact ? path === item.href : path.startsWith(item.href)
+        )
+    );
+    if (matched) return matched.label;
+    const defaultGroup = navGroups.find((g) => g.label && g.defaultOpen);
+    return defaultGroup ? defaultGroup.label : null;
+  };
+
+  const [openGroup, setOpenGroup] = useState<string | null>(() =>
+    getActiveGroupLabel(pathname)
+  );
+
+  // When pathname changes (navigation occurs), ensure the active section's dropdown is open
+  useEffect(() => {
+    const matched = navGroups.find(
+      (g) =>
+        g.label &&
+        g.items.some((item) =>
+          item.exact ? pathname === item.href : pathname.startsWith(item.href)
+        )
+    );
+    if (matched) {
+      setOpenGroup(matched.label);
+    }
+  }, [pathname]);
+
+  const handleToggle = (label: string) => {
+    setOpenGroup((prev) => (prev === label ? null : label));
+  };
+
   return (
     <div className="hidden md:flex flex-col h-full border-r border-border/60 bg-slate-950">
       {/* Brand / Org Identity */}
@@ -230,7 +272,13 @@ export function Sidebar() {
       {/* Nav */}
       <div className="flex-1 overflow-y-auto py-3 px-2 scrollbar-thin">
         {navGroups.map((group, idx) => (
-          <NavGroupSection key={idx} group={group} pathname={pathname} />
+          <NavGroupSection
+            key={group.label || `flat-${idx}`}
+            group={group}
+            pathname={pathname}
+            isOpen={openGroup === group.label}
+            onToggle={() => handleToggle(group.label)}
+          />
         ))}
       </div>
 
