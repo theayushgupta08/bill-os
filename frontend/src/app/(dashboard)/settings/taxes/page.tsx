@@ -10,22 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, Percent, Settings, Plus } from "lucide-react";
+import { Percent, Settings, Plus } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
+import { HelpTooltip } from "@/components/ui/tooltip";
 import { TaxRate } from "@/types";
-
-function Tooltip({ text }: { text: string }) {
-  return (
-    <div className="group relative inline-block ml-1.5 align-middle cursor-help">
-      <HelpCircle className="w-3.5 h-3.5 text-slate-500 hover:text-indigo-400 transition-colors" />
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 bg-slate-950 text-slate-200 text-xs rounded-lg shadow-xl border border-slate-800 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150 z-50 font-normal">
-        {text}
-        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-950"></div>
-      </div>
-    </div>
-  );
-}
 
 export default function TaxSettingsAndRatesPage() {
   const queryClient = useQueryClient();
@@ -189,7 +178,7 @@ export default function TaxSettingsAndRatesPage() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <Label htmlFor="defaultGstRate" className="text-slate-350 text-xs">Default Tax Code</Label>
-                    <Tooltip text="Select the default tax rate code pre-filled when creating invoices or items." />
+                    <HelpTooltip text="Select the default tax rate code pre-filled when creating invoices or items." />
                   </div>
                   <select
                     id="defaultGstRate"
@@ -229,7 +218,7 @@ export default function TaxSettingsAndRatesPage() {
                     <Label htmlFor="taxInclusivePricing" className="font-normal text-xs text-slate-350 cursor-pointer select-none">
                       Tax Inclusive Default
                     </Label>
-                    <Tooltip text="When checked, transaction item pricing includes calculated taxes by default." />
+                    <HelpTooltip text="When checked, transaction item pricing includes calculated taxes by default." />
                   </div>
                 </div>
 
@@ -260,7 +249,7 @@ export default function TaxSettingsAndRatesPage() {
                 <div className="space-y-1.5 flex-1 w-full">
                   <div className="flex items-center">
                     <Label className="text-slate-350 text-xs">Tax Name</Label>
-                    <Tooltip text="The name tag of this tax rate (e.g. GST 18%, VAT 5%)." />
+                    <HelpTooltip text="The name tag of this tax rate (e.g. GST 18%, VAT 5%)." />
                   </div>
                   <Input 
                     value={newTaxName} 
@@ -273,7 +262,7 @@ export default function TaxSettingsAndRatesPage() {
                 <div className="space-y-1.5 flex-1 w-full">
                   <div className="flex items-center">
                     <Label className="text-slate-350 text-xs">Rate (%)</Label>
-                    <Tooltip text="The exact decimal percentage rate of tax (e.g. 18.00)." />
+                    <HelpTooltip text="The exact decimal percentage rate of tax (e.g. 18.00)." />
                   </div>
                   <Input 
                     type="number" 

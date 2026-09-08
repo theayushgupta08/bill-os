@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, Plus, Trash2, FileText } from "lucide-react";
+import { Plus, Trash2, FileText } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
+import { HelpTooltip } from "@/components/ui/tooltip";
 import { InvoiceSettings, Organization } from "@/types";
 
 interface BankDetails {
@@ -37,17 +38,6 @@ function parseTerms(raw: string | undefined | null): string[] {
     .filter(Boolean);
 }
 
-function Tooltip({ text }: { text: string }) {
-  return (
-    <div className="group relative inline-block ml-1.5 align-middle cursor-help">
-      <HelpCircle className="w-3.5 h-3.5 text-slate-500 hover:text-indigo-400 transition-colors" />
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 bg-slate-950 text-slate-200 text-xs rounded-lg shadow-xl border border-slate-800 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150 z-50 font-normal">
-        {text}
-        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-950"></div>
-      </div>
-    </div>
-  );
-}
 
 export function InvoiceSettingsForm() {
   const queryClient = useQueryClient();
@@ -223,7 +213,7 @@ export function InvoiceSettingsForm() {
             <div className="max-w-md space-y-2">
               <div className="flex items-center">
                 <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
-                <Tooltip text="The abbreviation prepended to your invoice numbers (e.g., INV- or ACME-)." />
+                <HelpTooltip text="The abbreviation prepended to your invoice numbers (e.g., INV- or ACME-)." />
               </div>
               <Input 
                 id="invoicePrefix" 
@@ -245,7 +235,7 @@ export function InvoiceSettingsForm() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <Label htmlFor="bankName">Bank Name</Label>
-                    <Tooltip text="The name of the banking institution (e.g. HDFC Bank, ICICI Bank, State Bank of India)." />
+                    <HelpTooltip text="The name of the banking institution (e.g. HDFC Bank, ICICI Bank, State Bank of India)." />
                   </div>
                   <Input 
                     id="bankName" 
@@ -259,7 +249,7 @@ export function InvoiceSettingsForm() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <Label htmlFor="accountHolder">Account Holder Name</Label>
-                    <Tooltip text="The official registered name of the business entity or individual holding this bank account." />
+                    <HelpTooltip text="The official registered name of the business entity or individual holding this bank account." />
                   </div>
                   <Input 
                     id="accountHolder" 
@@ -273,7 +263,7 @@ export function InvoiceSettingsForm() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <Label htmlFor="accountNumber">Account Number</Label>
-                    <Tooltip text="The complete bank account number where funds should be transferred." />
+                    <HelpTooltip text="The complete bank account number where funds should be transferred." />
                   </div>
                   <Input 
                     id="accountNumber" 
@@ -287,7 +277,7 @@ export function InvoiceSettingsForm() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <Label htmlFor="ifscCode">IFSC Code</Label>
-                    <Tooltip text="Indian Financial System Code (11 alphanumeric characters) used for direct NEFT/RTGS/IMPS wire transfers." />
+                    <HelpTooltip text="Indian Financial System Code (11 alphanumeric characters) used for direct NEFT/RTGS/IMPS wire transfers." />
                   </div>
                   <Input 
                     id="ifscCode" 
@@ -302,7 +292,7 @@ export function InvoiceSettingsForm() {
                 <div className="space-y-2 md:col-span-2">
                   <div className="flex items-center">
                     <Label htmlFor="branchName">Branch Name & Address</Label>
-                    <Tooltip text="The specific branch location and address details of the bank." />
+                    <HelpTooltip text="The specific branch location and address details of the bank." />
                   </div>
                   <Input 
                     id="branchName" 
@@ -320,7 +310,7 @@ export function InvoiceSettingsForm() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Label className="text-sm font-semibold">Terms & Conditions</Label>
-                  <Tooltip text="Default bullet points printed at the bottom of every invoice (e.g. return policy, interest on delayed payments)." />
+                  <HelpTooltip text="Default bullet points printed at the bottom of every invoice (e.g. return policy, interest on delayed payments)." />
                 </div>
                 <span className="text-xs text-muted-foreground font-medium">
                   {termsList.length} {termsList.length === 1 ? "bullet point" : "bullet points"}

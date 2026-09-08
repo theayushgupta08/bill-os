@@ -7,22 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, Plus, X, Building2 } from "lucide-react";
+import { Plus, X, Building2 } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
+import { HelpTooltip } from "@/components/ui/tooltip";
 import { Organization } from "@/types";
-
-function Tooltip({ text }: { text: string }) {
-  return (
-    <div className="group relative inline-block ml-1.5 align-middle cursor-help">
-      <HelpCircle className="w-3.5 h-3.5 text-slate-500 hover:text-indigo-400 transition-colors" />
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 bg-slate-950 text-slate-200 text-xs rounded-lg shadow-xl border border-slate-800 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150 z-50 font-normal">
-        {text}
-        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-950"></div>
-      </div>
-    </div>
-  );
-}
 
 export function OrganizationSettingsForm() {
   const queryClient = useQueryClient();
@@ -134,14 +123,14 @@ export function OrganizationSettingsForm() {
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Label htmlFor="name">Display Name</Label>
-                  <Tooltip text="The common name for your business as displayed across the billOS application." />
+                  <HelpTooltip text="The common name for your business as displayed across the billOS application." />
                 </div>
                 <Input id="name" name="name" value={org.name || ""} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Label htmlFor="legalName">Legal Entity Name</Label>
-                  <Tooltip text="The official registered name of your company (e.g. Acme Corporation Private Limited)." />
+                  <HelpTooltip text="The official registered name of your company (e.g. Acme Corporation Private Limited)." />
                 </div>
                 <Input id="legalName" name="legalName" value={org.legalName || ""} onChange={handleChange} />
               </div>
@@ -151,14 +140,14 @@ export function OrganizationSettingsForm() {
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Label htmlFor="gstin">GSTIN</Label>
-                  <Tooltip text="The Goods and Services Tax Identification Number of your organization." />
+                  <HelpTooltip text="The Goods and Services Tax Identification Number of your organization." />
                 </div>
                 <Input id="gstin" name="gstin" value={org.gstin || ""} onChange={handleChange} />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Label htmlFor="email">Email</Label>
-                  <Tooltip text="The official primary contact email address for your organization." />
+                  <HelpTooltip text="The official primary contact email address for your organization." />
                 </div>
                 <Input id="email" name="email" type="email" value={org.email || ""} onChange={handleChange} />
               </div>
@@ -168,7 +157,7 @@ export function OrganizationSettingsForm() {
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Label htmlFor="phone">Primary Phone</Label>
-                  <Tooltip text="The official primary contact telephone or mobile number for your organization." />
+                  <HelpTooltip text="The official primary contact telephone or mobile number for your organization." />
                 </div>
                 <Input 
                   id="phone" 
@@ -227,7 +216,7 @@ export function OrganizationSettingsForm() {
             <div className="space-y-2">
               <div className="flex items-center">
                 <Label htmlFor="addressLine1">Address Line 1</Label>
-                <Tooltip text="The first line of your organization's physical address (street name, building number)." />
+                <HelpTooltip text="The first line of your organization's physical address (street name, building number)." />
               </div>
               <Input id="addressLine1" name="addressLine1" value={org.addressLine1 || ""} onChange={handleChange} />
             </div>
@@ -235,7 +224,7 @@ export function OrganizationSettingsForm() {
             <div className="space-y-2">
               <div className="flex items-center">
                 <Label htmlFor="addressLine2">Address Line 2</Label>
-                <Tooltip text="The second line of your organization's physical address (suite, unit, floor, locality)." />
+                <HelpTooltip text="The second line of your organization's physical address (suite, unit, floor, locality)." />
               </div>
               <Input id="addressLine2" name="addressLine2" value={org.addressLine2 || ""} onChange={handleChange} />
             </div>
@@ -244,21 +233,21 @@ export function OrganizationSettingsForm() {
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Label htmlFor="city">City</Label>
-                  <Tooltip text="The city where your organization's office is located." />
+                  <HelpTooltip text="The city where your organization's office is located." />
                 </div>
                 <Input id="city" name="city" value={org.city || ""} onChange={handleChange} />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Label htmlFor="state">State</Label>
-                  <Tooltip text="The state or province where your organization's office is located." />
+                  <HelpTooltip text="The state or province where your organization's office is located." />
                 </div>
                 <Input id="state" name="state" value={org.state || ""} onChange={handleChange} />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Label htmlFor="pincode">Pincode</Label>
-                  <Tooltip text="The postal code or zip code for your organization's location." />
+                  <HelpTooltip text="The postal code or zip code for your organization's location." />
                 </div>
                 <Input id="pincode" name="pincode" value={org.pincode || ""} onChange={handleChange} />
               </div>
