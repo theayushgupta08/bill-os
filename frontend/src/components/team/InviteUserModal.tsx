@@ -58,17 +58,19 @@ export function InviteUserModal({ onRefresh }: { onRefresh: () => void }) {
           <Mail className="mr-2 h-4 w-4" />
           Invite Member
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Invite Team Member</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[460px] p-6 rounded-2xl bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 shadow-2xl">
+        <DialogHeader className="space-y-1.5">
+          <DialogTitle className="text-xl font-bold text-white tracking-tight">Invite Team Member</DialogTitle>
+          <DialogDescription className="text-zinc-400 text-sm">
             Send an email invitation to join your organization.
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+        <form onSubmit={handleSubmit} className="space-y-5 pt-3">
           <div className="space-y-2">
-            <Label htmlFor="email">Email address</Label>
+            <Label htmlFor="email" className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+              Email address
+            </Label>
             <Input 
               id="email" 
               type="email" 
@@ -76,40 +78,48 @@ export function InviteUserModal({ onRefresh }: { onRefresh: () => void }) {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="h-10 rounded-xl bg-zinc-950/70 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-blue-500 focus:ring-blue-500/20"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="role">Assign Role</Label>
+            <Label htmlFor="role" className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+              Assign Role
+            </Label>
             <Select 
               value={formData.role} 
               onValueChange={(val) => setFormData({ ...formData, role: val ?? formData.role })}
             >
-              <SelectTrigger id="role">
+              <SelectTrigger id="role" className="w-full h-10 rounded-xl bg-zinc-950/70 border-zinc-800 text-white focus:border-blue-500 focus:ring-blue-500/20">
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USER">
-                  <div className="flex items-center">
-                    <User className="mr-2 h-4 w-4 text-zinc-500" />
+              <SelectContent 
+                side="bottom" 
+                align="start" 
+                sideOffset={6}
+                className="w-[var(--anchor-width)] min-w-[340px] rounded-xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-xl shadow-2xl p-1.5 z-50"
+              >
+                <SelectItem value="USER" className="rounded-lg py-2 px-2.5 cursor-pointer">
+                  <div className="flex items-center gap-2.5">
+                    <User className="h-4 w-4 text-zinc-400 shrink-0" />
                     <span>User (View & create records)</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="MANAGER">
-                  <div className="flex items-center">
-                    <Users className="mr-2 h-4 w-4 text-blue-500" />
+                <SelectItem value="MANAGER" className="rounded-lg py-2 px-2.5 cursor-pointer">
+                  <div className="flex items-center gap-2.5">
+                    <Users className="h-4 w-4 text-blue-400 shrink-0" />
                     <span>Manager (Edit records, view reports)</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="ADMIN">
-                  <div className="flex items-center">
-                    <Shield className="mr-2 h-4 w-4 text-emerald-500" />
+                <SelectItem value="ADMIN" className="rounded-lg py-2 px-2.5 cursor-pointer">
+                  <div className="flex items-center gap-2.5">
+                    <Shield className="h-4 w-4 text-emerald-400 shrink-0" />
                     <span>Admin (Manage team, full access)</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="OWNER">
-                  <div className="flex items-center">
-                    <ShieldAlert className="mr-2 h-4 w-4 text-rose-500" />
+                <SelectItem value="OWNER" className="rounded-lg py-2 px-2.5 cursor-pointer">
+                  <div className="flex items-center gap-2.5">
+                    <ShieldAlert className="h-4 w-4 text-rose-400 shrink-0" />
                     <span>Owner (Unrestricted access)</span>
                   </div>
                 </SelectItem>
@@ -117,11 +127,20 @@ export function InviteUserModal({ onRefresh }: { onRefresh: () => void }) {
             </Select>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <DialogFooter className="pt-2 gap-2 sm:gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)}
+              className="h-10 rounded-xl border-zinc-800 bg-zinc-950/50 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            >
               Cancel
             </Button>
-            <Button type="submit" isLoading={loading}>
+            <Button 
+              type="submit" 
+              isLoading={loading}
+              className="h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium shadow-md shadow-blue-500/20"
+            >
               Send Invitation
             </Button>
           </DialogFooter>
