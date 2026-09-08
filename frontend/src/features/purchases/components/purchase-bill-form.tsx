@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -145,19 +146,20 @@ export function PurchaseBillForm() {
     mutationFn: (payload: unknown) => api.post("/purchase-bills", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-bills"] });
+      toast.success("Purchase bill created successfully!");
       router.push("/purchases/bills");
       router.refresh();
     },
     onError: (error: any) => {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to create Bill");
+      toast.error(error.response?.data?.message || "Failed to create Bill");
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (lines.some(l => !l.productId || !l.warehouseId)) {
-      alert("Please select a product and a receiving warehouse for all lines.");
+      toast.error("Please select a product and a receiving warehouse for all lines.");
       return;
     }
     

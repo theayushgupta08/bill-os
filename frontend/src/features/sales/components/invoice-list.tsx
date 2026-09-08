@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { toast } from "sonner";
 import { Invoice } from "@/types";
 
 export function InvoiceList() {
@@ -39,10 +40,11 @@ export function InvoiceList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-invoices"] });
+      toast.success("Payment recorded successfully!");
     },
     onError: (error) => {
       console.error("Failed to record payment", error);
-      alert("Failed to record payment");
+      toast.error("Failed to record payment");
     }
   });
 

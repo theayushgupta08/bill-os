@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { HelpCircle } from "lucide-react";
+import { toast } from "sonner";
 import { TaxSettings, Organization } from "@/types";
 
 function Tooltip({ text }: { text: string }) {
@@ -64,11 +65,11 @@ export function TaxSettingsForm() {
     mutationFn: (payload: Partial<TaxSettings>) => api.put<TaxSettings>(`/organizations/${orgId}/settings`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taxSettings", orgId] });
-      alert("Tax settings updated successfully!");
+      toast.success("Tax settings updated successfully!");
     },
     onError: (error) => {
       console.error("Failed to update tax settings", error);
-      alert("Failed to update tax settings.");
+      toast.error("Failed to update tax settings.");
     }
   });
 

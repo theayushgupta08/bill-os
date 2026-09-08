@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,12 +50,13 @@ export function InventoryAdjustForm() {
     mutationFn: (payload: unknown) => api.post("/inventory/adjust", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-levels"] });
+      toast.success("Stock adjustment saved successfully!");
       router.push("/inventory");
       router.refresh();
     },
     onError: (error) => {
       console.error("Failed to post adjustment", error);
-      alert("Failed to adjust stock. See console.");
+      toast.error("Failed to adjust stock. Please check details.");
     }
   });
 

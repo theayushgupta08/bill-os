@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -133,19 +134,20 @@ export function PurchaseOrderForm() {
     mutationFn: (payload: unknown) => api.post("/purchase-orders", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      toast.success("Purchase order created successfully!");
       router.push("/purchases/orders");
       router.refresh();
     },
     onError: (error: any) => {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to create PO");
+      toast.error(error.response?.data?.message || "Failed to create PO");
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (lines.some(l => !l.productId)) {
-      alert("Please select a product for all lines.");
+      toast.error("Please select a product for all lines.");
       return;
     }
     

@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
+import { toast } from "sonner";
 import { PurchaseOrder } from "@/types";
 
 interface PurchaseBill {
@@ -49,10 +50,11 @@ export function PurchaseBillList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-bills"] });
+      toast.success("Payment recorded successfully!");
     },
     onError: (error) => {
       console.error("Failed to record payment", error);
-      alert("Failed to record payment");
+      toast.error("Failed to record payment");
     }
   });
 

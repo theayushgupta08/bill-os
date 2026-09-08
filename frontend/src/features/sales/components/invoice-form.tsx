@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Customer, Product, TaxRate, Warehouse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,19 +146,20 @@ export function InvoiceForm() {
     mutationFn: (payload: unknown) => api.post("/sales-invoices", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-invoices"] });
+      toast.success("Invoice created successfully!");
       router.push("/sales/invoices");
       router.refresh();
     },
     onError: (error: unknown) => {
       console.error(error);
-      alert((error as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create Invoice");
+      toast.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create Invoice");
     }
   });
 
   const handleSubmit = (e: React.FormEvent, status: "DRAFT" | "ISSUED") => {
     e.preventDefault();
     if (lines.some(l => !l.productId || !l.warehouseId)) {
-      alert("Please select a product and a shipping warehouse for all lines.");
+      toast.error("Please select a product and a shipping warehouse for all lines.");
       return;
     }
     

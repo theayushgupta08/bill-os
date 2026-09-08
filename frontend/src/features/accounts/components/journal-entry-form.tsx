@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,19 +70,20 @@ export function JournalEntryForm() {
     mutationFn: (payload: unknown) => api.post("/journal-entries", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      toast.success("Journal entry saved successfully!");
       router.push("/journal-entries");
       router.refresh();
     },
     onError: (error) => {
       console.error("Failed to save journal entry", error);
-      alert("Failed to save journal entry. See console.");
+      toast.error("Failed to save journal entry. Please check console.");
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isBalanced) {
-      alert("Debits must equal Credits to post an entry!");
+      toast.error("Debits must equal Credits to post an entry!");
       return;
     }
 

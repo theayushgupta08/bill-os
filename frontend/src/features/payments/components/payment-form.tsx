@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,20 +79,21 @@ export function PaymentForm() {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["sales-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-bills"] });
+      toast.success("Payment recorded successfully!");
       router.push("/payments");
       router.refresh();
     },
     onError: (error: unknown) => {
       console.error(error);
       const err = error as AxiosError<{message: string}>;
-      alert(err.response?.data?.message || "Failed to record payment");
+      toast.error(err.response?.data?.message || "Failed to record payment");
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.amount || Number(formData.amount) <= 0) {
-      alert("Please enter a valid amount.");
+      toast.error("Please enter a valid amount.");
       return;
     }
 

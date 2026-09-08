@@ -5,6 +5,7 @@ import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileJson } from "lucide-react";
+import { toast } from "sonner";
 
 export default function GstReportsPage() {
   const [hsnSummary, setHsnSummary] = useState<any>(null);
@@ -40,7 +41,7 @@ export default function GstReportsPage() {
       a.remove();
     } catch (error) {
       console.error(error);
-      alert("Failed to download JSON");
+      toast.error("Failed to download JSON");
     } finally {
       setDownloadingJson(false);
     }
@@ -88,7 +89,7 @@ export default function GstReportsPage() {
                   if (input && input.value) {
                     downloadEInvoiceJson(input.value);
                   } else {
-                    alert("Please enter an Invoice ID");
+                    toast.warning("Please enter an Invoice ID");
                   }
                 }}
                 disabled={downloadingJson}

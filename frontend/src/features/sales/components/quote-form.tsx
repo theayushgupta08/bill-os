@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Customer, Product, TaxRate, LineItem } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,19 +124,20 @@ export function QuoteForm() {
     mutationFn: (payload: unknown) => api.post("/quotations", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quotations"] });
+      toast.success("Quotation created successfully!");
       router.push("/sales/quotes");
       router.refresh(); // Important to refresh Server Components cache
     },
     onError: (error: any) => {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to create Quotation");
+      toast.error(error.response?.data?.message || "Failed to create Quotation");
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (lines.some(l => !l.productId)) {
-      alert("Please select a product for all lines.");
+      toast.error("Please select a product for all lines.");
       return;
     }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Warehouse } from "@/types";
 import { Input } from "@/components/ui/input";
@@ -65,8 +66,10 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
     try {
       if (id) {
         await api.put(`/warehouses/${id}`, formData);
+        toast.success("Warehouse updated successfully!");
       } else {
         await api.post("/warehouses", formData);
+        toast.success("Warehouse created successfully!");
       }
       
       router.push("/warehouses");
@@ -74,7 +77,7 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
     } catch (error: unknown) {
       console.error("Failed to save warehouse", error);
       const err = error as AxiosError<{message: string}>;
-      alert(err.response?.data?.message || "Failed to save warehouse. See console.");
+      toast.error(err.response?.data?.message || "Failed to save warehouse. Please check details.");
     } finally {
       setLoading(false);
     }

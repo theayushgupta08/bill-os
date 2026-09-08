@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Customer, Product, TaxRate } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,19 +134,20 @@ export function OrderForm() {
     mutationFn: (payload: unknown) => api.post("/sales-orders", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
+      toast.success("Sales order created successfully!");
       router.push("/sales/orders");
       router.refresh();
     },
     onError: (error: any) => {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to create Sales Order");
+      toast.error(error.response?.data?.message || "Failed to create Sales Order");
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (lines.some(l => !l.productId)) {
-      alert("Please select a product for all lines.");
+      toast.error("Please select a product for all lines.");
       return;
     }
     
