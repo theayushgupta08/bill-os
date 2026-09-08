@@ -108,6 +108,7 @@ export default function SetupOrganizationPage() {
 
   // Bank Details
   const [bankName, setBankName] = useState("");
+  const [accountHolder, setAccountHolder] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [ifscCode, setIfscCode] = useState("");
   const [branchName, setBranchName] = useState("");
@@ -472,6 +473,7 @@ export default function SetupOrganizationPage() {
       language,
       bankDetails: {
         bankName: bankName.trim() || null,
+        accountHolder: accountHolder.trim() || null,
         accountNumber: accountNumber.trim() || null,
         ifscCode: ifscCode.trim().toUpperCase() || null,
         branchName: branchName.trim() || null,
@@ -998,6 +1000,16 @@ export default function SetupOrganizationPage() {
                   </div>
 
                   <div className="space-y-1.5">
+                    <Label className="text-zinc-300 text-xs">Account Holder Name</Label>
+                    <Input
+                      value={accountHolder}
+                      onChange={(e) => setAccountHolder(e.target.value)}
+                      placeholder="e.g. Acme Corporation Pvt Ltd"
+                      className="bg-zinc-900 border-zinc-800 text-white rounded-xl h-10 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
                     <Label className="text-zinc-300 text-xs">Account Number</Label>
                     <Input
                       value={accountNumber}
@@ -1028,7 +1040,7 @@ export default function SetupOrganizationPage() {
                     />
                   </div>
 
-                  <div className="space-y-1.5 md:col-span-2">
+                  <div className="space-y-1.5">
                     <Label className="text-zinc-300 text-xs">Bank Branch Address</Label>
                     <Input
                       value={bankAddress}
@@ -1474,6 +1486,10 @@ export default function SetupOrganizationPage() {
                   <div>
                     <span className="text-zinc-500 block">Bank Name:</span>
                     <span className="text-zinc-300">{bankName || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block">Account Holder:</span>
+                    <span className="text-zinc-300">{accountHolder || "—"}</span>
                   </div>
                   <div>
                     <span className="text-zinc-500 block">Account Number:</span>

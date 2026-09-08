@@ -6,9 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Plus, Trash2 } from "lucide-react";
 import { InvoiceSettings, Organization } from "@/types";
 
 interface BankDetails {
@@ -17,6 +16,23 @@ interface BankDetails {
   ifscCode: string;
   branchName: string;
   accountHolder: string;
+  bankAddress?: string;
+}
+
+function parseTerms(raw: string | undefined | null): string[] {
+  if (!raw || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item).trim()).filter(Boolean);
+    }
+  } catch {
+    // Not JSON, parse lines
+  }
+  return raw
+    .split("\n")
+    .map((line) => line.trim().replace(/^(\d+\.|\*|-|•)\s*/, "").trim())
+    .filter(Boolean);
 }
 
 function Tooltip({ text }: { text: string }) {
@@ -35,12 +51,15 @@ export function InvoiceSettingsForm() {
   const queryClient = useQueryClient();
   const [orgId, setOrgId] = useState<string | null>(null);
   const [settings, setSettings] = useState<InvoiceSettings | null>(null);
+  const [termsList, setTermsList] = useState<string[]>([]);
+  const [newTermInput, setNewTermInput] = useState("");
   const [bankFields, setBankFields] = useState<BankDetails>({
     bankName: "",
     accountNumber: "",
     ifscCode: "",
     branchName: "",
     accountHolder: "",
+    bankAddress: "",
   });
 
   const { data: orgs, isLoading: loadingOrgs } = useQuery({
@@ -72,14 +91,17 @@ export function InvoiceSettingsForm() {
     if (invoiceSettings) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSettings(invoiceSettings);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTermsList(parseTerms(invoiceSettings.invoiceTerms));
       
       // Parse bankDetails string
-      let parsedBank = {
+      let parsedBank: BankDetails = {
         bankName: "",
         accountNumber: "",
         ifscCode: "",
         branchName: "",
         accountHolder: "",
+        bankAddress: "",
       };
       try {
         if (invoiceSettings.bankDetails) {
@@ -92,6 +114,7 @@ export function InvoiceSettingsForm() {
         // If parsing fails, treat the entire string as the bankName for backward compatibility
         parsedBank.bankName = invoiceSettings.bankDetails || "";
       }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBankFields(parsedBank);
     }
   }, [invoiceSettings]);
@@ -111,10 +134,24 @@ export function InvoiceSettingsForm() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!orgId || !settings) return;
-    updateMutation.mutate(settings);
+
+    let finalTerms = [...termsList];
+    if (newTermInput.trim()) {
+      finalTerms.push(newTermInput.trim());
+      setTermsList(finalTerms);
+      setNewTermInput("");
+    }
+
+    const payload: Partial<InvoiceSettings> = {
+      ...settings,
+      invoiceTerms: JSON.stringify(finalTerms),
+      bankDetails: JSON.stringify(bankFields),
+    };
+
+    updateMutation.mutate(payload);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setSettings((prev: InvoiceSettings | null) => prev ? ({ ...prev, [name]: value }) : prev);
   };
@@ -131,6 +168,23 @@ export function InvoiceSettingsForm() {
     }) : prev);
   };
 
+  const handleTermChange = (index: number, value: string) => {
+    const updated = [...termsList];
+    updated[index] = value;
+    setTermsList(updated);
+  };
+
+  const handleAddTerm = () => {
+    const trimmed = newTermInput.trim();
+    if (!trimmed) return;
+    setTermsList((prev) => [...prev, trimmed]);
+    setNewTermInput("");
+  };
+
+  const handleRemoveTerm = (index: number) => {
+    setTermsList((prev) => prev.filter((_, i) => i !== index));
+  };
+
   if (loadingOrgs || (orgId && loadingSettings)) return <div className="p-8">Loading settings...</div>;
   if (!settings) return <div className="p-8">Settings not found.</div>;
 
@@ -144,37 +198,22 @@ export function InvoiceSettingsForm() {
         <Card>
           <CardHeader>
             <CardTitle>Invoice Configuration</CardTitle>
-            <CardDescription>Configure numbering, terms, and bank details for your invoices.</CardDescription>
+            <CardDescription>Configure prefix, bank details, and bullet terms for your invoices.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
-                  <Tooltip text="The abbreviation prepended to your invoice numbers (e.g., INV or ACME)." />
-                </div>
-                <Input 
-                  id="invoicePrefix" 
-                  name="invoicePrefix" 
-                  placeholder="e.g. INV"
-                  value={settings.invoicePrefix || ""} 
-                  onChange={handleChange} 
-                />
+            <div className="max-w-md space-y-2">
+              <div className="flex items-center">
+                <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
+                <Tooltip text="The abbreviation prepended to your invoice numbers (e.g., INV- or ACME-)." />
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <Label htmlFor="invoiceNumberFormat">Number Format</Label>
-                  <Tooltip text="The pattern for automatic numbering. Supports dynamic tags like {PREFIX}, {FY} (Financial Year), and {SEQUENCE} (e.g., 001)." />
-                </div>
-                <Input 
-                  id="invoiceNumberFormat" 
-                  name="invoiceNumberFormat" 
-                  placeholder="{PREFIX}/{FY}/{SEQUENCE}"
-                  value={settings.invoiceNumberFormat || ""} 
-                  onChange={handleChange} 
-                />
-              </div>
+              <Input 
+                id="invoicePrefix" 
+                name="invoicePrefix" 
+                placeholder="e.g. INV-"
+                value={settings.invoicePrefix || ""} 
+                onChange={handleChange} 
+              />
             </div>
 
             {/* Bank Details Section */}
@@ -238,7 +277,7 @@ export function InvoiceSettingsForm() {
                     placeholder="e.g. HDFC0001234"
                     value={bankFields.ifscCode} 
                     onChange={handleBankFieldChange} 
-                    className="font-mono"
+                    className="font-mono uppercase"
                   />
                 </div>
 
@@ -258,19 +297,80 @@ export function InvoiceSettingsForm() {
               </div>
             </div>
 
-            <div className="space-y-2 border-t pt-4">
-              <div className="flex items-center">
-                <Label htmlFor="invoiceTerms">Terms & Conditions</Label>
-                <Tooltip text="Default terms printed at the bottom of every invoice (e.g. return policy, interest on delayed payments)." />
+            {/* Terms & Conditions (Bullet Points) */}
+            <div className="space-y-4 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Label className="text-sm font-semibold">Terms & Conditions</Label>
+                  <Tooltip text="Default bullet points printed at the bottom of every invoice (e.g. return policy, interest on delayed payments)." />
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {termsList.length} {termsList.length === 1 ? "bullet point" : "bullet points"}
+                </span>
               </div>
-              <Textarea 
-                id="invoiceTerms" 
-                name="invoiceTerms" 
-                rows={4}
-                placeholder="1. Goods once sold will not be taken back.&#10;2. Interest @ 18% p.a. will be charged if payment is delayed."
-                value={settings.invoiceTerms || ""} 
-                onChange={handleChange} 
-              />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Add each invoice condition as an individual bullet item. You can edit each point directly in place.
+              </p>
+
+              <div className="space-y-2.5">
+                {termsList.map((term, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 group p-1.5 rounded-lg border bg-card/60 hover:border-primary/40 transition-colors"
+                  >
+                    <div className="flex items-center justify-center w-6 h-6 rounded-md bg-muted text-muted-foreground text-xs font-semibold shrink-0">
+                      {index + 1}
+                    </div>
+                    <Input
+                      value={term}
+                      onChange={(e) => handleTermChange(index, e.target.value)}
+                      placeholder={`Term #${index + 1}`}
+                      className="flex-1 h-9 bg-transparent border-transparent hover:border-input focus:border-ring text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveTerm(index)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                      title="Delete term"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                {termsList.length === 0 && (
+                  <div className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-lg bg-muted/20">
+                    No terms & conditions added yet. Use the field below to add your first bullet point.
+                  </div>
+                )}
+              </div>
+
+              {/* Add New Bullet Input */}
+              <div className="flex gap-2 pt-1">
+                <Input
+                  value={newTermInput}
+                  onChange={(e) => setNewTermInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddTerm();
+                    }
+                  }}
+                  placeholder="Type a new term and press Enter (e.g. Goods once sold will not be taken back)"
+                  className="h-10 text-sm flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddTerm}
+                  variant="outline"
+                  className="h-10 px-3 text-xs shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Add Bullet
+                </Button>
+              </div>
             </div>
 
             <div className="flex justify-end pt-4 border-t">
