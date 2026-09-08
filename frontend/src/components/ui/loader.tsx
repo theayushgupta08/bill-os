@@ -151,7 +151,7 @@ export function BrandLoader({
           >
             <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-xl p-1">
               <Image
-                src="/billos.png"
+                src="/billos-loader.png"
                 alt="BillOS"
                 width={cfg.logoSize}
                 height={cfg.logoSize}
