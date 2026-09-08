@@ -38,6 +38,7 @@ import { useOrganization, getOrgInitials, getOrgGradient } from "@/lib/use-organ
 import { api } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { useNotifications, useMarkNotificationRead } from "@/features/collections/hooks/use-collections";
+import { CollectPaymentModal } from "@/features/collections/components/collect-payment-modal";
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -254,8 +255,10 @@ export function Header() {
         </p>
       </div>
 
-      {/* Right side: Org pill + Notifications + User menu */}
+      {/* Right side: Collect Payment + User pill + Notifications + User menu */}
       <div className="flex items-center gap-2">
+        <CollectPaymentModal />
+
         {/* User name display */}
         {userName && (
           <div

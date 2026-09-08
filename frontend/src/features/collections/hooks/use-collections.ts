@@ -157,6 +157,7 @@ export function useRecordPayment() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["collection-payments"] });
       qc.invalidateQueries({ queryKey: ["collection-dashboard"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
