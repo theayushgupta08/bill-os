@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SupabaseUserProvisioningService {
 
-    public static final String DEFAULT_PHONE = "+91 0000000000";
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+\\d{1,4} ?\\d{4,14}$");
     private static final Pattern TEN_DIGITS_PATTERN = Pattern.compile("^\\d{10}$");
 
@@ -139,7 +138,7 @@ public class SupabaseUserProvisioningService {
 
     public String sanitizePhone(String rawPhone) {
         if (isBlank(rawPhone)) {
-            return DEFAULT_PHONE;
+            return null;
         }
         String trimmed = rawPhone.trim();
         if (PHONE_PATTERN.matcher(trimmed).matches()) {
@@ -149,8 +148,8 @@ public class SupabaseUserProvisioningService {
             return "+91 " + trimmed;
         }
 
-        log.warn("Phone '{}' does not match required format; defaulting to {}", rawPhone, DEFAULT_PHONE);
-        return DEFAULT_PHONE;
+        log.warn("Phone '{}' does not match required format; leaving as null", rawPhone);
+        return null;
     }
 
     private boolean isPlaceholderName(String firstName, String email) {

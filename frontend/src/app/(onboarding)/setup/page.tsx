@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
+import { BrandLoader } from "@/components/ui/loader";
 import {
   Building2,
   FileText,
@@ -28,8 +29,26 @@ const steps = [
 export default function SetupOrganizationPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [checkingUser, setCheckingUser] = useState(true);
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function verifyUserPhone() {
+      try {
+        const user = await api.get<{ phone?: string | null }>("/users/me");
+        if (!user?.phone || user.phone.trim() === "") {
+          router.replace("/phone");
+          return;
+        }
+      } catch (err) {
+        console.warn("Could not verify user phone on setup page:", err);
+      } finally {
+        setCheckingUser(false);
+      }
+    }
+    verifyUserPhone();
+  }, [router]);
   const [formData, setFormData] = useState({
     name: "",
     legalName: "",
@@ -90,6 +109,14 @@ export default function SetupOrganizationPage() {
       setLoading(false);
     }
   };
+
+  if (checkingUser) {
+    return (
+      <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
+        <BrandLoader size="lg" text="Loading workspace..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4 relative overflow-hidden">

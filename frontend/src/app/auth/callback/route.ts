@@ -50,20 +50,42 @@ export async function GET(request: NextRequest) {
 
     const accessToken = data.session.access_token;
 
-    // Check if the user belongs to any organization
+    // Check if the user has a phone number and belongs to any organization
+    let hasPhone = false;
     let hasOrganizations = false;
     let primaryOrgId: string | null = null;
 
     try {
       const apiUrl =
         process.env.NEXT_PUBLIC_API_URL || "https://bill-os.onrender.com/api/v1";
-      const orgsRes = await fetch(`${apiUrl}/organizations`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      });
+
+      const [userRes, orgsRes] = await Promise.all([
+        fetch(`${apiUrl}/users/me`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        }),
+        fetch(`${apiUrl}/organizations`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        }),
+      ]);
+
+      if (userRes.ok) {
+        const userProfile = await userRes.json();
+        if (
+          userProfile?.phone &&
+          typeof userProfile.phone === "string" &&
+          userProfile.phone.trim() !== ""
+        ) {
+          hasPhone = true;
+        }
+      }
 
       if (orgsRes.ok) {
         const orgs = await orgsRes.json();
@@ -73,11 +95,13 @@ export async function GET(request: NextRequest) {
         }
       }
     } catch (apiErr) {
-      console.warn("Failed to check organizations in auth callback:", apiErr);
-      // Fallback: new user goes to setup
+      console.warn("Failed to check user/organizations in auth callback:", apiErr);
     }
 
-    if (hasOrganizations && primaryOrgId) {
+    if (!hasPhone) {
+      // First-time or OAuth user without phone -> prompt for phone first
+      redirectUrl = new URL("/phone", origin);
+    } else if (hasOrganizations && primaryOrgId) {
       // Existing user -> sync active_org_id to client and go to dashboard/returnUrl
       const destination =
         returnUrl && returnUrl.startsWith("/") ? returnUrl : "/dashboard";
@@ -86,7 +110,7 @@ export async function GET(request: NextRequest) {
         origin
       );
     } else {
-      // First-time user -> go to setup
+      // User has phone but no organizations -> go to setup
       redirectUrl = new URL("/setup", origin);
     }
 

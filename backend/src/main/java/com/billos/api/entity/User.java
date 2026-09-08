@@ -6,7 +6,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.util.UUID;
 import lombok.Getter;
@@ -41,11 +40,10 @@ public class User extends BaseEntity {
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
-    @NotBlank(message = "Phone number is required")
     @Pattern(
             regexp = "^\\+\\d{1,4} ?\\d{4,14}$",
-            message = "Phone must be in format: Country Code + Phone (e.g. +91 XXXXXXXXXX)")
-    @Column(nullable = false)
+            message = "Phone must be in format: Country Code + Phone (e.g. +91 9876543210)")
+    @Column(name = "phone")
     private String phone;
 
     @Column(name = "is_active")

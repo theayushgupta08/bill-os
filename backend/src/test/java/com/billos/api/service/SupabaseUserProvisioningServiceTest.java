@@ -63,8 +63,8 @@ class SupabaseUserProvisioningServiceTest {
     }
 
     @Test
-    @DisplayName("should create a user with default phone when phone is missing or empty (e.g. Google OAuth)")
-    void shouldCreateUser_withDefaultPhone_whenPhoneIsMissingOrBlank() {
+    @DisplayName("should create a user with null phone when phone is missing or empty (e.g. Google OAuth)")
+    void shouldCreateUser_withNullPhone_whenPhoneIsMissingOrBlank() {
         when(userRepository.findBySupabaseId(SUPABASE_ID)).thenReturn(Optional.empty());
         when(userRepository.findByEmail("ada@example.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -76,7 +76,7 @@ class SupabaseUserProvisioningServiceTest {
         verify(userRepository).save(captor.capture());
         User saved = captor.getValue();
 
-        assertThat(saved.getPhone()).isEqualTo(SupabaseUserProvisioningService.DEFAULT_PHONE);
+        assertThat(saved.getPhone()).isNull();
         assertThat(result).isSameAs(saved);
     }
 
