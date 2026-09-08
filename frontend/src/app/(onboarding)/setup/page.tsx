@@ -20,6 +20,8 @@ import {
   X,
 } from "lucide-react";
 
+import { createClient } from "@/lib/supabase/client";
+
 const steps = [
   { id: 1, label: "Business Info" },
   { id: 2, label: "Legal Details" },
@@ -29,22 +31,22 @@ const steps = [
 export default function SetupOrganizationPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [checkingUser, setCheckingUser] = useState(true);
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function verifyUserPhone() {
       try {
-        const user = await api.get<{ phone?: string | null }>("/users/me");
-        if (!user?.phone || user.phone.trim() === "") {
-          router.replace("/phone");
-          return;
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const hasMetaPhone = user.phone || user.user_metadata?.phone;
+          if (!hasMetaPhone) {
+            router.replace("/phone");
+          }
         }
       } catch (err) {
         console.warn("Could not verify user phone on setup page:", err);
-      } finally {
-        setCheckingUser(false);
       }
     }
     verifyUserPhone();
@@ -109,14 +111,6 @@ export default function SetupOrganizationPage() {
       setLoading(false);
     }
   };
-
-  if (checkingUser) {
-    return (
-      <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
-        <BrandLoader size="lg" text="Loading workspace..." />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4 relative overflow-hidden">

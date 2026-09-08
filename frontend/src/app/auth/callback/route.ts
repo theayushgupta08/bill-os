@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export async function GET(request: NextRequest) {
@@ -13,9 +14,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Pre-prepare a response object so we can attach session cookies directly to the redirect
-  let redirectUrl = new URL("/setup", origin);
-  let response = NextResponse.redirect(redirectUrl);
+  const cookieStore = await cookies();
+  const cookiesToSetList: { name: string; value: string; options?: any }[] = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,12 +23,19 @@ export async function GET(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set({ name, value, ...options });
-            response.cookies.set({ name, value, ...options });
+            cookiesToSetList.push({ name, value, options });
+            try {
+              cookieStore.set(name, value, {
+                ...options,
+                path: "/",
+              });
+            } catch {
+              // Ignore in environments where setting cookie directly is not permitted
+            }
           });
         },
       },
@@ -48,10 +55,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const sessionUser = data.session.user;
     const accessToken = data.session.access_token;
 
-    // Check if the user has a phone number and belongs to any organization
+    // Check if user has phone in Supabase user metadata first
     let hasPhone = false;
+    if (
+      (sessionUser?.phone && sessionUser.phone.trim() !== "") ||
+      (sessionUser?.user_metadata?.phone &&
+        String(sessionUser.user_metadata.phone).trim() !== "")
+    ) {
+      hasPhone = true;
+    }
+
     let hasOrganizations = false;
     let primaryOrgId: string | null = null;
 
@@ -98,6 +114,7 @@ export async function GET(request: NextRequest) {
       console.warn("Failed to check user/organizations in auth callback:", apiErr);
     }
 
+    let redirectUrl: URL;
     if (!hasPhone) {
       // First-time or OAuth user without phone -> prompt for phone first
       redirectUrl = new URL("/phone", origin);
@@ -114,10 +131,13 @@ export async function GET(request: NextRequest) {
       redirectUrl = new URL("/setup", origin);
     }
 
-    // Clone new response with the final destination while preserving the session cookies
+    // Clone redirect response and ensure all session cookies are explicitly attached with path: "/"
     const finalResponse = NextResponse.redirect(redirectUrl);
-    response.cookies.getAll().forEach((cookie) => {
-      finalResponse.cookies.set(cookie);
+    cookiesToSetList.forEach(({ name, value, options }) => {
+      finalResponse.cookies.set(name, value, {
+        ...options,
+        path: "/",
+      });
     });
 
     return finalResponse;

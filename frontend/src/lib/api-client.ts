@@ -19,7 +19,17 @@ apiClient.interceptors.request.use(
 
       // Fetch the active session from Supabase
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      let { data: { session } } = await supabase.auth.getSession();
+
+      // If getSession returns null initially, attempt getUser to initialize auth state
+      if (!session) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          const { data: refreshedSession } = await supabase.auth.getSession();
+          session = refreshedSession?.session;
+        }
+      }
+
       const token = session?.access_token;
 
       if (token) {
@@ -43,11 +53,22 @@ apiClient.interceptors.response.use(
     return response.data;
   },
   async (error) => {
-    // If we get a 401 Unauthorized, we might want to log them out
+    // If we get a 401 Unauthorized, only log out on dashboard/protected app routes
+    // Never aggressively sign out on onboarding (/phone, /setup) or auth flows
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      window.location.href = '/login';
+      const pathname = window.location.pathname;
+      const isOnboardingOrAuth =
+        pathname.startsWith('/phone') ||
+        pathname.startsWith('/setup') ||
+        pathname.startsWith('/login') ||
+        pathname.startsWith('/register') ||
+        pathname.startsWith('/auth');
+
+      if (!isOnboardingOrAuth) {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        window.location.href = '/login';
+      }
     }
 
     // Standardize the error message

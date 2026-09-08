@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import { Button } from "@/components/ui/button";
@@ -16,27 +16,7 @@ export default function PhoneOnboardingPage() {
   const [countryCode, setCountryCode] = useState("+91");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Check if user already has a phone number set
-  useEffect(() => {
-    async function checkExistingPhone() {
-      try {
-        const profile = await api.get<{ phone?: string | null }>("/users/me");
-        if (profile?.phone && profile.phone.trim() !== "") {
-          // Already has a phone -> forward to setup
-          router.replace("/setup");
-          return;
-        }
-      } catch (err) {
-        console.warn("Could not check user profile in phone onboarding:", err);
-      } finally {
-        setChecking(false);
-      }
-    }
-    checkExistingPhone();
-  }, [router]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow digits and spaces
@@ -86,14 +66,6 @@ export default function PhoneOnboardingPage() {
       setLoading(false);
     }
   };
-
-  if (checking) {
-    return (
-      <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
-        <Loader size="lg" text="Checking profile..." />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4 relative overflow-hidden">

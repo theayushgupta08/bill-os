@@ -174,12 +174,6 @@ export function BrandLoader({
             {text && (
               <div className="flex items-center gap-1.5 text-muted-foreground font-medium text-xs sm:text-sm">
                 <span>{text}</span>
-                {/* Micro-animated wave dots */}
-                <span className="inline-flex gap-0.5 items-center">
-                  <span className="w-1 h-1 rounded-full bg-primary/70 animate-[bounce_1.4s_infinite_ease-in-out]" />
-                  <span className="w-1 h-1 rounded-full bg-primary/70 animate-[bounce_1.4s_infinite_ease-in-out_0.2s]" />
-                  <span className="w-1 h-1 rounded-full bg-primary/70 animate-[bounce_1.4s_infinite_ease-in-out_0.4s]" />
-                </span>
               </div>
             )}
           </div>
