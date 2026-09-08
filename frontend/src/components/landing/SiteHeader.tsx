@@ -16,6 +16,7 @@ export function SiteHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
+  const [userAvatar, setUserAvatar] = useState("");
 
   const getUserData = async () => {
     try {
@@ -23,20 +24,42 @@ export function SiteHeader() {
       
       if (session?.user) {
         setIsLoggedIn(true);
-        const email = session.user.email;
-        if (email) {
-          const prefix = email.split("@")[0];
+        const meta = (session.user.user_metadata || {}) as Record<string, any>;
+        const identityMeta = (session.user.identities?.[0]?.identity_data || {}) as Record<string, any>;
+
+        // Resolve real user name from OAuth (Google) / signup metadata
+        const resolvedName =
+          meta.full_name ||
+          meta.name ||
+          (meta.first_name ? `${meta.first_name} ${meta.last_name || ""}`.trim() : null) ||
+          (meta.given_name ? `${meta.given_name} ${meta.family_name || ""}`.trim() : null) ||
+          identityMeta.full_name ||
+          identityMeta.name ||
+          (identityMeta.given_name ? `${identityMeta.given_name} ${identityMeta.family_name || ""}`.trim() : null);
+
+        if (resolvedName) {
+          setUserName(resolvedName);
+        } else if (session.user.email) {
+          const prefix = session.user.email.split("@")[0];
           setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
-          
-          api.get<{email: string; firstName?: string; lastName?: string}[]>("/team").then((res) => {
+        }
+
+        const avatar = meta.avatar_url || meta.picture || identityMeta.avatar_url || identityMeta.picture;
+        if (avatar) {
+          setUserAvatar(avatar);
+        }
+
+        api.get<{email: string; firstName?: string; lastName?: string}[]>("/team").then((res) => {
+          const email = session.user.email;
+          if (email) {
             const current = res.find(
               (m) => m.email.toLowerCase() === email.toLowerCase()
             );
             if (current && current.firstName) {
               setUserName(`${current.firstName} ${current.lastName || ""}`.trim());
             }
-          }).catch(() => {});
-        }
+          }
+        }).catch(() => {});
       } else {
         setIsLoggedIn(false);
       }
@@ -181,8 +204,12 @@ export function SiteHeader() {
                   </Link>
                   <Button asChild className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all gap-2">
                     <Link prefetch={false} href="/dashboard">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="7" r="4"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/></svg>
-                      {userName || "Dashboard"}
+                      {userAvatar ? (
+                        <img src={userAvatar} alt={userName} className="w-4 h-4 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="7" r="4"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/></svg>
+                      )}
+                      <span>{userName || "Dashboard"}</span>
                     </Link>
                   </Button>
                 </>

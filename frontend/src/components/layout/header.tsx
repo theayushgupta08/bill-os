@@ -82,6 +82,8 @@ export function Header() {
   const pathname = usePathname();
   const { data: org } = useOrganization();
   const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userAvatar, setUserAvatar] = useState("");
   const supabase = createClient();
 
   const orgInitials = getOrgInitials(org?.name);
@@ -100,20 +102,46 @@ export function Header() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const email = session.user.email;
-        if (email) {
-          const prefix = email.split("@")[0];
+        const meta = (session.user.user_metadata || {}) as Record<string, any>;
+        const identityMeta = (session.user.identities?.[0]?.identity_data || {}) as Record<string, any>;
+
+        // Resolve real user name from OAuth (Google) / signup metadata
+        const resolvedName =
+          meta.full_name ||
+          meta.name ||
+          (meta.first_name ? `${meta.first_name} ${meta.last_name || ""}`.trim() : null) ||
+          (meta.given_name ? `${meta.given_name} ${meta.family_name || ""}`.trim() : null) ||
+          identityMeta.full_name ||
+          identityMeta.name ||
+          (identityMeta.given_name ? `${identityMeta.given_name} ${identityMeta.family_name || ""}`.trim() : null);
+
+        if (resolvedName) {
+          setUserName(resolvedName);
+        } else if (session.user.email) {
+          const prefix = session.user.email.split("@")[0];
           setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
-          
-          api.get<{email: string; firstName?: string; lastName?: string}[]>("/team").then((res) => {
+        }
+
+        if (session.user.email) {
+          setUserEmail(session.user.email);
+        }
+
+        const avatar = meta.avatar_url || meta.picture || identityMeta.avatar_url || identityMeta.picture;
+        if (avatar) {
+          setUserAvatar(avatar);
+        }
+
+        api.get<{email: string; firstName?: string; lastName?: string}[]>("/team").then((res) => {
+          const email = session.user.email;
+          if (email) {
             const current = res.find(
               (m) => m.email.toLowerCase() === email.toLowerCase()
             );
             if (current && current.firstName) {
               setUserName(`${current.firstName} ${current.lastName || ""}`.trim());
             }
-          }).catch(() => {});
-        }
+          }
+        }).catch(() => {});
       }
     } catch (e) {
       // Ignored
@@ -290,13 +318,22 @@ export function Header() {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger render={
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full overflow-hidden p-0" />
           }>
-            <CircleUser className="h-5 w-5" />
+            {userAvatar ? (
+              <img src={userAvatar} alt={userName} className="w-full h-full object-cover rounded-full" />
+            ) : (
+              <CircleUser className="h-5 w-5" />
+            )}
             <span className="sr-only">Toggle user menu</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuGroup>
+              <div className="px-3 py-2 border-b border-border/40">
+                <p className="text-sm font-semibold text-foreground truncate">{userName || "User"}</p>
+                {userEmail && <p className="text-xs text-muted-foreground truncate">{userEmail}</p>}
+              </div>
+
               {org && (
                 <>
                   <div className="flex items-center gap-2.5 px-3 py-2.5">
