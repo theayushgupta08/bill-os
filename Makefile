@@ -113,3 +113,6 @@ run:
 	@echo "  make backend-run"
 	@echo "  make frontend-run"
 	@echo "  make ai-run"
+
+db-reset:
+	.\ai-service\.venv\Scripts\python scripts/reset_db.py
