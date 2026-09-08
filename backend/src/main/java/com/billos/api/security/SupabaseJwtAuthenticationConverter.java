@@ -7,6 +7,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -23,7 +24,7 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
     private final SupabaseUserProvisioningService userProvisioningService;
 
     @Override
-    public AbstractAuthenticationToken convert(Jwt jwt) {
+    public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
         String role = jwt.getClaimAsString("role");
         if (!AUTHENTICATED_ROLE.equals(role)) {
             log.warn("Rejected token with role '{}' — only '{}' may authenticate", role, AUTHENTICATED_ROLE);

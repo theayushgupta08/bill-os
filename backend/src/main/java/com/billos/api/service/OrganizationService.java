@@ -27,8 +27,6 @@ public class OrganizationService {
     private final OrganizationSettingsRepository organizationSettingsRepository;
     private final UserOrgRoleRepository userOrgRoleRepository;
     private final UserRepository userRepository;
-    private final AccountService accountService;
-    private final WarehouseService warehouseService;
     private final OrganizationSeeder organizationSeeder;
 
     // Removed @Transactional so that the Organization is committed before the seeder starts
