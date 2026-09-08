@@ -24,7 +24,11 @@ export const metadata: Metadata = {
   title: `${siteConfig.name} | ${siteConfig.tagline}`,
   description: siteConfig.description,
   icons: {
-    icon: siteConfig.logo,
+    icon: [
+      { url: "/billos.png", type: "image/png" },
+    ],
+    shortcut: "/billos.png",
+    apple: "/billos.png",
   },
 };
 
@@ -42,6 +46,9 @@ export default function RootLayout({
       className={`${fontSans.variable} ${fontHeading.variable} ${fontMono.variable} h-full antialiased dark`}
     >
       <head>
+        <link rel="icon" href="/billos.png" type="image/png" sizes="any" />
+        <link rel="shortcut icon" href="/billos.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/billos.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

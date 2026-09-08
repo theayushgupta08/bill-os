@@ -242,18 +242,64 @@ export function Sidebar() {
     setOpenGroup((prev) => (prev === label ? null : label));
   };
 
+  const websiteUrl = org?.website?.trim()
+    ? (org.website.startsWith("http://") || org.website.startsWith("https://")
+        ? org.website
+        : `https://${org.website}`)
+    : null;
+
   return (
     <div className="hidden md:flex flex-col h-full border-r border-border/60 bg-slate-950">
       {/* Brand / Org Identity */}
       <div className="flex items-center gap-3 h-[60px] px-4 border-b border-border/40 flex-shrink-0">
-        {/* Org Avatar */}
-        <div
-          className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-md`}
-        >
-          <span className="text-white text-xs font-bold tracking-tight">
-            {isLoading ? "…" : initials}
-          </span>
-        </div>
+        {/* Org Avatar / Logo */}
+        {websiteUrl ? (
+          <a
+            href={websiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Visit ${org?.name || "Organization"} (${org?.website})`}
+            className={`w-8 h-8 rounded-lg ${
+              org?.logoUrl
+                ? "bg-slate-900 border border-slate-700/80 p-0.5"
+                : `bg-gradient-to-br ${gradient}`
+            } flex items-center justify-center flex-shrink-0 shadow-md transition-transform hover:scale-105 hover:opacity-90 cursor-pointer overflow-hidden group`}
+          >
+            {org?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={org.logoUrl}
+                alt={org.name || "Organization Logo"}
+                className="w-full h-full object-contain rounded-md"
+              />
+            ) : (
+              <span className="text-white text-xs font-bold tracking-tight">
+                {isLoading ? "…" : initials}
+              </span>
+            )}
+          </a>
+        ) : (
+          <div
+            className={`w-8 h-8 rounded-lg ${
+              org?.logoUrl
+                ? "bg-slate-900 border border-slate-700/80 p-0.5"
+                : `bg-gradient-to-br ${gradient}`
+            } flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden cursor-default`}
+          >
+            {org?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={org.logoUrl}
+                alt={org.name || "Organization Logo"}
+                className="w-full h-full object-contain rounded-md"
+              />
+            ) : (
+              <span className="text-white text-xs font-bold tracking-tight">
+                {isLoading ? "…" : initials}
+              </span>
+            )}
+          </div>
+        )}
         {/* Org Name */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate leading-tight">

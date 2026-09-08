@@ -9,6 +9,7 @@ export interface Organization {
   phone?: string;
   email?: string;
   logoUrl?: string;
+  website?: string;
   city?: string;
   state?: string;
 }

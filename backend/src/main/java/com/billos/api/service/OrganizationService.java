@@ -143,6 +143,8 @@ public class OrganizationService {
         if (updatedDetails.getCity() != null) org.setCity(updatedDetails.getCity());
         if (updatedDetails.getState() != null) org.setState(updatedDetails.getState());
         if (updatedDetails.getPincode() != null) org.setPincode(updatedDetails.getPincode());
+        if (updatedDetails.getLogoUrl() != null) org.setLogoUrl(updatedDetails.getLogoUrl());
+        if (updatedDetails.getWebsite() != null) org.setWebsite(updatedDetails.getWebsite());
 
         return organizationRepository.save(org);
     }

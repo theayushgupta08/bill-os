@@ -20,6 +20,7 @@ export interface Organization extends BaseEntity {
   secondaryPhones?: string[];
   email?: string;
   logoUrl?: string;
+  website?: string;
   financialYearStart?: string;
 }
 

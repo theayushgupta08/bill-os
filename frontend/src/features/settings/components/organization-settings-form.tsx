@@ -40,6 +40,7 @@ export function OrganizationSettingsForm() {
     mutationFn: (payload: Partial<Organization>) => api.put<Organization>(`/organizations/${payload.id}`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["active-organization"] });
       toast.success("Organization details updated successfully!");
     },
     onError: (error) => {
@@ -150,6 +151,23 @@ export function OrganizationSettingsForm() {
                   <HelpTooltip text="The official primary contact email address for your organization." />
                 </div>
                 <Input id="email" name="email" type="email" value={org.email || ""} onChange={handleChange} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <Label htmlFor="website">Website URL</Label>
+                  <HelpTooltip text="The official website for your organization (clicking the sidebar logo will open this URL)." />
+                </div>
+                <Input id="website" name="website" placeholder="https://yourcompany.com" value={org.website || ""} onChange={handleChange} />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <Label htmlFor="logoUrl">Logo URL</Label>
+                  <HelpTooltip text="Direct image URL for your organization logo to display in the sidebar." />
+                </div>
+                <Input id="logoUrl" name="logoUrl" placeholder="https://example.com/logo.png" value={org.logoUrl || ""} onChange={handleChange} />
               </div>
             </div>
 

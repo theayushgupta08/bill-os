@@ -89,6 +89,11 @@ export function Header() {
 
   const orgInitials = getOrgInitials(org?.name);
   const orgGradient = getOrgGradient(org?.name);
+  const websiteUrl = org?.website?.trim()
+    ? (org.website.startsWith("http://") || org.website.startsWith("https://")
+        ? org.website
+        : `https://${org.website}`)
+    : null;
 
   const { data: notifications, isLoading: notificationsLoading } = useNotifications();
   const markReadMutation = useMarkNotificationRead();
@@ -180,9 +185,49 @@ export function Header() {
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           {/* Mobile org header */}
           <div className="flex items-center gap-3 h-[60px] px-4 border-b border-border/40">
-            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${orgGradient} flex items-center justify-center flex-shrink-0`}>
-              <span className="text-white text-xs font-bold">{orgInitials}</span>
-            </div>
+            {websiteUrl ? (
+              <a
+                href={websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Visit ${org?.name || "Organization"} (${org?.website})`}
+                className={`w-8 h-8 rounded-lg ${
+                  org?.logoUrl
+                    ? "bg-slate-900 border border-slate-700/80 p-0.5"
+                    : `bg-gradient-to-br ${orgGradient}`
+                } flex items-center justify-center flex-shrink-0 shadow-md transition-transform hover:scale-105 cursor-pointer overflow-hidden`}
+              >
+                {org?.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={org.logoUrl}
+                    alt={org.name || "Organization"}
+                    className="w-full h-full object-contain rounded-md"
+                  />
+                ) : (
+                  <span className="text-white text-xs font-bold">{orgInitials}</span>
+                )}
+              </a>
+            ) : (
+              <div
+                className={`w-8 h-8 rounded-lg ${
+                  org?.logoUrl
+                    ? "bg-slate-900 border border-slate-700/80 p-0.5"
+                    : `bg-gradient-to-br ${orgGradient}`
+                } flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden cursor-default`}
+              >
+                {org?.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={org.logoUrl}
+                    alt={org.name || "Organization"}
+                    className="w-full h-full object-contain rounded-md"
+                  />
+                ) : (
+                  <span className="text-white text-xs font-bold">{orgInitials}</span>
+                )}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{org?.name || "Your Business"}</p>
               <p className="text-xs text-slate-500">billOS</p>
@@ -340,9 +385,40 @@ export function Header() {
               {org && (
                 <>
                   <div className="flex items-center gap-2.5 px-3 py-2.5">
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${orgGradient} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-white text-xs font-bold">{orgInitials}</span>
-                    </div>
+                    {websiteUrl ? (
+                      <a
+                        href={websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`w-8 h-8 rounded-lg ${
+                          org?.logoUrl
+                            ? "bg-slate-900 border border-slate-700/80 p-0.5"
+                            : `bg-gradient-to-br ${orgGradient}`
+                        } flex items-center justify-center flex-shrink-0 shadow-md hover:scale-105 cursor-pointer overflow-hidden`}
+                      >
+                        {org?.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={org.logoUrl} alt={org.name} className="w-full h-full object-contain rounded-md" />
+                        ) : (
+                          <span className="text-white text-xs font-bold">{orgInitials}</span>
+                        )}
+                      </a>
+                    ) : (
+                      <div
+                        className={`w-8 h-8 rounded-lg ${
+                          org?.logoUrl
+                            ? "bg-slate-900 border border-slate-700/80 p-0.5"
+                            : `bg-gradient-to-br ${orgGradient}`
+                        } flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden cursor-default`}
+                      >
+                        {org?.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={org.logoUrl} alt={org.name} className="w-full h-full object-contain rounded-md" />
+                        ) : (
+                          <span className="text-white text-xs font-bold">{orgInitials}</span>
+                        )}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold truncate">{org.name}</p>
                       {org.gstin && (
