@@ -44,12 +44,6 @@ class OrganizationServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private AccountService accountService;
-
-    @Mock
-    private WarehouseService warehouseService;
-
-    @Mock
     private OrganizationSeeder organizationSeeder;
 
     @Mock

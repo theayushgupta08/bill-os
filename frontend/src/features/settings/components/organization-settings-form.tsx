@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/api-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Building2, GitBranch, Crown, ArrowRight, ShieldCheck } from "lucide-react";
+import { Plus, X, Building2, GitBranch, Crown, ArrowRight, ShieldCheck, Upload, Trash2 } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tooltip";
@@ -20,6 +20,7 @@ export function OrganizationSettingsForm() {
   const [org, setOrg] = useState<Organization | null>(null);
   const [createBranchOpen, setCreateBranchOpen] = useState(false);
   const { data: orgTree } = useOrganizationTree();
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: orgData, isLoading } = useQuery({
     queryKey: ["organizations"],
@@ -92,6 +93,32 @@ export function OrganizationSettingsForm() {
       const updated = (prev.secondaryPhones || []).filter((_, i: number) => i !== index);
       return { ...prev, secondaryPhones: updated };
     });
+  };
+
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Logo image size must be under 2MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setOrg((prev: Organization | null) => (prev ? { ...prev, logoUrl: result } : prev));
+      toast.info("Logo selected. Click 'Save Changes' to apply.");
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input so selecting the same file triggers change
+    e.target.value = "";
+  };
+
+  const handleRemoveLogo = () => {
+    setOrg((prev: Organization | null) => (prev ? { ...prev, logoUrl: "" } : prev));
+    toast.info("Logo removed. Click 'Save Changes' to apply.");
   };
 
   if (isLoading) {
@@ -299,6 +326,66 @@ export function OrganizationSettingsForm() {
             <CardDescription className="text-xs text-slate-400">Update your company details and GST information.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Organization Logo Section */}
+            <div className="space-y-1.5 pb-2 border-b border-slate-800/80">
+              <div className="flex items-center">
+                <Label>Organization Logo</Label>
+                <HelpTooltip text="Brand logo displayed in the application sidebar, header, and official invoice documents." />
+              </div>
+              <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-800 bg-slate-950/40">
+                <div className="w-16 h-16 rounded-xl border border-slate-700 bg-slate-900/90 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
+                  {org.logoUrl ? (
+                    <img
+                      src={org.logoUrl}
+                      alt={org.name || "Organization Logo"}
+                      className="w-full h-full object-contain p-1"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-slate-500">
+                      <Building2 className="w-6 h-6 mb-0.5 text-slate-400" />
+                      <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-500">No Logo</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1.5 flex-1">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={handleLogoFileChange}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="h-8 border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white text-xs gap-1.5"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      Update Logo
+                    </Button>
+                    {org.logoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemoveLogo}
+                        className="h-8 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 text-xs gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Recommended: Square PNG, JPG, or SVG under 2MB.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center">
@@ -343,16 +430,6 @@ export function OrganizationSettingsForm() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center">
-                  <Label htmlFor="logoUrl">Logo URL</Label>
-                  <HelpTooltip text="Direct image URL for your organization logo to display in the sidebar." />
-                </div>
-                <Input id="logoUrl" name="logoUrl" placeholder="https://example.com/logo.png" value={org.logoUrl || ""} onChange={handleChange} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center">
                   <Label htmlFor="phone">Primary Phone</Label>
                   <HelpTooltip text="The official primary contact telephone or mobile number for your organization." />
                 </div>
@@ -367,6 +444,7 @@ export function OrganizationSettingsForm() {
                   onChange={handleChange} 
                 />
               </div>
+            </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Secondary Phones</Label>
@@ -408,7 +486,6 @@ export function OrganizationSettingsForm() {
                   ))}
                 </div>
               </div>
-            </div>
 
             <div className="space-y-2">
               <div className="flex items-center">
