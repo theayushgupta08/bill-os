@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { MoreHorizontal, Shield, Trash2, ShieldAlert, UserX, UserCheck } from 'lucide-react';
+import { MoreHorizontal, Shield, Trash2, ShieldAlert, UserX, UserCheck, User, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -122,9 +122,11 @@ export function RoleActionMenu({
             <span>Make Admin</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleRoleChange('MANAGER')} className="cursor-pointer">
+            <Users className="mr-2 h-4 w-4 text-blue-400" />
             <span>Make Manager</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleRoleChange('USER')} className="cursor-pointer">
+            <User className="mr-2 h-4 w-4 text-zinc-400" />
             <span>Make User</span>
           </DropdownMenuItem>
           

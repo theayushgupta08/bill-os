@@ -57,8 +57,22 @@ export default function LoginPage() {
       }
 
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
-      setError(errorMessage);
+      try {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      } catch {
+        // ignore
+      }
+      const rawMsg = err instanceof Error ? err.message : 'Login failed';
+      if (
+        rawMsg.toLowerCase().includes('deactivated') ||
+        rawMsg.toLowerCase().includes('banned') ||
+        rawMsg.toLowerCase().includes('disabled')
+      ) {
+        setError('Your account has been deactivated. All active sessions have been revoked. Please contact your organization administrator.');
+      } else {
+        setError(rawMsg);
+      }
       console.error(err);
     } finally {
       setLoading(false);

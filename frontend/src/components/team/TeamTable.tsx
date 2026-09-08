@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -45,6 +46,8 @@ export function TeamTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [currentUserRole, setCurrentUserRole] = useState<string>("USER");
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
 
   const fetchTeam = async () => {
     try {
@@ -57,6 +60,7 @@ export function TeamTable() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user?.email) {
+        setCurrentUserEmail(session.user.email);
         try {
           const email = session.user.email;
           const currentMember = data.find((m: {email: string; role: string}) => m.email.toLowerCase() === email.toLowerCase());
@@ -71,6 +75,59 @@ export function TeamTable() {
       toast.error("Failed to load team members");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const canToggleStatus = (member: TeamMember) => {
+    if (!member.userId || member.status === "INVITED") return false;
+    if (currentUserEmail && member.email.toLowerCase() === currentUserEmail.toLowerCase()) {
+      return false;
+    }
+    if (currentUserRole !== "OWNER" && currentUserRole !== "ADMIN") {
+      return false;
+    }
+    const hierarchy = ["OWNER", "ADMIN", "MANAGER", "USER", "VIEWER"];
+    const callerLevel = hierarchy.indexOf(currentUserRole);
+    const targetLevel = hierarchy.indexOf(member.role);
+    if (callerLevel === -1 || targetLevel === -1) return false;
+    return callerLevel < targetLevel;
+  };
+
+  const handleToggleUserStatus = async (member: TeamMember) => {
+    if (!canToggleStatus(member)) return;
+    const isActivating = member.status === "INACTIVE";
+    const actionText = isActivating ? "activate" : "deactivate";
+
+    if (!isActivating) {
+      const displayName = member.firstName
+        ? `${member.firstName} ${member.lastName || ""}`.trim()
+        : member.email;
+      const confirmed = window.confirm(
+        `Are you sure you want to deactivate ${displayName}?\n\nAll of their active sessions will be terminated immediately, and they will not be able to log in.`
+      );
+      if (!confirmed) return;
+    }
+
+    setTogglingUserId(member.userId);
+    try {
+      await api.put(`/team/${member.userId}/toggle-status`, { active: isActivating });
+      toast.success(
+        isActivating
+          ? `User ${member.email} has been activated`
+          : `User ${member.email} has been deactivated and all sessions terminated`
+      );
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.userId === member.userId
+            ? { ...m, status: isActivating ? "ACTIVE" : "INACTIVE" }
+            : m
+        )
+      );
+      fetchTeam();
+    } catch (err: unknown) {
+      toast.error((err as Error).message || `Failed to ${actionText} user`);
+    } finally {
+      setTogglingUserId(null);
     }
   };
 
@@ -321,22 +378,58 @@ export function TeamTable() {
                   </TableCell>
                   <TableCell>{getRoleBadge(member.role)}</TableCell>
                   <TableCell>
-                    {member.status === "INVITED" ? (
-                      <span className="inline-flex items-center text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
-                        Invited
-                      </span>
-                    ) : member.status === "INACTIVE" ? (
-                      <span className="inline-flex items-center text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
-                        Inactive
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-                        Active
-                      </span>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {member.status === "INVITED" ? (
+                        <span className="inline-flex items-center text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full animate-pulse">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+                          Invited
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={member.status === "ACTIVE"}
+                            disabled={!canToggleStatus(member) || togglingUserId === member.userId}
+                            onClick={() => handleToggleUserStatus(member)}
+                            title={
+                              currentUserEmail && member.email.toLowerCase() === currentUserEmail.toLowerCase()
+                                ? "You cannot deactivate your own account"
+                                : !canToggleStatus(member)
+                                ? "You do not have permission to change this user's status"
+                                : member.status === "ACTIVE"
+                                ? "Click to deactivate user (terminates all active sessions)"
+                                : "Click to activate user"
+                            }
+                            className={cn(
+                              "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40",
+                              member.status === "ACTIVE"
+                                ? "bg-emerald-500 hover:bg-emerald-400"
+                                : "bg-zinc-700 hover:bg-zinc-600"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200",
+                                member.status === "ACTIVE" ? "translate-x-4" : "translate-x-0.5"
+                              )}
+                            />
+                          </button>
+
+                          {member.status === "INACTIVE" ? (
+                            <span className="inline-flex items-center text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
+                              Inactive
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+                              Active
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <RoleActionMenu

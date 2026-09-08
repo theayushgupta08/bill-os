@@ -18,10 +18,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @SuppressWarnings("null")
@@ -32,6 +35,7 @@ public class TeamService {
     private final OrganizationInvitationRepository invitationRepository;
     private final OrganizationRepository organizationRepository;
     private final EmailService emailService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Transactional(readOnly = true)
     public List<TeamMemberDto> getTeamMembers() {
@@ -215,6 +219,10 @@ public class TeamService {
             throw new RuntimeException("Invalid role found");
         }
 
+        if (callerId.equals(targetUserId)) {
+            throw new RuntimeException("You cannot change the status of your own account");
+        }
+
         // Only OWNER and ADMIN can perform toggles
         if (!"OWNER".equals(callerRole) && !"ADMIN".equals(callerRole)) {
             throw new RuntimeException("Only Owner and Admin have permission to toggle user status");
@@ -229,6 +237,52 @@ public class TeamService {
                 userRepository.findById(targetUserId).orElseThrow(() -> new RuntimeException("User not found"));
 
         targetUser.setIsActive(active);
+
+        // Terminate sessions and manage Supabase login access
+        UUID supabaseId = targetUser.getSupabaseId();
+        if (supabaseId == null && targetUser.getEmail() != null) {
+            try {
+                List<UUID> ids = jdbcTemplate.query(
+                        "SELECT id FROM auth.users WHERE LOWER(email) = LOWER(?)",
+                        (rs, rowNum) -> UUID.fromString(rs.getString("id")),
+                        targetUser.getEmail().trim());
+                if (!ids.isEmpty()) {
+                    supabaseId = ids.get(0);
+                    targetUser.setSupabaseId(supabaseId);
+                }
+            } catch (Exception e) {
+                log.warn("Could not lookup Supabase ID by email for {}: {}", targetUser.getEmail(), e.getMessage());
+            }
+        }
+
+        if (supabaseId != null) {
+            if (!active) {
+                try {
+                    // Immediately delete all active sessions across all devices
+                    jdbcTemplate.update("DELETE FROM auth.sessions WHERE user_id = ?", supabaseId);
+                    // Delete all refresh tokens
+                    jdbcTemplate.update("DELETE FROM auth.refresh_tokens WHERE user_id = ?", supabaseId);
+                    // Ban in Supabase GoTrue Auth to forbid future logins
+                    jdbcTemplate.update(
+                            "UPDATE auth.users SET banned_until = '2999-12-31 23:59:59+00' WHERE id = ?", supabaseId);
+                    log.info(
+                            "Terminated all sessions and banned Supabase user {} ({})",
+                            supabaseId,
+                            targetUser.getEmail());
+                } catch (Exception e) {
+                    log.error("Failed to revoke Supabase sessions or ban user {}: {}", supabaseId, e.getMessage());
+                }
+            } else {
+                try {
+                    // Unban user in Supabase GoTrue Auth so user can log in again
+                    jdbcTemplate.update("UPDATE auth.users SET banned_until = NULL WHERE id = ?", supabaseId);
+                    log.info("Lifted Supabase ban for user {} ({})", supabaseId, targetUser.getEmail());
+                } catch (Exception e) {
+                    log.error("Failed to clear Supabase ban for user {}: {}", supabaseId, e.getMessage());
+                }
+            }
+        }
+
         userRepository.save(targetUser);
     }
 }
