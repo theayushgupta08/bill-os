@@ -58,8 +58,11 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             throws Exception {
         String path = request.getRequestURI();
 
-        // Exclude Swagger and Actuator from Rate Limiting
-        if (path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui") || path.startsWith("/actuator")) {
+        // Exclude Swagger, Actuator, and Health Check from Rate Limiting
+        if (path.startsWith("/api/v1/health")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/actuator")) {
             return true;
         }
 
