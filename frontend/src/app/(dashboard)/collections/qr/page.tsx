@@ -66,6 +66,22 @@ export default function QrCodesPage() {
     (m) => Boolean(m.userId) && m.status !== "INVITED"
   );
 
+  const getUserDisplayName = (id?: string | null) => {
+    if (!id) return "";
+    const member = (teamMembers ?? []).find((u) => u.userId === id);
+    if (!member) return id;
+    const fullName = [member.firstName, member.lastName].filter(Boolean).join(" ");
+    return fullName ? `${fullName} (${member.email})` : member.email;
+  };
+
+  const userSelectItems = availableUsers.map((member) => {
+    const fullName = [member.firstName, member.lastName].filter(Boolean).join(" ");
+    return {
+      value: member.userId,
+      label: fullName ? `${fullName} (${member.email})` : member.email,
+    };
+  });
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -221,6 +237,7 @@ export default function QrCodesPage() {
                   </div>
                 ) : (
                   <Select
+                    items={userSelectItems}
                     value={userId}
                     onValueChange={(val: string | null) => val && setUserId(val)}
                     required
@@ -229,7 +246,11 @@ export default function QrCodesPage() {
                       id="qr-user"
                       className="h-10 bg-slate-800/80 border-slate-700 text-white rounded-xl text-sm"
                     >
-                      <SelectValue placeholder="Select user from organization" />
+                      <SelectValue placeholder="Select user from organization">
+                        {(val: string | null) =>
+                          val ? getUserDisplayName(val) : "Select user from organization"
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-800 text-white max-h-60">
                       {availableUsers.map((member) => {
@@ -376,6 +397,7 @@ export default function QrCodesPage() {
                 </div>
               ) : (
                 <Select
+                  items={userSelectItems}
                   value={editUserId}
                   onValueChange={(val: string | null) => val && setEditUserId(val)}
                   required
@@ -384,7 +406,11 @@ export default function QrCodesPage() {
                     id="edit-qr-user"
                     className="h-10 bg-slate-800/80 border-slate-700 text-white rounded-xl text-sm"
                   >
-                    <SelectValue placeholder="Select user from organization" />
+                    <SelectValue placeholder="Select user from organization">
+                      {(val: string | null) =>
+                        val ? getUserDisplayName(val) : "Select user from organization"
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="bg-slate-900 border-slate-800 text-white max-h-60">
                     {availableUsers.map((member) => {
