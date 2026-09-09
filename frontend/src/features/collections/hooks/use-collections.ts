@@ -109,6 +109,22 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface TeamMember {
+  userId: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role: string;
+  status: string;
+}
+
+export function useTeamMembers() {
+  return useQuery<TeamMember[]>({
+    queryKey: ["team-members"],
+    queryFn: () => api.get("/team"),
+  });
+}
+
 // --- QR Codes ---
 
 export function useQrCodes() {

@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,20 +61,18 @@ public class CollectionService {
             }
         }
 
-        User user = null;
-        if (targetUserId != null) {
-            user = userRepository.findById(targetUserId).orElse(null);
+        if (targetUserId == null) {
+            throw new IllegalArgumentException("User assignment is required. Each QR code must belong to a user.");
         }
-        if (user == null) {
-            List<UserOrgRole> roles = userOrgRoleRepository.findAll().stream()
-                    .filter(r -> r.getOrganizationId().equals(orgId))
-                    .toList();
-            if (!roles.isEmpty()) {
-                user = roles.get(0).getUser();
-            } else {
-                throw new RuntimeException("User not found for registering QR code");
-            }
-        }
+
+        UUID finalTargetUserId = targetUserId;
+        User user = userRepository
+                .findById(finalTargetUserId)
+                .orElseThrow(() -> new RuntimeException("Selected user not found"));
+
+        userOrgRoleRepository
+                .findByUserIdAndOrganizationId(user.getId(), orgId)
+                .orElseThrow(() -> new RuntimeException("Selected user does not belong to this organization"));
 
         CollectionQrCode qr = new CollectionQrCode();
         qr.setOrganizationId(orgId);
@@ -90,9 +89,25 @@ public class CollectionService {
         CollectionQrCode qr =
                 qrCodeRepository.findById(id).orElseThrow(() -> new RuntimeException("QR Code not found"));
 
-        qr.setNickname(dto.getNickname());
-        qr.setIsActive(dto.getIsActive());
-        qr.setQrImageUrl(dto.getQrImageUrl());
+        if (dto.getNickname() != null) {
+            qr.setNickname(dto.getNickname());
+        }
+        if (dto.getIsActive() != null) {
+            qr.setIsActive(dto.getIsActive());
+        }
+        if (dto.getQrImageUrl() != null) {
+            qr.setQrImageUrl(dto.getQrImageUrl());
+        }
+        if (dto.getUserId() != null) {
+            UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+            User user = userRepository
+                    .findById(dto.getUserId())
+                    .orElseThrow(() -> new RuntimeException("Selected user not found"));
+            userOrgRoleRepository
+                    .findByUserIdAndOrganizationId(user.getId(), orgId)
+                    .orElseThrow(() -> new RuntimeException("Selected user does not belong to this organization"));
+            qr.setUser(user);
+        }
 
         return toQrDto(qrCodeRepository.save(qr));
     }
@@ -657,10 +672,12 @@ public class CollectionService {
 
         CollectionQrCodeDto dto = new CollectionQrCodeDto();
         dto.setId(entity.getId());
-        dto.setUserId(entity.getUser().getId());
-        dto.setUserEmail(entity.getUser().getEmail());
-        dto.setUserFirstName(entity.getUser().getFirstName());
-        dto.setUserLastName(entity.getUser().getLastName());
+        if (entity.getUser() != null) {
+            dto.setUserId(entity.getUser().getId());
+            dto.setUserEmail(entity.getUser().getEmail());
+            dto.setUserFirstName(entity.getUser().getFirstName());
+            dto.setUserLastName(entity.getUser().getLastName());
+        }
         dto.setNickname(entity.getNickname());
         dto.setQrImageUrl(entity.getQrImageUrl());
         dto.setIsActive(entity.getIsActive());
