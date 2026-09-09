@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -104,7 +105,11 @@ export function Header() {
   const unreadCount = notifications?.filter(n => !n.readAt).length || 0;
 
   const handleMarkRead = async (id: string) => {
-    await markReadMutation.mutateAsync(id);
+    try {
+      await markReadMutation.mutateAsync(id);
+    } catch (e) {
+      console.error("Failed to mark notification as read", e);
+    }
   };
 
   const getUserData = async () => {
@@ -318,53 +323,61 @@ export function Header() {
         )}
 
         {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger render={
-            <Button variant="ghost" size="icon" className="h-8 w-8 relative">
-              <Bell className="h-4 w-4" />
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button variant="ghost" size="icon" className="h-8 w-8 relative" />
+            }
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+            )}
+            <span className="sr-only">Notifications</span>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-0 overflow-hidden shadow-xl border border-border/80">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/30">
+              <span className="font-semibold text-sm text-foreground">Notifications</span>
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-              )}
-              <span className="sr-only">Notifications</span>
-            </Button>
-          }>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
-            <DropdownMenuLabel className="font-semibold flex justify-between items-center">
-              Notifications
-              {unreadCount > 0 && (
-                <Badge variant="secondary" className="text-xs bg-indigo-500/10 text-indigo-400">
+                <Badge variant="secondary" className="text-xs bg-indigo-500/10 text-indigo-400 font-medium">
                   {unreadCount} new
                 </Badge>
               )}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            </div>
             {notificationsLoading ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
-            ) : notifications?.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">No notifications</div>
+              <div className="p-6 text-center text-sm text-muted-foreground">Loading...</div>
+            ) : !Array.isArray(notifications) || notifications.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">No notifications</div>
             ) : (
-              <DropdownMenuGroup>
-                {notifications?.map((notif) => (
-                  <DropdownMenuItem key={notif.id} className="flex flex-col items-start gap-1 p-3 cursor-pointer" onClick={() => !notif.readAt && handleMarkRead(notif.id)}>
+              <div className="divide-y divide-border/40 max-h-80 overflow-y-auto">
+                {notifications.map((notif) => (
+                  <div
+                    key={notif.id}
+                    className={`flex flex-col items-start gap-1 p-3 cursor-pointer transition-colors hover:bg-muted/50 ${
+                      !notif.readAt ? "bg-muted/20" : "opacity-75"
+                    }`}
+                    onClick={() => !notif.readAt && handleMarkRead(notif.id)}
+                  >
                     <div className="flex items-center justify-between w-full">
-                      <span className={`font-semibold text-sm ${!notif.readAt ? "text-white" : "text-slate-400"}`}>
+                      <span className={`text-sm ${!notif.readAt ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                         {notif.title}
                       </span>
                       {!notif.readAt && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />}
                     </div>
-                    <span className={`text-xs ${!notif.readAt ? "text-slate-300" : "text-slate-500"} line-clamp-2`}>
+                    <span className={`text-xs ${!notif.readAt ? "text-foreground/90" : "text-muted-foreground"} line-clamp-2`}>
                       {notif.message}
                     </span>
-                    <span className="text-[10px] text-slate-500 mt-1">
-                      {new Date(notif.createdAt).toLocaleString()}
-                    </span>
-                  </DropdownMenuItem>
+                    {notif.createdAt && (
+                      <span className="text-[10px] text-muted-foreground mt-1">
+                        {new Date(notif.createdAt).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                 ))}
-              </DropdownMenuGroup>
+              </div>
             )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </PopoverContent>
+        </Popover>
 
         {/* User Menu */}
         <DropdownMenu>
