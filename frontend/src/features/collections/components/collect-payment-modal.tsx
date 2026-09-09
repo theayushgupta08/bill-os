@@ -31,8 +31,6 @@ import {
   QrCode,
   ArrowLeft,
   CheckCircle2,
-  Copy,
-  Check,
   ExternalLink,
   ChevronRight,
   ShieldCheck,
@@ -58,7 +56,6 @@ export function CollectPaymentModal() {
   const [amount, setAmount] = useState("");
   const [place, setPlace] = useState("COUNTER");
   const [utrNumber, setUtrNumber] = useState("");
-  const [copied, setCopied] = useState(false);
 
   // Queries & Mutations
   const { data: qrCodes, isLoading: loadingQrs } = useQrCodes();
@@ -72,7 +69,6 @@ export function CollectPaymentModal() {
     setAmount("");
     setPlace("COUNTER");
     setUtrNumber("");
-    setCopied(false);
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -85,14 +81,6 @@ export function CollectPaymentModal() {
   const handleSelectQr = (qr: CollectionQrCode) => {
     setSelectedQr(qr);
     setStep("qr");
-  };
-
-  const handleCopyUpi = () => {
-    if (!selectedQr?.upiId) return;
-    navigator.clipboard.writeText(selectedQr.upiId);
-    setCopied(true);
-    toast.success("UPI ID copied to clipboard!");
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleQuickAmount = (val: number) => {
@@ -197,19 +185,8 @@ export function CollectPaymentModal() {
                         <QrCode className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-white truncate group-hover:text-emerald-300 transition-colors">
-                            {qr.nickname}
-                          </p>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] px-1.5 py-0 border-slate-700 text-slate-300 bg-slate-800"
-                          >
-                            {qr.paymentProvider}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-slate-400 font-mono truncate">
-                          {qr.upiId}
+                        <p className="text-sm font-semibold text-white truncate group-hover:text-emerald-300 transition-colors">
+                          {qr.nickname}
                         </p>
                         <p className="text-[11px] text-slate-500 truncate mt-0.5">
                           Owner: {qr.userFirstName} {qr.userLastName}
@@ -253,41 +230,14 @@ export function CollectPaymentModal() {
                   <img
                     src={selectedQr.qrImageUrl}
                     alt={selectedQr.nickname}
-                    className="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded"
+                    className="w-48 h-48 object-contain rounded"
                   />
                 ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=4&data=${encodeURIComponent(
-                      `upi://pay?pa=${selectedQr.upiId}&pn=${encodeURIComponent(
-                        selectedQr.upiName || selectedQr.nickname
-                      )}&cu=INR`
-                    )}`}
-                    alt={selectedQr.nickname}
-                    className="w-44 h-44 sm:w-48 sm:h-48 object-contain"
-                  />
+                  <div className="w-48 h-48 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                    <QrCode className="w-12 h-12 text-slate-400 mb-2" />
+                    <span className="text-xs text-slate-500">{selectedQr.nickname}</span>
+                  </div>
                 )}
-              </div>
-
-              {/* UPI ID Badge with Copy Action */}
-              <div className="mt-3 flex items-center gap-2">
-                <span className="text-xs font-mono text-slate-300 bg-slate-950 px-2.5 py-1 rounded-md border border-slate-800">
-                  {selectedQr.upiId}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCopyUpi}
-                  className="h-7 px-2 text-xs text-slate-400 hover:text-white"
-                >
-                  {copied ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5" />
-                  )}
-                  <span className="ml-1">{copied ? "Copied" : "Copy"}</span>
-                </Button>
               </div>
             </div>
 

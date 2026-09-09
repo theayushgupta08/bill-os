@@ -26,23 +26,12 @@ public class CollectionQrCode extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "payment_provider", nullable = false)
-    private String paymentProvider; // UPI, PHONEPE, GOOGLEPAY, PAYTM, BHIM, OTHER
-
-    @Column(name = "upi_name", nullable = false)
-    private String upiName;
-
-    @Column(name = "upi_id", nullable = false)
-    private String upiId;
-
     @Column(nullable = false)
     private String nickname;
 
-    @Column(name = "qr_image_url")
+    @Column(name = "qr_image_url", columnDefinition = "TEXT")
     private String qrImageUrl;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
-
-    private String notes;
 }

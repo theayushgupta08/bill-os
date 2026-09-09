@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,13 +17,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -33,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { QrCode, Plus, Loader2, Power } from "lucide-react";
+import { QrCode, Plus, Loader2, Power, Upload, Trash2 } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import {
   useQrCodes,
@@ -41,8 +32,7 @@ import {
   useUpdateQrCode,
   type CollectionQrCode,
 } from "@/features/collections/hooks/use-collections";
-
-const PAYMENT_PROVIDERS = ["UPI", "PHONEPE", "GOOGLEPAY", "PAYTM", "BHIM", "OTHER"];
+import { toast } from "sonner";
 
 export default function QrCodesPage() {
   const { data: qrCodes, isLoading } = useQrCodes();
@@ -50,24 +40,60 @@ export default function QrCodesPage() {
   const updateMutation = useUpdateQrCode();
   const [open, setOpen] = useState(false);
 
-  const [form, setForm] = useState({
-    userId: "",
-    paymentProvider: "UPI",
-    upiName: "",
-    upiId: "",
-    nickname: "",
-    qrImageUrl: "",
-    notes: "",
-  });
+  const [nickname, setNickname] = useState("");
+  const [qrImage, setQrImage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCreate = async () => {
-    await createMutation.mutateAsync(form);
-    setOpen(false);
-    setForm({ userId: "", paymentProvider: "UPI", upiName: "", upiId: "", nickname: "", qrImageUrl: "", notes: "" });
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("QR image file must be under 5MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setQrImage(reader.result as string);
+      toast.success("QR code image selected");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nickname.trim()) {
+      toast.error("Please enter a QR nickname");
+      return;
+    }
+    if (!qrImage) {
+      toast.error("Please upload a QR code image");
+      return;
+    }
+
+    try {
+      await createMutation.mutateAsync({
+        nickname: nickname.trim(),
+        qrImageUrl: qrImage,
+      });
+      toast.success("QR code registered successfully!");
+      setOpen(false);
+      setNickname("");
+      setQrImage("");
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Failed to register QR code");
+    }
   };
 
   const toggleActive = async (qr: CollectionQrCode) => {
-    await updateMutation.mutateAsync({ id: qr.id, isActive: !qr.isActive, nickname: qr.nickname, qrImageUrl: qr.qrImageUrl, notes: qr.notes });
+    await updateMutation.mutateAsync({
+      id: qr.id,
+      isActive: !qr.isActive,
+      nickname: qr.nickname,
+      qrImageUrl: qr.qrImageUrl,
+    });
   };
 
   return (
@@ -79,83 +105,123 @@ export default function QrCodesPage() {
             Manage employee UPI QR codes used for collecting payments.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              <Plus className="h-4 w-4 mr-2" /> Add QR Code
-            </Button>
-          }>
-          </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-slate-800">
+        <Dialog
+          open={open}
+          onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) {
+              setNickname("");
+              setQrImage("");
+            }
+          }}
+        >
+          <DialogTrigger
+            render={
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Plus className="h-4 w-4 mr-2" /> Add QR Code
+              </Button>
+            }
+          />
+          <DialogContent className="bg-slate-900 border-slate-800 sm:max-w-[440px] p-6 rounded-2xl">
             <DialogHeader>
-              <DialogTitle className="text-white">Register New QR Code</DialogTitle>
+              <DialogTitle className="text-white text-lg font-semibold">
+                Register New QR Code
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-slate-300">User ID</Label>
+            <form onSubmit={handleCreate} className="space-y-5 pt-2">
+              {/* Field 1: QR Nickname */}
+              <div className="space-y-1.5">
+                <Label htmlFor="qr-nickname" className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  QR Nickname
+                </Label>
                 <Input
-                  value={form.userId}
-                  onChange={(e) => setForm({ ...form, userId: e.target.value })}
-                  placeholder="Enter user UUID"
-                  className="bg-slate-800 border-slate-700 text-white"
+                  id="qr-nickname"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="e.g. Counter 1 QR, Rahul's Shop QR"
+                  className="h-10 bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-500 rounded-xl"
+                  required
                 />
               </div>
-              <div>
-                <Label className="text-slate-300">Payment Provider</Label>
-                <Select value={form.paymentProvider} onValueChange={(v) => v && setForm({ ...form, paymentProvider: v })}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    {PAYMENT_PROVIDERS.map((p) => (
-                      <SelectItem key={p} value={p} className="text-white">
-                        {p}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-slate-300">UPI Account Name</Label>
-                <Input
-                  value={form.upiName}
-                  onChange={(e) => setForm({ ...form, upiName: e.target.value })}
-                  placeholder="e.g. Rahul Sharma"
-                  className="bg-slate-800 border-slate-700 text-white"
+
+              {/* Field 2: Upload QR */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Upload QR
+                </Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
+
+                {qrImage ? (
+                  <div className="relative border border-slate-700/80 rounded-2xl p-4 bg-slate-950/60 flex flex-col items-center justify-center">
+                    <div className="w-40 h-40 rounded-xl overflow-hidden border border-slate-700 bg-white p-2 shadow-inner flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={qrImage}
+                        alt="QR Preview"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="h-8 rounded-lg border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs"
+                      >
+                        <Upload className="w-3.5 h-3.5 mr-1.5" />
+                        Change Image
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setQrImage("");
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                        className="h-8 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 text-xs"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-700 hover:border-indigo-500/60 rounded-2xl p-6 bg-slate-950/40 hover:bg-slate-800/30 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-2 group-hover:scale-105 transition-transform">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-200">
+                      Click to upload QR image
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      PNG, JPG, WEBP or SVG up to 5MB
+                    </p>
+                  </div>
+                )}
               </div>
-              <div>
-                <Label className="text-slate-300">UPI ID (VPA)</Label>
-                <Input
-                  value={form.upiId}
-                  onChange={(e) => setForm({ ...form, upiId: e.target.value })}
-                  placeholder="e.g. rahul@okhdfcbank"
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
-              <div>
-                <Label className="text-slate-300">Nickname</Label>
-                <Input
-                  value={form.nickname}
-                  onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-                  placeholder="e.g. Rahul's Shop QR"
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
-              <div>
-                <Label className="text-slate-300">QR Image URL (optional)</Label>
-                <Input
-                  value={form.qrImageUrl}
-                  onChange={(e) => setForm({ ...form, qrImageUrl: e.target.value })}
-                  placeholder="https://..."
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
-              <Button onClick={handleCreate} disabled={createMutation.isPending} className="w-full bg-indigo-600 hover:bg-indigo-700">
-                {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || !nickname.trim() || !qrImage}
+                className="w-full h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-medium text-white shadow-md shadow-indigo-600/20"
+              >
+                {createMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
                 Register QR Code
               </Button>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -168,11 +234,8 @@ export default function QrCodesPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-slate-800/60 hover:bg-transparent">
-                  <TableHead className="text-slate-400 text-xs">Nickname</TableHead>
+                  <TableHead className="text-slate-400 text-xs">QR Code</TableHead>
                   <TableHead className="text-slate-400 text-xs">Owner</TableHead>
-                  <TableHead className="text-slate-400 text-xs">Provider</TableHead>
-                  <TableHead className="text-slate-400 text-xs">UPI Name</TableHead>
-                  <TableHead className="text-slate-400 text-xs">UPI ID</TableHead>
                   <TableHead className="text-slate-400 text-xs">Status</TableHead>
                   <TableHead className="text-slate-400 text-xs text-right">Actions</TableHead>
                 </TableRow>
@@ -180,20 +243,28 @@ export default function QrCodesPage() {
               <TableBody>
                 {(qrCodes ?? []).map((qr) => (
                   <TableRow key={qr.id} className="border-slate-800/40">
-                    <TableCell className="text-white font-medium flex items-center gap-2">
-                      <QrCode className="h-4 w-4 text-indigo-400" />
-                      {qr.nickname}
+                    <TableCell className="text-white font-medium">
+                      <div className="flex items-center gap-3">
+                        {qr.qrImageUrl ? (
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white p-1 border border-slate-700 shrink-0 flex items-center justify-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={qr.qrImageUrl}
+                              alt={qr.nickname}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shrink-0 flex items-center justify-center">
+                            <QrCode className="h-5 w-5" />
+                          </div>
+                        )}
+                        <span className="text-sm font-medium text-white">{qr.nickname}</span>
+                      </div>
                     </TableCell>
                     <TableCell className="text-slate-300 text-sm">
-                      {qr.userFirstName} {qr.userLastName}
+                      {qr.userFirstName ? `${qr.userFirstName} ${qr.userLastName || ""}` : qr.userEmail || "-"}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs border-slate-600 text-slate-300">
-                        {qr.paymentProvider}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-slate-300 text-sm">{qr.upiName}</TableCell>
-                    <TableCell className="text-slate-400 text-sm font-mono">{qr.upiId}</TableCell>
                     <TableCell>
                       {qr.isActive ? (
                         <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Active</Badge>
@@ -207,6 +278,7 @@ export default function QrCodesPage() {
                         size="sm"
                         onClick={() => toggleActive(qr)}
                         disabled={updateMutation.isPending}
+                        title={qr.isActive ? "Deactivate QR Code" : "Activate QR Code"}
                         className="text-slate-400 hover:text-white"
                       >
                         <Power className="h-4 w-4" />
@@ -216,7 +288,7 @@ export default function QrCodesPage() {
                 ))}
                 {(!qrCodes || qrCodes.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-slate-500 py-12">
+                    <TableCell colSpan={4} className="text-center text-slate-500 py-12">
                       No QR codes registered yet
                     </TableCell>
                   </TableRow>

@@ -49,18 +49,38 @@ public class CollectionService {
     @Transactional
     public CollectionQrCodeDto createQrCode(CollectionQrCodeDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
-        User user = userRepository.findById(dto.getUserId()).orElseThrow(() -> new RuntimeException("User not found"));
+        UUID targetUserId = dto.getUserId();
+        if (targetUserId == null) {
+            try {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
+                    targetUserId = principal.getId();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        User user = null;
+        if (targetUserId != null) {
+            user = userRepository.findById(targetUserId).orElse(null);
+        }
+        if (user == null) {
+            List<UserOrgRole> roles = userOrgRoleRepository.findAll().stream()
+                    .filter(r -> r.getOrganizationId().equals(orgId))
+                    .toList();
+            if (!roles.isEmpty()) {
+                user = roles.get(0).getUser();
+            } else {
+                throw new RuntimeException("User not found for registering QR code");
+            }
+        }
 
         CollectionQrCode qr = new CollectionQrCode();
         qr.setOrganizationId(orgId);
         qr.setUser(user);
-        qr.setPaymentProvider(dto.getPaymentProvider());
-        qr.setUpiName(dto.getUpiName());
-        qr.setUpiId(dto.getUpiId());
-        qr.setNickname(dto.getNickname());
+        qr.setNickname(dto.getNickname() != null ? dto.getNickname() : "Default QR");
         qr.setQrImageUrl(dto.getQrImageUrl());
         qr.setIsActive(true);
-        qr.setNotes(dto.getNotes());
 
         return toQrDto(qrCodeRepository.save(qr));
     }
@@ -72,7 +92,6 @@ public class CollectionService {
 
         qr.setNickname(dto.getNickname());
         qr.setIsActive(dto.getIsActive());
-        qr.setNotes(dto.getNotes());
         qr.setQrImageUrl(dto.getQrImageUrl());
 
         return toQrDto(qrCodeRepository.save(qr));
@@ -642,13 +661,9 @@ public class CollectionService {
         dto.setUserEmail(entity.getUser().getEmail());
         dto.setUserFirstName(entity.getUser().getFirstName());
         dto.setUserLastName(entity.getUser().getLastName());
-        dto.setPaymentProvider(entity.getPaymentProvider());
-        dto.setUpiName(entity.getUpiName());
-        dto.setUpiId(entity.getUpiId());
         dto.setNickname(entity.getNickname());
         dto.setQrImageUrl(entity.getQrImageUrl());
         dto.setIsActive(entity.getIsActive());
-        dto.setNotes(entity.getNotes());
         dto.setOrganizationId(entity.getOrganizationId());
         dto.setIsShared(entity.getIsShared());
         dto.setIsMasterShared(isMasterShared);

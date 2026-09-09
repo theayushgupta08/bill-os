@@ -12,13 +12,9 @@ public class CollectionQrCodeDto {
     private String userEmail;
     private String userFirstName;
     private String userLastName;
-    private String paymentProvider;
-    private String upiName;
-    private String upiId;
     private String nickname;
     private String qrImageUrl;
     private Boolean isActive;
-    private String notes;
     private UUID organizationId;
     private Boolean isShared;
     private Boolean isMasterShared;

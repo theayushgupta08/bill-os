@@ -116,7 +116,7 @@ export default function PaymentsPage() {
                   <SelectContent className="bg-slate-800 border-slate-700">
                     {(qrCodes ?? []).filter((q) => q.isActive).map((q) => (
                       <SelectItem key={q.id} value={q.id} className="text-white">
-                        {q.nickname} ({q.upiId})
+                        {q.nickname}
                       </SelectItem>
                     ))}
                   </SelectContent>

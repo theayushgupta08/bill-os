@@ -11,13 +11,9 @@ export interface CollectionQrCode {
   userEmail: string;
   userFirstName: string;
   userLastName: string;
-  paymentProvider: string;
-  upiName: string;
-  upiId: string;
   nickname: string;
   qrImageUrl?: string;
   isActive: boolean;
-  notes?: string;
 }
 
 export interface CollectionPayment {
