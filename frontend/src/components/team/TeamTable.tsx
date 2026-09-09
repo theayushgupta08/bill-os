@@ -29,6 +29,8 @@ import {
   UserPlus,
   Filter,
   UserX,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,6 +48,7 @@ interface TeamMember {
   lastName?: string;
   role: string;
   status: string; // ACTIVE, INACTIVE, or INVITED
+  inviteToken?: string;
 }
 
 export function TeamTable() {
@@ -56,6 +59,19 @@ export function TeamTable() {
   const [currentUserRole, setCurrentUserRole] = useState<string>("USER");
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  const handleCopyInvite = async (token: string) => {
+    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/accept-invite?token=${token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedToken(token);
+      toast.success("Invitation link copied to clipboard!");
+      setTimeout(() => setCopiedToken(null), 2500);
+    } catch {
+      toast.error("Failed to copy invitation link");
+    }
+  };
 
   const fetchTeam = async () => {
     try {
@@ -419,10 +435,32 @@ export function TeamTable() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {member.status === "INVITED" ? (
-                        <span className="inline-flex items-center text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full animate-pulse">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
-                          Invited
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>
+                            Invited
+                          </span>
+                          {member.inviteToken && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyInvite(member.inviteToken!)}
+                              title="Copy invitation link to clipboard"
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-300 hover:text-white bg-zinc-800/80 hover:bg-zinc-700/80 px-2 py-0.5 rounded-md transition-all border border-zinc-700/60 shadow-xs cursor-pointer"
+                            >
+                              {copiedToken === member.inviteToken ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span className="text-emerald-400">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3 text-zinc-400" />
+                                  <span>Copy Link</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         <>
                           <button

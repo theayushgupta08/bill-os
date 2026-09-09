@@ -63,7 +63,7 @@ public class TeamService {
         List<OrganizationInvitation> invitations = invitationRepository.findByOrganizationId(orgId);
         for (OrganizationInvitation inv : invitations) {
             if ("PENDING".equals(inv.getStatus()) && inv.getExpiresAt().isAfter(ZonedDateTime.now())) {
-                team.add(new TeamMemberDto(null, inv.getEmail(), null, null, inv.getRole(), "INVITED"));
+                team.add(new TeamMemberDto(null, inv.getEmail(), null, null, inv.getRole(), "INVITED", inv.getToken()));
             }
         }
 
@@ -71,7 +71,7 @@ public class TeamService {
     }
 
     @Transactional
-    public void inviteUser(InviteUserRequest request) {
+    public String inviteUser(InviteUserRequest request) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
         Organization org = organizationRepository
@@ -110,6 +110,8 @@ public class TeamService {
         // Send Email
         emailService.sendOrganizationInvitation(
                 request.getEmail(), org.getName(), request.getRole(), invitation.getToken());
+
+        return invitation.getToken();
     }
 
     @Transactional

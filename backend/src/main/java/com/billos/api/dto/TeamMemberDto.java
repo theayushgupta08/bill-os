@@ -2,10 +2,12 @@ package com.billos.api.dto;
 
 import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class TeamMemberDto {
@@ -15,4 +17,9 @@ public class TeamMemberDto {
     private String lastName;
     private String role;
     private String status; // ACTIVE or INVITED
+    private String inviteToken;
+
+    public TeamMemberDto(UUID userId, String email, String firstName, String lastName, String role, String status) {
+        this(userId, email, firstName, lastName, role, status, null);
+    }
 }

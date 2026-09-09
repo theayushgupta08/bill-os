@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
+import com.billos.api.dto.InviteUserRequest;
 import com.billos.api.dto.TeamMemberDto;
+import com.billos.api.entity.Organization;
+import com.billos.api.entity.OrganizationInvitation;
 import com.billos.api.entity.User;
 import com.billos.api.entity.UserOrgRole;
 import com.billos.api.repository.OrganizationInvitationRepository;
@@ -195,5 +198,32 @@ class TeamServiceTest {
                 .hasMessageContaining("Only Owner and Admin have permission to toggle user status");
 
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("inviteUser - should create pending invitation, send email, and return token")
+    void inviteUser_shouldCreateInvitationAndReturnToken() {
+        // Arrange
+        Organization org = new Organization();
+        org.setId(orgId);
+        org.setName("Acme Corp");
+
+        InviteUserRequest request = new InviteUserRequest();
+        request.setEmail("invitee@example.com");
+        request.setRole("ADMIN");
+
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+        when(userRepository.findByEmail("invitee@example.com")).thenReturn(Optional.empty());
+        when(invitationRepository.findByOrganizationIdAndEmailAndStatus(orgId, "invitee@example.com", "PENDING"))
+                .thenReturn(Optional.empty());
+
+        // Act
+        String token = teamService.inviteUser(request);
+
+        // Assert
+        assertThat(token).isNotBlank();
+        verify(invitationRepository).save(any(OrganizationInvitation.class));
+        verify(emailService)
+                .sendOrganizationInvitation(eq("invitee@example.com"), eq("Acme Corp"), eq("ADMIN"), eq(token));
     }
 }

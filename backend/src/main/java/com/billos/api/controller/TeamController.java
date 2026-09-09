@@ -29,8 +29,8 @@ public class TeamController {
     @PostMapping("/invite")
     @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> inviteUser(@Valid @RequestBody InviteUserRequest request) {
-        teamService.inviteUser(request);
-        return ResponseEntity.ok(Map.of("message", "Invitation sent successfully"));
+        String token = teamService.inviteUser(request);
+        return ResponseEntity.ok(Map.of("message", "Invitation sent successfully", "token", token));
     }
 
     @PostMapping("/accept-invite")
