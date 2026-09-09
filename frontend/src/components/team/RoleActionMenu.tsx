@@ -1,7 +1,17 @@
 "use client";
 
 import { useState } from 'react';
-import { MoreHorizontal, Shield, Trash2, ShieldAlert, UserX, UserCheck, User, Users } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Shield,
+  Trash2,
+  ShieldAlert,
+  UserX,
+  UserCheck,
+  User,
+  Users,
+  Copy,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -22,21 +32,23 @@ interface TeamMember {
   lastName?: string;
   role: string;
   status: string;
+  inviteToken?: string;
+  invitationId?: string;
 }
 
-export function RoleActionMenu({ 
-  member, 
+export function RoleActionMenu({
+  member,
   onRefresh,
-  currentUserRole
-}: { 
-  member: TeamMember; 
+  currentUserRole,
+}: {
+  member: TeamMember;
   onRefresh: () => void;
   currentUserRole: string;
 }) {
   const [loading, setLoading] = useState(false);
 
   const isPending = member.status === 'INVITED';
-  
+
   // Basic UI protection (Backend enforces this too)
   const canModify = (currentUserRole === 'OWNER' || currentUserRole === 'ADMIN') && !isPending;
 
@@ -44,10 +56,10 @@ export function RoleActionMenu({
   const callerLevel = hierarchy.indexOf(currentUserRole);
   const targetLevel = hierarchy.indexOf(member.role);
 
-  const canToggle = 
+  const canToggle =
     (currentUserRole === 'OWNER' || currentUserRole === 'ADMIN') &&
-    callerLevel !== -1 && 
-    targetLevel !== -1 && 
+    callerLevel !== -1 &&
+    targetLevel !== -1 &&
     callerLevel < targetLevel &&
     !isPending;
 
@@ -69,7 +81,7 @@ export function RoleActionMenu({
     const isActivating = member.status === 'INACTIVE';
     const actionText = isActivating ? 'activate' : 'deactivate';
     if (!confirm(`Are you sure you want to ${actionText} this user?`)) return;
-    
+
     setLoading(true);
     try {
       await api.put(`/team/${member.userId}/toggle-status`, { active: isActivating });
@@ -96,23 +108,96 @@ export function RoleActionMenu({
     }
   };
 
+  const handleDeleteInvite = async () => {
+    if (!confirm(`Are you sure you want to cancel and delete the invitation for ${member.email}?`)) return;
+    setLoading(true);
+    try {
+      if (member.invitationId) {
+        await api.delete(`/team/invite/${member.invitationId}`);
+      } else if (member.userId) {
+        try {
+          await api.delete(`/team/invite/${member.userId}`);
+        } catch {
+          await api.delete(`/team/invite?email=${encodeURIComponent(member.email)}`);
+        }
+      } else {
+        await api.delete(`/team/invite?email=${encodeURIComponent(member.email)}`);
+      }
+      toast.success('Invitation deleted successfully');
+      onRefresh();
+    } catch (err: unknown) {
+      try {
+        await api.delete(`/team/invite?email=${encodeURIComponent(member.email)}`);
+        toast.success('Invitation deleted successfully');
+        onRefresh();
+      } catch (fallbackErr: unknown) {
+        toast.error((err as Error).message || 'Failed to delete invitation');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isPending) {
+    if (currentUserRole !== 'OWNER' && currentUserRole !== 'ADMIN') {
+      return <span className="text-xs text-muted-foreground">-</span>;
+    }
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" className="h-8 w-8 p-0" disabled={loading} />}
+        >
+          <span className="sr-only">Open menu</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-[170px]">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Invitation</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {member.inviteToken && (
+              <DropdownMenuItem
+                onClick={() => {
+                  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/accept-invite?token=${member.inviteToken}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success('Invitation link copied to clipboard!');
+                }}
+                className="cursor-pointer"
+              >
+                <Copy className="mr-2 h-4 w-4 text-zinc-400" />
+                <span>Copy Link</span>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onClick={handleDeleteInvite}
+              className="cursor-pointer text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Delete Invite</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
   if (!canModify) {
     return <span className="text-xs text-muted-foreground">-</span>;
   }
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={
-        <Button variant="ghost" className="h-8 w-8 p-0" disabled={loading} />
-      }>
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" className="h-8 w-8 p-0" disabled={loading} />}
+      >
+        <span className="sr-only">Open menu</span>
+        <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[170px]">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          
+
           <DropdownMenuItem onClick={() => handleRoleChange('OWNER')} className="cursor-pointer">
             <ShieldAlert className="mr-2 h-4 w-4 text-rose-500" />
             <span>Make Owner</span>
@@ -129,7 +214,7 @@ export function RoleActionMenu({
             <User className="mr-2 h-4 w-4 text-zinc-400" />
             <span>Make User</span>
           </DropdownMenuItem>
-          
+
           <DropdownMenuSeparator />
 
           {canToggle && (
@@ -150,8 +235,11 @@ export function RoleActionMenu({
               <DropdownMenuSeparator />
             </>
           )}
-          
-          <DropdownMenuItem onClick={handleRemove} className="cursor-pointer text-destructive focus:text-destructive">
+
+          <DropdownMenuItem
+            onClick={handleRemove}
+            className="cursor-pointer text-destructive focus:text-destructive"
+          >
             <Trash2 className="mr-2 h-4 w-4" />
             <span>Remove User</span>
           </DropdownMenuItem>

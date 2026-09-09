@@ -18,8 +18,20 @@ public class TeamMemberDto {
     private String role;
     private String status; // ACTIVE or INVITED
     private String inviteToken;
+    private UUID invitationId;
 
     public TeamMemberDto(UUID userId, String email, String firstName, String lastName, String role, String status) {
-        this(userId, email, firstName, lastName, role, status, null);
+        this(userId, email, firstName, lastName, role, status, null, null);
+    }
+
+    public TeamMemberDto(
+            UUID userId,
+            String email,
+            String firstName,
+            String lastName,
+            String role,
+            String status,
+            String inviteToken) {
+        this(userId, email, firstName, lastName, role, status, inviteToken, null);
     }
 }

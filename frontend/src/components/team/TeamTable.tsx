@@ -31,6 +31,8 @@ import {
   UserX,
   Copy,
   Check,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -49,6 +51,7 @@ interface TeamMember {
   role: string;
   status: string; // ACTIVE, INACTIVE, or INVITED
   inviteToken?: string;
+  invitationId?: string;
 }
 
 export function TeamTable() {
@@ -60,6 +63,7 @@ export function TeamTable() {
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [deletingInviteEmail, setDeletingInviteEmail] = useState<string | null>(null);
 
   const handleCopyInvite = async (token: string) => {
     const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/accept-invite?token=${token}`;
@@ -70,6 +74,39 @@ export function TeamTable() {
       setTimeout(() => setCopiedToken(null), 2500);
     } catch {
       toast.error("Failed to copy invitation link");
+    }
+  };
+
+  const handleDeleteInvite = async (member: TeamMember) => {
+    if (!window.confirm(`Are you sure you want to cancel and delete the invitation for ${member.email}?`)) {
+      return;
+    }
+
+    setDeletingInviteEmail(member.email);
+    try {
+      if (member.invitationId) {
+        await api.delete(`/team/invite/${member.invitationId}`);
+      } else if (member.userId) {
+        try {
+          await api.delete(`/team/invite/${member.userId}`);
+        } catch {
+          await api.delete(`/team/invite?email=${encodeURIComponent(member.email)}`);
+        }
+      } else {
+        await api.delete(`/team/invite?email=${encodeURIComponent(member.email)}`);
+      }
+      toast.success(`Invitation for ${member.email} deleted successfully`);
+      fetchTeam();
+    } catch (err: unknown) {
+      try {
+        await api.delete(`/team/invite?email=${encodeURIComponent(member.email)}`);
+        toast.success(`Invitation for ${member.email} deleted successfully`);
+        fetchTeam();
+      } catch (fallbackErr: unknown) {
+        toast.error((err as Error).message || "Failed to delete invitation");
+      }
+    } finally {
+      setDeletingInviteEmail(null);
     }
   };
 
@@ -458,6 +495,22 @@ export function TeamTable() {
                                   <span>Copy Link</span>
                                 </>
                               )}
+                            </button>
+                          )}
+                          {(currentUserRole === "OWNER" || currentUserRole === "ADMIN") && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteInvite(member)}
+                              disabled={deletingInviteEmail === member.email}
+                              title="Delete invitation"
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 px-2 py-0.5 rounded-md transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              {deletingInviteEmail === member.email ? (
+                                <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
+                              ) : (
+                                <Trash2 className="w-3 h-3 text-rose-400" />
+                              )}
+                              <span>Delete</span>
                             </button>
                           )}
                         </div>

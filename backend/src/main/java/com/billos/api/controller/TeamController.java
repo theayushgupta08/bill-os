@@ -39,6 +39,21 @@ public class TeamController {
         return ResponseEntity.ok(Map.of("message", "Invitation accepted successfully"));
     }
 
+    @DeleteMapping("/invite")
+    @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> cancelInvitation(
+            @RequestParam(required = false) UUID invitationId, @RequestParam(required = false) String email) {
+        teamService.cancelInvitation(invitationId, email);
+        return ResponseEntity.ok(Map.of("message", "Invitation cancelled successfully"));
+    }
+
+    @DeleteMapping("/invite/{invitationId}")
+    @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> cancelInvitationById(@PathVariable UUID invitationId) {
+        teamService.cancelInvitation(invitationId, null);
+        return ResponseEntity.ok(Map.of("message", "Invitation cancelled successfully"));
+    }
+
     @PutMapping("/{userId}/role")
     @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> updateUserRole(

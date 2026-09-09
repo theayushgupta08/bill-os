@@ -226,4 +226,53 @@ class TeamServiceTest {
         verify(emailService)
                 .sendOrganizationInvitation(eq("invitee@example.com"), eq("Acme Corp"), eq("ADMIN"), eq(token));
     }
+
+    @Test
+    @DisplayName("cancelInvitation - should find and delete invitation by invitationId")
+    void cancelInvitation_shouldDeleteById() {
+        UUID inviteId = UUID.randomUUID();
+        OrganizationInvitation invite = new OrganizationInvitation();
+        invite.setId(inviteId);
+        invite.setOrganizationId(orgId);
+        invite.setEmail("test@example.com");
+
+        when(invitationRepository.findById(inviteId)).thenReturn(Optional.of(invite));
+
+        teamService.cancelInvitation(inviteId, null);
+
+        verify(invitationRepository).delete(invite);
+    }
+
+    @Test
+    @DisplayName("cancelInvitation - should find and delete invitation by email if id not found")
+    void cancelInvitation_shouldDeleteByEmail() {
+        OrganizationInvitation invite = new OrganizationInvitation();
+        invite.setId(UUID.randomUUID());
+        invite.setOrganizationId(orgId);
+        invite.setEmail("test@example.com");
+
+        when(invitationRepository.findByOrganizationId(orgId)).thenReturn(List.of(invite));
+
+        teamService.cancelInvitation(null, "test@example.com");
+
+        verify(invitationRepository).delete(invite);
+    }
+
+    @Test
+    @DisplayName("removeUser - should delete pending invitation if user not found in UserOrgRole")
+    void removeUser_shouldDeletePendingInvitationIfUserIdMatchesInvite() {
+        UUID inviteId = UUID.randomUUID();
+        when(userOrgRoleRepository.findByUserIdAndOrganizationId(inviteId, orgId))
+                .thenReturn(Optional.empty());
+
+        OrganizationInvitation invite = new OrganizationInvitation();
+        invite.setId(inviteId);
+        invite.setOrganizationId(orgId);
+
+        when(invitationRepository.findById(inviteId)).thenReturn(Optional.of(invite));
+
+        teamService.removeUser(inviteId);
+
+        verify(invitationRepository).delete(invite);
+    }
 }

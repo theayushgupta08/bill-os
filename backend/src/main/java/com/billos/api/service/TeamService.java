@@ -63,7 +63,15 @@ public class TeamService {
         List<OrganizationInvitation> invitations = invitationRepository.findByOrganizationId(orgId);
         for (OrganizationInvitation inv : invitations) {
             if ("PENDING".equals(inv.getStatus()) && inv.getExpiresAt().isAfter(ZonedDateTime.now())) {
-                team.add(new TeamMemberDto(null, inv.getEmail(), null, null, inv.getRole(), "INVITED", inv.getToken()));
+                team.add(new TeamMemberDto(
+                        inv.getId(),
+                        inv.getEmail(),
+                        null,
+                        null,
+                        inv.getRole(),
+                        "INVITED",
+                        inv.getToken(),
+                        inv.getId()));
             }
         }
 
@@ -175,21 +183,64 @@ public class TeamService {
     public void removeUser(UUID userId) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
-        UserOrgRole role = userOrgRoleRepository
-                .findByUserIdAndOrganizationId(userId, orgId)
-                .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
+        Optional<UserOrgRole> roleOpt = userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId);
 
-        // Prevent removing the last OWNER
-        if ("OWNER".equals(role.getRole())) {
-            long ownerCount = userOrgRoleRepository.findAll().stream()
-                    .filter(r -> r.getOrganizationId().equals(orgId) && "OWNER".equals(r.getRole()))
-                    .count();
-            if (ownerCount <= 1) {
-                throw new RuntimeException("Cannot remove the last owner of the organization");
+        if (roleOpt.isPresent()) {
+            UserOrgRole role = roleOpt.get();
+            // Prevent removing the last OWNER
+            if ("OWNER".equals(role.getRole())) {
+                long ownerCount = userOrgRoleRepository.findAll().stream()
+                        .filter(r -> r.getOrganizationId().equals(orgId) && "OWNER".equals(r.getRole()))
+                        .count();
+                if (ownerCount <= 1) {
+                    throw new RuntimeException("Cannot remove the last owner of the organization");
+                }
             }
+            userOrgRoleRepository.delete(role);
+            return;
         }
 
-        userOrgRoleRepository.delete(role);
+        // Check if userId is a pending invitation ID
+        Optional<OrganizationInvitation> inviteOpt = invitationRepository
+                .findById(userId)
+                .filter(inv -> inv.getOrganizationId().equals(orgId));
+        if (inviteOpt.isPresent()) {
+            invitationRepository.delete(inviteOpt.get());
+            log.info("Cancelled pending invitation {} for organization {}", userId, orgId);
+            return;
+        }
+
+        throw new RuntimeException("User or invitation not found");
+    }
+
+    @Transactional
+    public void cancelInvitation(UUID invitationId, String email) {
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        Optional<OrganizationInvitation> inviteOpt = Optional.empty();
+
+        if (invitationId != null) {
+            inviteOpt = invitationRepository.findById(invitationId).filter(inv -> inv.getOrganizationId()
+                    .equals(orgId));
+        }
+
+        if (inviteOpt.isEmpty() && email != null && !email.isBlank()) {
+            String cleanEmail = email.trim().toLowerCase();
+            inviteOpt = invitationRepository.findByOrganizationId(orgId).stream()
+                    .filter(inv -> inv.getEmail() != null && inv.getEmail().equalsIgnoreCase(cleanEmail))
+                    .findFirst();
+        }
+
+        if (inviteOpt.isPresent()) {
+            OrganizationInvitation invitation = inviteOpt.get();
+            invitationRepository.delete(invitation);
+            log.info(
+                    "Cancelled invitation {} for email {} in organization {}",
+                    invitation.getId(),
+                    invitation.getEmail(),
+                    orgId);
+        } else {
+            throw new RuntimeException("Invitation not found");
+        }
     }
 
     @Transactional
