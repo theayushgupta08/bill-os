@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { PageLoader } from "@/components/ui/loader";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 import { PurchaseOrder } from "@/types";
@@ -30,7 +31,7 @@ export function PurchaseOrderList() {
     }
   }
 
-  if (isLoading) return <div className="p-8">Loading...</div>;
+  if (isLoading) return <PageLoader text="Loading purchase orders..." />;
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">

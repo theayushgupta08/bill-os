@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Plus, Edit, Trash2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/ui/loader";
 import {
   Table,
   TableBody,
@@ -76,8 +77,8 @@ export function CustomerList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center h-24">
-                  Loading...
+                <TableCell colSpan={6} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading customers..." size="lg" />
                 </TableCell>
               </TableRow>
             ) : customers.length === 0 ? (

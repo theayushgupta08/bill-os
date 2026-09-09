@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PageLoader } from "@/components/ui/loader";
 
 interface Account {
   id: string;
@@ -125,7 +126,7 @@ export function JournalEntryForm() {
     }));
   };
 
-  if (loadingAccounts) return <div className="p-8">Loading...</div>;
+  if (loadingAccounts) return <PageLoader text="Loading journal entry form..." showBrandText />;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

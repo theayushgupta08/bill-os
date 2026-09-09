@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { PageLoader } from "@/components/ui/loader";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
@@ -38,7 +39,7 @@ export function JournalEntryList() {
     },
   });
 
-  if (isLoading) return <div className="p-8">Loading...</div>;
+  if (isLoading) return <PageLoader text="Loading journal entries..." />;
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">

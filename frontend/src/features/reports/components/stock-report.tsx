@@ -4,6 +4,7 @@ import { api } from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
 import { Package, Inbox } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 
 interface StockRecord {
   productName: string;
@@ -61,7 +62,9 @@ export function StockReport() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-12 text-slate-500">Loading stock inventory...</TableCell>
+                <TableCell colSpan={4} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading stock inventory..." size="lg" />
+                </TableCell>
               </TableRow>
             ) : stock.map((item: StockRecord, idx: number) => (
               <TableRow key={idx} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">

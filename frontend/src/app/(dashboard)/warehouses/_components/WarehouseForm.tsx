@@ -10,6 +10,7 @@ import { Warehouse } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PageLoader } from "@/components/ui/loader";
 
 interface WarehouseFormProps {
   id?: string;
@@ -88,7 +89,7 @@ export function WarehouseForm({ id }: WarehouseFormProps) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  if (initialLoading) return <div>Loading...</div>;
+  if (initialLoading) return <PageLoader text="Loading warehouse details..." showBrandText />;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">

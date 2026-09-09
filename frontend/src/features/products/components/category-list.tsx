@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/ui/loader";
 import {
   Table,
   TableBody,
@@ -67,8 +68,8 @@ export function CategoryList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center h-24">
-                  Loading...
+                <TableCell colSpan={3} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading categories..." size="lg" />
                 </TableCell>
               </TableRow>
             ) : categories.length === 0 ? (

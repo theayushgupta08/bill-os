@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { PageLoader } from "@/components/ui/loader";
 
 interface CustomerFormProps {
   customerId?: string; // If provided, it's in edit mode
@@ -83,7 +84,7 @@ export default function CustomerForm({ customerId }: CustomerFormProps) {
   };
 
   if (isFetching) {
-    return <div>Loading...</div>;
+    return <PageLoader text="Loading customer details..." showBrandText />;
   }
 
   return (

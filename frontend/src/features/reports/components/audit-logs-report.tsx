@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Terminal } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 
 interface AuditLogRecord {
   id: string;
@@ -64,7 +65,9 @@ export function AuditLogsReport() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-slate-500">Loading system logs...</TableCell>
+                <TableCell colSpan={5} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading system logs..." size="lg" />
+                </TableCell>
               </TableRow>
             ) : logs.map((log: AuditLogRecord) => (
               <TableRow key={log.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">

@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 import { Badge } from "@/components/ui/badge";
 import { Building2, IndianRupee } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 
 interface GSTR1Record {
   customerGstin?: string;
@@ -118,7 +119,9 @@ export function Gstr1Report() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-12 text-slate-500">Loading GSTR-1 entries...</TableCell>
+                <TableCell colSpan={9} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading GSTR-1 entries..." size="lg" />
+                </TableCell>
               </TableRow>
             ) : data.map((row: GSTR1Record, idx: number) => (
               <TableRow key={idx} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">

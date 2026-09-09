@@ -42,6 +42,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useNotifications, useMarkNotificationRead } from "@/features/collections/hooks/use-collections";
 import { CollectPaymentModal } from "@/features/collections/components/collect-payment-modal";
 import { UpdateProfileDialog } from "@/components/user/update-profile-dialog";
+import { BrandLoader } from "@/components/ui/loader";
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -345,7 +346,9 @@ export function Header() {
               )}
             </div>
             {notificationsLoading ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">Loading...</div>
+              <div className="p-6 flex items-center justify-center">
+                <BrandLoader variant="inline" size="sm" text="Loading notifications..." />
+              </div>
             ) : !Array.isArray(notifications) || notifications.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">No notifications</div>
             ) : (

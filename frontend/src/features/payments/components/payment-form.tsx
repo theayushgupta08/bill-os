@@ -21,6 +21,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Invoice, PurchaseOrder } from "@/types";
+import { PageLoader } from "@/components/ui/loader";
 
 export function PaymentForm() {
   const router = useRouter();
@@ -122,7 +123,7 @@ export function PaymentForm() {
     createMutation.mutate(payload);
   };
 
-  if (initialLoading) return <div className="p-8">Loading...</div>;
+  if (initialLoading) return <PageLoader text="Loading payment details..." showBrandText />;
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 max-w-2xl mx-auto">

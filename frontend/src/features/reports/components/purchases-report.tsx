@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 import { ShoppingBag, IndianRupee } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 
 import { PurchaseOrder } from "@/types";
 
@@ -104,7 +105,9 @@ export function PurchasesReport() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-slate-500">Loading purchase entries...</TableCell>
+                <TableCell colSpan={5} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading purchase entries..." size="lg" />
+                </TableCell>
               </TableRow>
             ) : bills.map((bill: any) => (
               <TableRow key={bill.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">

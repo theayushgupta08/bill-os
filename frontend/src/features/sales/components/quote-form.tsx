@@ -28,6 +28,7 @@ import { Plus, Trash, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PageLoader } from "@/components/ui/loader";
 
 export function QuoteForm() {
   const router = useRouter();
@@ -154,7 +155,7 @@ export function QuoteForm() {
     createMutation.mutate(payload);
   };
 
-  if (initialLoading) return <div className="p-8">Loading reference data...</div>;
+  if (initialLoading) return <PageLoader text="Loading quotation form..." showBrandText />;
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 max-w-6xl mx-auto">

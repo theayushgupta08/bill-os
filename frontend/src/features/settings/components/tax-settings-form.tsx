@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { TaxSettings, Organization } from "@/types";
+import { PageLoader } from "@/components/ui/loader";
 
 export function TaxSettingsForm() {
   const queryClient = useQueryClient();
@@ -75,7 +76,7 @@ export function TaxSettingsForm() {
     }) : prev);
   };
 
-  if (loadingOrgs || (orgId && loadingSettings)) return <div className="p-8">Loading settings...</div>;
+  if (loadingOrgs || (orgId && loadingSettings)) return <PageLoader text="Loading tax settings..." showBrandText />;
   if (!settings) return <div className="p-8">Settings not found.</div>;
 
   return (

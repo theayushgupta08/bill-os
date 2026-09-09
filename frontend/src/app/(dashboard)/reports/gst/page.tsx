@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileJson } from "lucide-react";
 import { toast } from "sonner";
+import { PageLoader } from "@/components/ui/loader";
 
 export default function GstReportsPage() {
   const [hsnSummary, setHsnSummary] = useState<any>(null);
@@ -47,7 +48,7 @@ export default function GstReportsPage() {
     }
   };
 
-  if (loading) return <div className="p-8">Loading...</div>;
+  if (loading) return <PageLoader text="Loading GST reports..." showBrandText />;
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">

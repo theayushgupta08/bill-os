@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IndianRupee, TrendingDown, TrendingUp, BarChart3 } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
@@ -66,7 +67,7 @@ export function PnlReport() {
       </div>
       
       {isLoading ? (
-        <div className="py-12 text-center text-slate-400">Loading Profit & Loss statement...</div>
+        <BrandLoader variant="card" text="Loading Profit & Loss statement..." size="lg" />
       ) : pnl ? (
         <div className="grid gap-6 md:grid-cols-3 mt-6">
           <Card className="border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-200">

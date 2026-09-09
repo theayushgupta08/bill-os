@@ -3,6 +3,7 @@
 import { api } from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { IndianRupee, ArrowUpRight, Users } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 import { useQuery } from "@tanstack/react-query";
 
 interface ReceivableRecord {
@@ -63,7 +64,9 @@ export function ReceivablesReport() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-12 text-slate-500">Loading outstanding ledger...</TableCell>
+                <TableCell colSpan={4} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading outstanding ledger..." size="lg" />
+                </TableCell>
               </TableRow>
             ) : customers.map((c: ReceivableRecord, idx: number) => (
               <TableRow key={idx} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">

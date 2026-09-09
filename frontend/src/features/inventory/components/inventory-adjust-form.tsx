@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Warehouse, Product } from "@/types";
+import { PageLoader } from "@/components/ui/loader";
 
 export function InventoryAdjustForm() {
   const router = useRouter();
@@ -74,7 +75,7 @@ export function InventoryAdjustForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  if (loadingWarehouses || loadingProducts) return <div className="p-8">Loading...</div>;
+  if (loadingWarehouses || loadingProducts) return <PageLoader text="Loading stock adjustment form..." showBrandText />;
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">

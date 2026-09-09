@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Supplier } from "@/types";
+import { PageLoader } from "@/components/ui/loader";
 
 interface SupplierFormProps {
   supplierId?: string; // If provided, it's in edit mode
@@ -83,7 +84,7 @@ export default function SupplierForm({ supplierId }: SupplierFormProps) {
   };
 
   if (isFetching) {
-    return <div>Loading...</div>;
+    return <PageLoader text="Loading supplier details..." showBrandText />;
   }
 
   return (

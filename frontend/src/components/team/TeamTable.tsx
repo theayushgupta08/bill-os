@@ -433,7 +433,16 @@ export function TeamTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMembers.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="h-64 text-center"
+                >
+                  <BrandLoader variant="card" text="Loading team members..." size="lg" />
+                </TableCell>
+              </TableRow>
+            ) : filteredMembers.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={5}

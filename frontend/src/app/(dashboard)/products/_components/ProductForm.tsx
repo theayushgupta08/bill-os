@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ProductCategory, Product } from "@/types";
+import { PageLoader } from "@/components/ui/loader";
 
 interface ProductFormProps {
   productId?: string; // If provided, it's in edit mode
@@ -91,7 +92,7 @@ export default function ProductForm({ productId }: ProductFormProps) {
   };
 
   if (isFetching) {
-    return <div>Loading...</div>;
+    return <PageLoader text="Loading product details..." showBrandText />;
   }
 
   return (

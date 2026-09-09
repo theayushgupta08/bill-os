@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowDownRight, ArrowUpRight, FileText, IndianRupee } from "lucide-react";
+import { BrandLoader } from "@/components/ui/loader";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
@@ -111,7 +112,9 @@ export function Gstr3bReport() {
       </div>
       
       {isLoading ? (
-        <div className="py-12 text-center text-slate-400">Loading GSTR-3B statement...</div>
+        <div className="py-16">
+          <BrandLoader variant="card" text="Loading GSTR-3B statement..." size="lg" />
+        </div>
       ) : data ? (
         <div className="grid gap-6 md:grid-cols-2 mt-6">
           {/* Outward Supplies */}

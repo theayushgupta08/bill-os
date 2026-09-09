@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PageLoader } from "@/components/ui/loader";
 
 interface Account {
   id: string;
@@ -120,7 +121,7 @@ export function AccountForm({ id }: AccountFormProps) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  if (id && isLoadingAccount) return <div>Loading...</div>;
+  if (id && isLoadingAccount) return <PageLoader text="Loading account details..." showBrandText />;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
