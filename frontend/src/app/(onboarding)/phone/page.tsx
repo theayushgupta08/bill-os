@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import {
 
 export default function PhoneOnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Stage state: 1 = Enter Phone, 2 = Verify OTP
   const [stage, setStage] = useState<1 | 2>(1);
@@ -207,8 +208,27 @@ export default function PhoneOnboardingPage() {
         );
       }
 
-      // 3. Move forward to comprehensive organization setup
-      router.push("/setup");
+      // 3. Decide where to go next:
+      //    - If user already has organizations (e.g. from an auto-accepted invitation), go to dashboard.
+      //    - If a returnUrl was passed (e.g. from the invitation flow), honor it.
+      //    - Otherwise, go to the organization setup wizard.
+      try {
+        const orgs = await api.get<Array<{ id: string }>>('/organizations');
+        if (orgs && orgs.length > 0) {
+          localStorage.setItem('active_org_id', orgs[0].id);
+          router.push('/dashboard');
+          return;
+        }
+      } catch {
+        // Non-critical — fall through to returnUrl or setup
+      }
+
+      const returnUrl = searchParams.get('returnUrl');
+      if (returnUrl && returnUrl.startsWith('/')) {
+        router.push(returnUrl);
+      } else {
+        router.push('/setup');
+      }
     } catch (err: unknown) {
       console.error("Failed to verify phone number:", err);
       const errorMessage =

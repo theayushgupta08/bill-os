@@ -116,8 +116,12 @@ export async function GET(request: NextRequest) {
 
     let redirectUrl: URL;
     if (!hasPhone) {
-      // First-time or OAuth user without phone -> prompt for phone first
-      redirectUrl = new URL("/phone", origin);
+      // First-time or OAuth user without phone -> prompt for phone first.
+      // Preserve returnUrl so the phone page can forward correctly after verification.
+      const phoneUrl = returnUrl && returnUrl.startsWith("/")
+        ? `/phone?returnUrl=${encodeURIComponent(returnUrl)}`
+        : "/phone";
+      redirectUrl = new URL(phoneUrl, origin);
     } else if (hasOrganizations && primaryOrgId) {
       // Existing user -> sync active_org_id to client and go to dashboard/returnUrl
       const destination =

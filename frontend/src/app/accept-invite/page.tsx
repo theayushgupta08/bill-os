@@ -4,10 +4,19 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api-client';
+import { API_URL } from '@/lib/api-client';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageLoader } from '@/components/ui/loader';
+
+interface InviteInfo {
+  valid: boolean;
+  email?: string;
+  orgName?: string;
+  role?: string;
+  reason?: string;
+}
 
 function AcceptInviteContent() {
   const router = useRouter();
@@ -20,6 +29,7 @@ function AcceptInviteContent() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -28,15 +38,54 @@ function AcceptInviteContent() {
       return;
     }
 
-    const checkAuth = async () => {
+    const initialize = async () => {
+      // Fetch invitation details from the public endpoint (no auth required)
+      try {
+        const res = await fetch(
+          `${API_URL.replace('/api/v1', '')}/api/v1/public/invite-info?token=${encodeURIComponent(token)}`
+        );
+        if (res.ok) {
+          const data: InviteInfo = await res.json();
+          setInviteInfo(data);
+          if (!data.valid) {
+            setError(data.reason || 'This invitation is no longer valid.');
+          }
+        }
+      } catch {
+        // Non-critical — we can still show the page without invite details
+      }
+
+      // Check authentication
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setIsAuthenticated(true);
+
+        // If user is authenticated and invitation is valid, try to accept automatically.
+        // The backend auto-accept may have already done this during login, but this handles
+        // the case where the user was already authenticated before the invitation was created.
+        try {
+          await api.post(`/team/accept-invite?token=${token}`);
+          setSuccess(true);
+          
+          // Refresh org list and redirect
+          const orgs = await api.get<Array<{ id: string }>>('/organizations');
+          if (orgs && orgs.length > 0) {
+            localStorage.setItem('active_org_id', orgs[0].id);
+          }
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 2000);
+          setLoading(false);
+          return;
+        } catch {
+          // If accept fails (already accepted, expired, etc.), that's fine —
+          // the user can still see the dashboard if they're already a member
+        }
       }
       setLoading(false);
     };
 
-    checkAuth();
+    initialize();
   }, [token]);
 
   const handleAccept = async () => {
@@ -48,8 +97,11 @@ function AcceptInviteContent() {
       await api.post(`/team/accept-invite?token=${token}`);
       setSuccess(true);
       
-      // Update active org if needed, or just redirect to dashboard
-      // They can switch orgs in the dashboard
+      // Refresh org list to get the newly joined org
+      const orgs = await api.get<Array<{ id: string }>>('/organizations');
+      if (orgs && orgs.length > 0) {
+        localStorage.setItem('active_org_id', orgs[0].id);
+      }
       setTimeout(() => {
         router.push('/dashboard');
       }, 2000);
@@ -59,6 +111,13 @@ function AcceptInviteContent() {
       setAccepting(false);
     }
   };
+
+  // Build register link with inviteEmail for pre-fill
+  const returnUrl = `/accept-invite?token=${token}`;
+  const registerHref = inviteInfo?.email
+    ? `/register?returnUrl=${encodeURIComponent(returnUrl)}&inviteEmail=${encodeURIComponent(inviteInfo.email)}`
+    : `/register?returnUrl=${encodeURIComponent(returnUrl)}`;
+  const loginHref = `/login?returnUrl=${encodeURIComponent(returnUrl)}`;
 
   if (loading) {
     return <PageLoader />;
@@ -70,7 +129,9 @@ function AcceptInviteContent() {
         <CardHeader className="space-y-2 text-center">
           <CardTitle className="text-2xl font-bold tracking-tight">Organization Invitation</CardTitle>
           <CardDescription className="text-base">
-            You've been invited to join a team on billOS.
+            {inviteInfo?.valid && inviteInfo.orgName
+              ? <>You've been invited to join <strong>{inviteInfo.orgName}</strong> on billOS.</>
+              : <>You've been invited to join a team on billOS.</>}
           </CardDescription>
         </CardHeader>
         
@@ -111,12 +172,12 @@ function AcceptInviteContent() {
                 To accept this invitation, you need to be logged in.
               </div>
               <Button asChild size="lg" className="w-full">
-                <Link href={`/login?returnUrl=/accept-invite?token=${token}`}>
+                <Link href={loginHref}>
                   Log In to Accept
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="w-full">
-                <Link href={`/register?returnUrl=/accept-invite?token=${token}`}>
+                <Link href={registerHref}>
                   Create Account
                 </Link>
               </Button>

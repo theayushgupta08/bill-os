@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl');
+  const inviteEmail = searchParams.get('inviteEmail');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -19,7 +20,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    email: '',
+    email: inviteEmail || '',
     password: ''
   });
 
@@ -53,8 +54,11 @@ export default function RegisterPage() {
       if (data.user && !data.session) {
         setSuccess(true);
       } else {
-        // Auto-logged in -> route to phone verification
-        router.push('/phone');
+        // Auto-logged in -> route to phone verification, preserving returnUrl
+        const phoneUrl = returnUrl
+          ? `/phone?returnUrl=${encodeURIComponent(returnUrl)}`
+          : '/phone';
+        router.push(phoneUrl);
       }
 
     } catch (err: unknown) {
@@ -113,7 +117,9 @@ export default function RegisterPage() {
       <div className="flex flex-col gap-2 text-center lg:text-left">
         <h1 className="text-3xl font-bold tracking-tight">Create an account</h1>
         <p className="text-sm text-muted-foreground">
-          Enter your details below to get started.
+          {inviteEmail
+            ? <>Create your account to join the organization.</>  
+            : <>Enter your details below to get started.</>}
         </p>
       </div>
 
@@ -161,8 +167,14 @@ export default function RegisterPage() {
             value={formData.email}
             onChange={handleChange}
             placeholder="name@example.com"
-            className="h-10"
+            readOnly={!!inviteEmail}
+            className={`h-10 ${inviteEmail ? 'bg-muted cursor-not-allowed opacity-70' : ''}`}
           />
+          {inviteEmail && (
+            <p className="text-xs text-muted-foreground">
+              This email matches your organization invitation and cannot be changed.
+            </p>
+          )}
         </div>
 
         <div className="grid gap-2">

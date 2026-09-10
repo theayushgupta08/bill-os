@@ -16,4 +16,6 @@ public interface OrganizationInvitationRepository extends JpaRepository<Organiza
 
     Optional<OrganizationInvitation> findByOrganizationIdAndEmailAndStatus(
             UUID organizationId, String email, String status);
+
+    List<OrganizationInvitation> findByEmailIgnoreCaseAndStatus(String email, String status);
 }
