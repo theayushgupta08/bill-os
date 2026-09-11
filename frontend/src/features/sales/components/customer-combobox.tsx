@@ -87,7 +87,7 @@ export function CustomerCombobox({
   };
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
+    <div ref={containerRef} className={cn("relative w-full", isOpen ? "z-50" : "z-auto", className)}>
       <div className="relative">
         <Input
           type="text"
@@ -115,7 +115,8 @@ export function CustomerCombobox({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 max-h-72 w-full overflow-hidden rounded-md border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl backdrop-blur-md outline-none animate-in fade-in-0 zoom-in-95">
+        <div className="absolute left-0 top-full z-[100] mt-1 max-h-72 w-full overflow-hidden rounded-md border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl backdrop-blur-md outline-none animate-in fade-in-0 zoom-in-95">
+
           {/* Quick Add Button Header */}
           <div className="p-1.5 border-b border-slate-800/80 bg-slate-950/40">
             <button

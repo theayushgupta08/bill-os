@@ -518,10 +518,10 @@ export function InvoiceForm() {
 
       <form className="space-y-6">
         {/* Top Header Card */}
-        <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-sm">
-          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-sm relative z-30 overflow-visible">
+          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-4 overflow-visible">
             {/* Searchable Customer Combobox */}
-            <div className="space-y-1.5 md:col-span-2">
+            <div className="space-y-1.5 md:col-span-2 relative z-50">
               <Label className="text-xs font-medium text-slate-300">Customer *</Label>
               <CustomerCombobox
                 customers={customers}
@@ -529,6 +529,7 @@ export function InvoiceForm() {
                 onChange={(val) => setFormData((prev) => ({ ...prev, customerId: val }))}
               />
             </div>
+
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -575,8 +576,9 @@ export function InvoiceForm() {
         </Card>
 
         {/* Line Items Table with Sticky Header */}
-        <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-sm">
+        <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-sm relative z-10">
           <CardContent className="pt-6 space-y-4">
+
             <div className="max-h-[460px] overflow-y-auto relative rounded-md border border-slate-800 bg-slate-950/40 shadow-sm scrollbar-thin scrollbar-thumb-slate-700">
               <Table>
                 <TableHeader className="sticky top-0 z-20 bg-slate-900 shadow-md">
