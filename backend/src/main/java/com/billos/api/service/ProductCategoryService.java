@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.dto.BulkImportResultDto;
 import com.billos.api.dto.ProductCategoryDto;
 import com.billos.api.entity.ProductCategory;
 import com.billos.api.mapper.ProductCategoryMapper;
@@ -49,6 +50,59 @@ public class ProductCategoryService {
 
         ProductCategory savedCategory = productCategoryRepository.save(category);
         return productCategoryMapper.toDto(savedCategory);
+    }
+
+    @Transactional
+    public BulkImportResultDto bulkCreateCategories(List<ProductCategoryDto> dtos) {
+        String currentTenant = TenantContext.getCurrentTenant();
+        UUID currentOrgId = UUID.fromString(currentTenant);
+
+        BulkImportResultDto result = new BulkImportResultDto();
+        result.setTotalCount(dtos.size());
+
+        List<ProductCategory> categoriesToSave = new java.util.ArrayList<>();
+        java.util.Set<String> seenNames = new java.util.HashSet<>();
+
+        for (int i = 0; i < dtos.size(); i++) {
+            ProductCategoryDto dto = dtos.get(i);
+            int rowNum = i + 1;
+
+            if (dto.getName() == null || dto.getName().trim().isEmpty()) {
+                result.getErrors()
+                        .add(new BulkImportResultDto.BulkImportErrorDto(
+                                rowNum, "Row " + rowNum, "Category name is required"));
+                result.setSkippedCount(result.getSkippedCount() + 1);
+                continue;
+            }
+
+            String name = dto.getName().trim();
+            if (seenNames.contains(name.toLowerCase())
+                    || productCategoryRepository.existsByOrganizationIdAndNameIgnoreCase(currentOrgId, name)) {
+                result.getErrors()
+                        .add(new BulkImportResultDto.BulkImportErrorDto(
+                                rowNum, name, "Category '" + name + "' already exists or is duplicated in file"));
+                result.setSkippedCount(result.getSkippedCount() + 1);
+                continue;
+            }
+            seenNames.add(name.toLowerCase());
+
+            ProductCategory category = productCategoryMapper.toEntity(dto);
+            category.setName(name);
+            category.setOrganizationId(currentOrgId);
+
+            if (dto.getParentId() != null) {
+                productCategoryRepository.findById(dto.getParentId()).ifPresent(category::setParent);
+            }
+
+            categoriesToSave.add(category);
+        }
+
+        if (!categoriesToSave.isEmpty()) {
+            productCategoryRepository.saveAll(categoriesToSave);
+            result.setInsertedCount(categoriesToSave.size());
+        }
+
+        return result;
     }
 
     @Transactional

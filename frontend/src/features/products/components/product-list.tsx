@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLoader } from "@/components/ui/loader";
 import {
@@ -18,11 +19,12 @@ import { useDataTable } from "@/hooks/use-data-table";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Product } from "@/types";
-
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+import { BulkImportDialog } from "@/components/common/bulk-import-dialog";
 
 export function ProductList() {
   const queryClient = useQueryClient();
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const { data: products = [] as Product[], isLoading } = useQuery({
     queryKey: ["products"],
@@ -72,12 +74,30 @@ export function ProductList() {
             description="Maintain your master catalog of sellable items, SKUs, pricing, GST rates, HSN codes, and inventory valuation."
           />
         </h1>
-        <Link href="/products/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Product
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsImportOpen(true)}
+            className="border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs"
+          >
+            <Upload className="mr-2 h-3.5 w-3.5 text-indigo-400" /> Import CSV/Excel
           </Button>
-        </Link>
+          <Link href="/products/new">
+            <Button className="text-xs">
+              <Plus className="mr-2 h-3.5 w-3.5" /> Add Product
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      <BulkImportDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        entity="products"
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["products"] });
+        }}
+      />
 
       <TableToolbar
         searchTerm={searchTerm}

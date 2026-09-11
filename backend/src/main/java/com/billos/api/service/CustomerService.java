@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.dto.BulkImportResultDto;
 import com.billos.api.dto.ConsolidatedCustomerLedgerDto;
 import com.billos.api.dto.ConsolidatedLedgerEntryDto;
 import com.billos.api.dto.CustomerDto;
@@ -149,6 +150,62 @@ public class CustomerService {
         }
         Customer savedCustomer = customerRepository.save(customer);
         return customerMapper.toDto(savedCustomer);
+    }
+
+    @Transactional
+    public BulkImportResultDto bulkCreateCustomers(List<CustomerDto> dtos) {
+        String currentTenant = TenantContext.getCurrentTenant();
+        UUID currentOrgId = UUID.fromString(currentTenant);
+
+        BulkImportResultDto result = new BulkImportResultDto();
+        result.setTotalCount(dtos.size());
+
+        List<Customer> customersToSave = new java.util.ArrayList<>();
+        java.util.Set<String> seenPhones = new java.util.HashSet<>();
+
+        for (int i = 0; i < dtos.size(); i++) {
+            CustomerDto dto = dtos.get(i);
+            int rowNum = i + 1;
+
+            if (dto.getName() == null || dto.getName().trim().isEmpty()) {
+                result.getErrors()
+                        .add(new BulkImportResultDto.BulkImportErrorDto(
+                                rowNum,
+                                dto.getPhone() != null ? dto.getPhone() : "Row " + rowNum,
+                                "Customer name is required"));
+                result.setSkippedCount(result.getSkippedCount() + 1);
+                continue;
+            }
+
+            String phone = dto.getPhone() != null ? dto.getPhone().trim() : "";
+            if (!phone.isEmpty()) {
+                if (seenPhones.contains(phone)
+                        || customerRepository.existsByOrganizationIdAndPhone(currentOrgId, phone)) {
+                    result.getErrors()
+                            .add(new BulkImportResultDto.BulkImportErrorDto(
+                                    rowNum,
+                                    phone,
+                                    "Customer with phone '" + phone + "' already exists or is duplicated in file"));
+                    result.setSkippedCount(result.getSkippedCount() + 1);
+                    continue;
+                }
+                seenPhones.add(phone);
+            }
+
+            Customer customer = customerMapper.toEntity(dto);
+            customer.setOrganizationId(currentOrgId);
+            customer.setOriginatingOrgId(currentOrgId);
+            customer.setIsShared(dto.getIsShared() != null ? dto.getIsShared() : true);
+
+            customersToSave.add(customer);
+        }
+
+        if (!customersToSave.isEmpty()) {
+            customerRepository.saveAll(customersToSave);
+            result.setInsertedCount(customersToSave.size());
+        }
+
+        return result;
     }
 
     @Transactional

@@ -1,5 +1,6 @@
 package com.billos.api.controller;
 
+import com.billos.api.dto.BulkImportResultDto;
 import com.billos.api.dto.ProductDto;
 import com.billos.api.service.ProductService;
 import java.util.List;
@@ -29,6 +30,11 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productService.createProduct(dto));
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<BulkImportResultDto> bulkCreateProducts(@RequestBody List<ProductDto> dtos) {
+        return ResponseEntity.ok(productService.bulkCreateProducts(dtos));
     }
 
     @PutMapping("/{id}")

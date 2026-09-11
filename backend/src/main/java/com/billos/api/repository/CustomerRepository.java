@@ -22,4 +22,6 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
             "SELECT c FROM Customer c WHERE c.id = :id AND (c.organizationId = :currentOrgId OR c.organizationId = :parentOrgId)")
     Optional<Customer> findAccessibleById(
             @Param("id") UUID id, @Param("currentOrgId") UUID currentOrgId, @Param("parentOrgId") UUID parentOrgId);
+
+    boolean existsByOrganizationIdAndPhone(UUID organizationId, String phone);
 }

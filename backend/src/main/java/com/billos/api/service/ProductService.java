@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.dto.BulkImportResultDto;
 import com.billos.api.dto.ProductDto;
 import com.billos.api.entity.Product;
 import com.billos.api.entity.ProductCategory;
@@ -83,6 +84,76 @@ public class ProductService {
 
         Product savedProduct = productRepository.save(product);
         return productMapper.toDto(savedProduct);
+    }
+
+    @Transactional
+    public BulkImportResultDto bulkCreateProducts(List<ProductDto> dtos) {
+        String currentTenant = TenantContext.getCurrentTenant();
+        UUID currentOrgId = UUID.fromString(currentTenant);
+
+        BulkImportResultDto result = new BulkImportResultDto();
+        result.setTotalCount(dtos.size());
+
+        List<Product> productsToSave = new java.util.ArrayList<>();
+        java.util.Set<String> seenSkus = new java.util.HashSet<>();
+
+        for (int i = 0; i < dtos.size(); i++) {
+            ProductDto dto = dtos.get(i);
+            int rowNum = i + 1;
+
+            if (dto.getName() == null || dto.getName().trim().isEmpty()) {
+                result.getErrors()
+                        .add(new BulkImportResultDto.BulkImportErrorDto(
+                                rowNum,
+                                dto.getSku() != null ? dto.getSku() : "Row " + rowNum,
+                                "Product name is required"));
+                result.setSkippedCount(result.getSkippedCount() + 1);
+                continue;
+            }
+
+            if (dto.getSku() == null || dto.getSku().trim().isEmpty()) {
+                result.getErrors()
+                        .add(new BulkImportResultDto.BulkImportErrorDto(
+                                rowNum, dto.getName(), "Product SKU is required"));
+                result.setSkippedCount(result.getSkippedCount() + 1);
+                continue;
+            }
+
+            String sku = dto.getSku().trim();
+            if (seenSkus.contains(sku.toLowerCase())
+                    || productRepository.existsByOrganizationIdAndSku(currentOrgId, sku)) {
+                result.getErrors()
+                        .add(new BulkImportResultDto.BulkImportErrorDto(
+                                rowNum, sku, "SKU '" + sku + "' already exists or is duplicated in file"));
+                result.setSkippedCount(result.getSkippedCount() + 1);
+                continue;
+            }
+            seenSkus.add(sku.toLowerCase());
+
+            Product product = productMapper.toEntity(dto);
+            product.setSku(sku);
+            product.setOrganizationId(currentOrgId);
+            product.setIsShared(dto.getIsShared() != null ? dto.getIsShared() : true);
+            if (product.getBasePrice() == null) {
+                product.setBasePrice(java.math.BigDecimal.ZERO);
+            }
+            if (product.getTaxRate() == null) {
+                product.setTaxRate(java.math.BigDecimal.ZERO);
+            }
+
+            if (dto.getCategoryId() != null) {
+                productCategoryRepository.findById(dto.getCategoryId()).ifPresent(product::setCategory);
+            }
+
+            productsToSave.add(product);
+        }
+
+        if (!productsToSave.isEmpty()) {
+            productRepository.saveAll(productsToSave);
+            result.setInsertedCount(productsToSave.size());
+        }
+
+        return result;
     }
 
     @Transactional

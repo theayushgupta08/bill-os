@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Edit, Trash2, BookOpen } from "lucide-react";
+import { Plus, Edit, Trash2, BookOpen, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLoader } from "@/components/ui/loader";
 import {
@@ -20,13 +20,14 @@ import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Customer } from "@/types";
 import { ConsolidatedCustomerLedgerDialog } from "./consolidated-customer-ledger-dialog";
-
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+import { BulkImportDialog } from "@/components/common/bulk-import-dialog";
 
 export function CustomerList() {
   const queryClient = useQueryClient();
   const [ledgerCustomerId, setLedgerCustomerId] = useState<string | null>(null);
   const [ledgerCustomerName, setLedgerCustomerName] = useState<string>("");
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const { data: customers = [] as Customer[], isLoading } = useQuery({
     queryKey: ["customers"],
@@ -76,12 +77,30 @@ export function CustomerList() {
             description="Manage your client directory, GSTIN details, billing/shipping addresses, payment terms, and outstanding balances."
           />
         </h1>
-        <Link href="/customers/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Customer
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsImportOpen(true)}
+            className="border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs"
+          >
+            <Upload className="mr-2 h-3.5 w-3.5 text-indigo-400" /> Import CSV/Excel
           </Button>
-        </Link>
+          <Link href="/customers/new">
+            <Button className="text-xs">
+              <Plus className="mr-2 h-3.5 w-3.5" /> Add Customer
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      <BulkImportDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        entity="customers"
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["customers"] });
+        }}
+      />
 
       <TableToolbar
         searchTerm={searchTerm}
