@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
-import { Customer, Product, TaxRate, Warehouse } from "@/types";
+import { Customer, Product, TaxRate, Warehouse, Organization } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -24,12 +23,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash, ArrowLeft } from "lucide-react";
+import { Plus, Trash, ArrowLeft, Building2, FileText, ExternalLink, Package, Layers } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageLoader } from "@/components/ui/loader";
 import { ProductCombobox } from "./product-combobox";
+import { CustomerCombobox } from "./customer-combobox";
+import { WarehouseCombobox } from "./warehouse-combobox";
+import { cn } from "@/lib/utils";
 
 interface LineItem {
   id: string;
@@ -40,30 +42,42 @@ interface LineItem {
   unitPrice: number;
 }
 
+interface BankDetails {
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+  branchName?: string;
+  accountHolder?: string;
+  bankAddress?: string;
+}
+
 export function InvoiceForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const soId = searchParams.get('soId');
+  const soId = searchParams.get("soId");
   const queryClient = useQueryClient();
+
+  // Consolidated Tax toggle: true by default
+  const [isConsolidatedTax, setIsConsolidatedTax] = useState(true);
+  const [consolidatedTaxRateId, setConsolidatedTaxRateId] = useState<string>("");
 
   const [formData, setFormData] = useState(() => ({
     customerId: "",
     soId: soId || "",
-    warehouseId: "",
-    invoiceNumber: "INV-" + Math.floor(Math.random() * 100000),
+    invoiceNumber: "INV-" + Math.floor(10000 + Math.random() * 90000),
     invoiceDate: new Date().toISOString().split("T")[0],
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-    notes: "",
   }));
 
   const [lines, setLines] = useState<LineItem[]>([
     { id: crypto.randomUUID(), productId: "", warehouseId: "", taxRateId: "", quantity: 1, unitPrice: 0 }
   ]);
 
+  // Queries
   const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
-      const res = await api.get<any[]>("/customers");
+      const res = await api.get<Customer[]>("/customers");
       return res;
     }
   });
@@ -71,7 +85,7 @@ export function InvoiceForm() {
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.get<any[]>("/products");
+      const res = await api.get<Product[]>("/products");
       return res;
     }
   });
@@ -79,7 +93,7 @@ export function InvoiceForm() {
   const { data: taxes = [], isLoading: loadingTaxes } = useQuery({
     queryKey: ["tax-rates"],
     queryFn: async () => {
-      const res = await api.get<any[]>("/tax-rates");
+      const res = await api.get<TaxRate[]>("/tax-rates");
       return res;
     }
   });
@@ -87,93 +101,223 @@ export function InvoiceForm() {
   const { data: warehouses = [], isLoading: loadingWarehouses } = useQuery({
     queryKey: ["warehouses"],
     queryFn: async () => {
-      const res = await api.get<any[]>("/warehouses");
+      const res = await api.get<Warehouse[]>("/warehouses");
       return res;
     }
   });
 
+  const { data: orgs } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: async () => {
+      const res = await api.get<Organization[]>("/organizations");
+      return res;
+    }
+  });
+
+  const orgId = orgs?.[0]?.id;
+  const currentOrg = orgs?.[0];
+
+  const { data: invoiceSettings } = useQuery({
+    queryKey: ["invoiceSettings", orgId],
+    queryFn: async () => {
+      if (!orgId) return null;
+      const res = await api.get<any>(`/organizations/${orgId}/settings`);
+      return res;
+    },
+    enabled: !!orgId
+  });
+
+  // Default warehouse (Main / code=MAIN / first)
+  const defaultWarehouse = useMemo(() => {
+    if (!warehouses || warehouses.length === 0) return null;
+    return (
+      warehouses.find((w) => w.code === "MAIN" || w.name?.toLowerCase().includes("main")) ||
+      warehouses[0]
+    );
+  }, [warehouses]);
+
+  // Autopopulate default warehouse on initial lines
+  useEffect(() => {
+    if (defaultWarehouse) {
+      setLines((prevLines) =>
+        prevLines.map((line) => ({
+          ...line,
+          warehouseId: line.warehouseId || defaultWarehouse.id,
+        }))
+      );
+    }
+  }, [defaultWarehouse]);
+
+  // Set default consolidated tax rate (e.g. 18% or first available)
+  useEffect(() => {
+    if (taxes && taxes.length > 0 && !consolidatedTaxRateId) {
+      const defaultTax = taxes.find((t) => Number(t.rate) === 18) || taxes[0];
+      if (defaultTax) {
+        setConsolidatedTaxRateId(defaultTax.id);
+      }
+    }
+  }, [taxes, consolidatedTaxRateId]);
+
   const initialLoading = loadingCustomers || loadingProducts || loadingTaxes || loadingWarehouses;
 
   const handleAddLine = () => {
-    setLines([...lines, { id: crypto.randomUUID(), productId: "", warehouseId: "", taxRateId: "", quantity: 1, unitPrice: 0 }]);
+    setLines((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        productId: "",
+        warehouseId: defaultWarehouse?.id || "",
+        taxRateId: isConsolidatedTax ? consolidatedTaxRateId : "",
+        quantity: 1,
+        unitPrice: 0,
+      }
+    ]);
   };
 
   const handleRemoveLine = (id: string) => {
     if (lines.length > 1) {
-      setLines(lines.filter((l: LineItem) => l.id !== id));
+      setLines((prev) => prev.filter((l) => l.id !== id));
     }
   };
 
-  const handleLineChange = (id: string, field: keyof LineItem, value: string | number) => {
-    setLines(lines.map(line => {
-      if (line.id === id) {
-        const updatedLine = { ...line, [field]: value };
-        if (field === "productId") {
-          const product = products.find((p: any) => p.id === value);
-          if (product) {
-            updatedLine.unitPrice = Number(product.price) || 0;
-            if (product.taxRateId) {
-              updatedLine.taxRateId = product.taxRateId;
+  const handleLineChange = (id: string, field: keyof LineItem, value: any) => {
+    setLines((prev) =>
+      prev.map((line) => {
+        if (line.id === id) {
+          const updatedLine = { ...line, [field]: value };
+          if (field === "productId") {
+            const product = products.find((p) => p.id === value);
+            if (product) {
+              updatedLine.unitPrice = Number(product.price ?? product.basePrice) || 0;
+              if (product.taxRateId && !isConsolidatedTax) {
+                updatedLine.taxRateId = product.taxRateId;
+              }
             }
           }
+          return updatedLine;
         }
-        return updatedLine;
-      }
-      return line;
-    }));
+        return line;
+      })
+    );
   };
 
-  const calculateTotals = () => {
+  // Check interstate status
+  const selectedCustomer = customers.find((c) => c.id === formData.customerId);
+  const isInterState = useMemo(() => {
+    if (!currentOrg?.state || !selectedCustomer?.billingState) return false;
+    return currentOrg.state.trim().toLowerCase() !== selectedCustomer.billingState.trim().toLowerCase();
+  }, [currentOrg, selectedCustomer]);
+
+  // Calculate Totals & GST breakdown
+  const totals = useMemo(() => {
     let subtotal = 0;
     let taxTotal = 0;
 
-    lines.forEach(line => {
-      const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
+    lines.forEach((line) => {
+      const lineSub = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0);
       subtotal += lineSub;
-      if (line.taxRateId) {
-        const tax = taxes.find((t: any) => t.id === line.taxRateId);
+
+      const activeTaxRateId = isConsolidatedTax ? consolidatedTaxRateId : line.taxRateId;
+      if (activeTaxRateId) {
+        const tax = taxes.find((t) => t.id === activeTaxRateId);
         if (tax) {
           taxTotal += (lineSub * (Number(tax.rate) || 0)) / 100;
         }
       }
     });
 
-    return { subtotal, taxTotal, total: subtotal + taxTotal };
-  };
+    // Division into CGST, SGST, IGST
+    let cgstAmount = 0;
+    let sgstAmount = 0;
+    let igstAmount = 0;
 
-  const totals = calculateTotals();
+    if (isInterState) {
+      igstAmount = taxTotal;
+    } else {
+      cgstAmount = taxTotal / 2;
+      sgstAmount = taxTotal / 2;
+    }
+
+    return {
+      subtotal,
+      taxTotal,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
+      total: subtotal + taxTotal,
+    };
+  }, [lines, isConsolidatedTax, consolidatedTaxRateId, taxes, isInterState]);
+
+  // Product count & quantity count
+  const productCount = useMemo(() => {
+    return lines.filter((l) => Boolean(l.productId)).length;
+  }, [lines]);
+
+  const totalQuantity = useMemo(() => {
+    return lines.reduce((acc, l) => acc + (Number(l.quantity) || 0), 0);
+  }, [lines]);
+
+  // Parse Bank Details
+  const parsedBank: BankDetails = useMemo(() => {
+    if (!invoiceSettings?.bankDetails) {
+      return { bankName: "", accountNumber: "", ifscCode: "" };
+    }
+    try {
+      const parsed = JSON.parse(invoiceSettings.bankDetails);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {
+      return { bankName: invoiceSettings.bankDetails, accountNumber: "", ifscCode: "" };
+    }
+    return { bankName: "", accountNumber: "", ifscCode: "" };
+  }, [invoiceSettings]);
+
+  // Parse Terms
+  const parsedTerms = useMemo(() => {
+    if (!invoiceSettings?.invoiceTerms) return [];
+    return invoiceSettings.invoiceTerms
+      .split("\n")
+      .map((t: string) => t.trim().replace(/^[-*•]\s*/, ""))
+      .filter((t: string) => t.length > 0);
+  }, [invoiceSettings]);
 
   const createMutation = useMutation({
     mutationFn: (payload: unknown) => api.post("/sales-invoices", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-invoices"] });
-      toast.success("Invoice created successfully!");
+      toast.success("Sales Invoice created successfully!");
       router.push("/sales/invoices");
       router.refresh();
     },
-    onError: (error: unknown) => {
+    onError: (error: any) => {
       console.error(error);
-      toast.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create Invoice");
+      toast.error(error.response?.data?.message || "Failed to create invoice");
     }
   });
 
   const handleSubmit = (e: React.FormEvent, status: "DRAFT" | "ISSUED") => {
     e.preventDefault();
-    if (lines.some(l => !l.productId || !l.warehouseId)) {
+    if (!formData.customerId) {
+      toast.error("Please select a customer.");
+      return;
+    }
+    if (lines.some((l) => !l.productId || !l.warehouseId)) {
       toast.error("Please select a product and a shipping warehouse for all lines.");
       return;
     }
-    
+
     const payload = {
       ...formData,
-      status: status,
-      lines: lines.map(l => ({
+      status,
+      notes: invoiceSettings?.invoiceTerms || "",
+      lines: lines.map((l) => ({
         productId: l.productId,
         warehouseId: l.warehouseId,
-        taxRateId: l.taxRateId || null,
+        taxRateId: isConsolidatedTax
+          ? (consolidatedTaxRateId || null)
+          : (l.taxRateId || null),
         quantity: Number(l.quantity),
-        unitPrice: Number(l.unitPrice)
-      }))
+        unitPrice: Number(l.unitPrice),
+      })),
     };
 
     createMutation.mutate(payload);
@@ -182,163 +326,231 @@ export function InvoiceForm() {
   if (initialLoading) return <PageLoader text="Loading invoice form..." showBrandText />;
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6 max-w-[1400px] mx-auto">
-      <div className="flex items-center space-x-2">
-        <Link href="/sales/invoices">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h2 className="text-3xl font-bold tracking-tight">Create Sales Invoice</h2>
+    <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-[1400px] mx-auto text-slate-100">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <Link href="/sales/invoices">
+            <Button variant="ghost" size="icon" className="hover:bg-slate-800 text-slate-300">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-white">Create Sales Invoice</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Issue GST-compliant sales invoices, allocate stock, and track receivables.
+            </p>
+          </div>
+        </div>
+
+        {/* Consolidated vs Product Specific Tax Rate Toggle */}
+        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1 rounded-lg">
+          <span className="text-xs text-slate-400 font-medium px-2">Tax Mode:</span>
+          <button
+            type="button"
+            onClick={() => setIsConsolidatedTax(true)}
+            className={cn(
+              "px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
+              isConsolidatedTax
+                ? "bg-indigo-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            )}
+          >
+            Consolidated Tax Rate
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsConsolidatedTax(false)}
+            className={cn(
+              "px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
+              !isConsolidatedTax
+                ? "bg-indigo-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            )}
+          >
+            Product-Specific Tax Rate
+          </button>
+        </div>
       </div>
 
-      <form className="space-y-8">
-        <Card>
-          <CardContent className="pt-6 grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Customer *</Label>
-              <Select 
-                value={formData.customerId} 
-                onValueChange={(val: string | null) => val && setFormData(prev => ({ ...prev, customerId: val }))}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Invoice Number *</Label>
-              <Input
-                value={formData.invoiceNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                required
+      <form className="space-y-6">
+        {/* Top Header Card */}
+        <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-sm">
+          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Searchable Customer Combobox */}
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="text-xs font-medium text-slate-300">Customer *</Label>
+              <CustomerCombobox
+                customers={customers}
+                value={formData.customerId}
+                onChange={(val) => setFormData((prev) => ({ ...prev, customerId: val }))}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Invoice Date *</Label>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-300">Invoice Number *</Label>
+              <Input
+                value={formData.invoiceNumber}
+                onChange={(e) => setFormData((prev) => ({ ...prev, invoiceNumber: e.target.value }))}
+                required
+                className="bg-slate-950/60 border-slate-800 text-white font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-300">Invoice Date *</Label>
               <Input
                 type="date"
                 value={formData.invoiceDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, invoiceDate: e.target.value }))}
                 required
+                className="bg-slate-950/60 border-slate-800 text-white text-xs"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Due Date *</Label>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-300">Due Date *</Label>
               <Input
                 type="date"
                 value={formData.dueDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, dueDate: e.target.value }))}
                 required
+                className="bg-slate-950/60 border-slate-800 text-white text-xs"
               />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Line Items Table with Sticky Header */}
+        <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-sm">
           <CardContent className="pt-6 space-y-4">
-            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+            <div className="max-h-[460px] overflow-y-auto relative rounded-md border border-slate-800 bg-slate-950/40 shadow-sm scrollbar-thin scrollbar-thumb-slate-700">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[20%]">Product *</TableHead>
-                    <TableHead className="w-[20%]">Ship From Whs *</TableHead>
-                    <TableHead className="w-[10%]">Qty *</TableHead>
-                    <TableHead className="w-[15%]">Unit Price *</TableHead>
-                    <TableHead className="w-[15%]">Tax Rate</TableHead>
-                    <TableHead className="w-[15%] text-right">Line Total</TableHead>
-                    <TableHead className="w-[5%]"></TableHead>
+                <TableHeader className="sticky top-0 z-20 bg-slate-900 shadow-md">
+                  <TableRow className="border-b border-slate-800 hover:bg-transparent">
+                    <TableHead className="w-[30%] text-slate-300 font-semibold text-xs py-3">Product *</TableHead>
+                    <TableHead className="w-[22%] text-slate-300 font-semibold text-xs py-3">Ship From Whs *</TableHead>
+                    <TableHead className="w-[12%] text-slate-300 font-semibold text-xs py-3">Qty *</TableHead>
+                    <TableHead className="w-[16%] text-slate-300 font-semibold text-xs py-3">Unit Price (₹) *</TableHead>
+                    {!isConsolidatedTax && (
+                      <TableHead className="w-[14%] text-slate-300 font-semibold text-xs py-3">Tax Rate</TableHead>
+                    )}
+                    <TableHead className="w-[16%] text-right text-slate-300 font-semibold text-xs py-3">Line Total</TableHead>
+                    <TableHead className="w-[4%] py-3"></TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
                   {lines.map((line: LineItem) => {
-                    const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
+                    const lineSub = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0);
                     let lineTax = 0;
-                    if (line.taxRateId) {
-                      const tax = taxes.find((t: any) => t.id === line.taxRateId);
+
+                    const activeTaxId = isConsolidatedTax ? consolidatedTaxRateId : line.taxRateId;
+                    if (activeTaxId) {
+                      const tax = taxes.find((t) => t.id === activeTaxId);
                       if (tax) lineTax = (lineSub * (Number(tax.rate) || 0)) / 100;
                     }
                     const lineTotal = lineSub + lineTax;
 
                     return (
-                      <TableRow key={line.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
-                        <TableCell>
-                          <ProductCombobox 
+                      <TableRow
+                        key={line.id}
+                        className="border-b border-slate-800/60 hover:bg-white/5 transition-colors"
+                      >
+                        {/* Searchable Product Combobox */}
+                        <TableCell className="py-2.5">
+                          <ProductCombobox
                             products={products}
                             value={line.productId}
-                            onChange={(val: string) => handleLineChange(line.id, "productId", val)}
+                            onChange={(val, prod) => {
+                              handleLineChange(line.id, "productId", val);
+                              if (prod && !isConsolidatedTax && prod.taxRateId) {
+                                handleLineChange(line.id, "taxRateId", prod.taxRateId);
+                              }
+                            }}
                           />
                         </TableCell>
-                        <TableCell>
-                          <Select 
-                            value={line.warehouseId} 
-                            onValueChange={(val: string | null) => val && handleLineChange(line.id, "warehouseId", val)}
-                            required
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select warehouse" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {warehouses.map((w: any) => (
-                                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+
+                        {/* Searchable Warehouse Combobox */}
+                        <TableCell className="py-2.5">
+                          <WarehouseCombobox
+                            warehouses={warehouses}
+                            value={line.warehouseId}
+                            onChange={(val) => handleLineChange(line.id, "warehouseId", val)}
+                            placeholder="Select warehouse..."
+                          />
                         </TableCell>
-                        <TableCell>
+
+                        {/* Quantity */}
+                        <TableCell className="py-2.5">
                           <Input
                             type="number"
                             min="0.01"
                             step="0.01"
                             value={line.quantity}
-                            onChange={(e) => handleLineChange(line.id, "quantity", parseFloat(e.target.value))}
+                            onChange={(e) =>
+                              handleLineChange(line.id, "quantity", parseFloat(e.target.value) || 0)
+                            }
                             required
+                            className="bg-slate-950/60 border-slate-800 text-white font-mono text-xs"
                           />
                         </TableCell>
-                        <TableCell>
+
+                        {/* Unit Price */}
+                        <TableCell className="py-2.5">
                           <Input
                             type="number"
                             min="0"
                             step="0.01"
                             value={line.unitPrice}
-                            onChange={(e) => handleLineChange(line.id, "unitPrice", parseFloat(e.target.value))}
+                            onChange={(e) =>
+                              handleLineChange(line.id, "unitPrice", parseFloat(e.target.value) || 0)
+                            }
                             required
+                            className="bg-slate-950/60 border-slate-800 text-white font-mono text-xs"
                           />
                         </TableCell>
-                        <TableCell>
-                          <Select 
-                            value={line.taxRateId || ""} 
-                            onValueChange={(val: string | null) => val && handleLineChange(line.id, "taxRateId", val === "none" ? "" : val)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="None" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              {taxes.map((t: any) => (
-                                <SelectItem key={t.id} value={t.id}>{t.name} ({t.rate}%)</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
+
+                        {/* Product Specific Tax Rate Column (hidden in Consolidated Mode) */}
+                        {!isConsolidatedTax && (
+                          <TableCell className="py-2.5">
+                            <Select
+                              value={line.taxRateId || "none"}
+                              onValueChange={(val) =>
+                                handleLineChange(line.id, "taxRateId", val === "none" ? "" : (val || ""))
+                              }
+                            >
+                              <SelectTrigger className="bg-slate-950/60 border-slate-800 text-white text-xs">
+                                <SelectValue placeholder="None" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-slate-900 border-slate-800 text-white text-xs">
+                                <SelectItem value="none">None (0%)</SelectItem>
+                                {taxes.map((t) => (
+                                  <SelectItem key={t.id} value={t.id}>
+                                    {t.name} ({t.rate}%)
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        )}
+
+                        {/* Line Total */}
+                        <TableCell className="text-right font-medium font-mono text-xs text-white py-2.5">
                           ₹{lineTotal.toFixed(2)}
                         </TableCell>
-                        <TableCell>
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
+
+                        {/* Remove Action */}
+                        <TableCell className="py-2.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
                             size="icon"
                             onClick={() => handleRemoveLine(line.id)}
                             disabled={lines.length === 1}
+                            className="text-slate-500 hover:text-red-400 hover:bg-red-500/10 h-8 w-8"
                           >
-                            <Trash className="h-4 w-4 text-red-500" />
+                            <Trash className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -347,60 +559,237 @@ export function InvoiceForm() {
                 </TableBody>
               </Table>
             </div>
-            
-            <Button type="button" variant="outline" onClick={handleAddLine}>
-              <Plus className="mr-2 h-4 w-4" /> Add Line
-            </Button>
+
+            {/* Table Footer: Add Line Button & Live Counters */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddLine}
+                className="border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 text-xs"
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Line
+              </Button>
+
+              {/* Product Count and Total Quantity Counters */}
+              <div className="flex items-center gap-4 bg-slate-950/60 border border-slate-800 px-3.5 py-1.5 rounded-lg text-xs">
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <Package className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Products:</span>
+                  <span className="font-semibold text-white">{productCount}</span>
+                </div>
+                <div className="h-3 w-px bg-slate-800" />
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Total Quantity:</span>
+                  <span className="font-semibold text-white font-mono">{totalQuantity}</span>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 gap-8">
-          <div className="space-y-2">
-            <Label>Notes / Terms</Label>
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Enter any additional notes..."
-              rows={4}
-            />
-          </div>
-          <Card>
-            <CardContent className="pt-6 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal</span>
-                <span>₹{totals.subtotal.toFixed(2)}</span>
+        {/* Bottom Section: Bank Details + Terms Cards on Left, Totals on Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column (7 cols): Organization Bank Details & Terms & Conditions */}
+          <div className="lg:col-span-7 space-y-4">
+            {/* Bank Details Card */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 relative shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-indigo-500/10 text-indigo-400 rounded-md">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold text-white">Bank Account Details</h3>
+                    <p className="text-[11px] text-slate-400">Payment instructions printed on invoice</p>
+                  </div>
+                </div>
+                <Link href="/settings/invoice">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 gap-1"
+                  >
+                    <span>Edit</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </Button>
+                </Link>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Total Tax</span>
-                <span>₹{totals.taxTotal.toFixed(2)}</span>
-              </div>
-              <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
-                <span>Grand Total</span>
-                <span>₹{totals.total.toFixed(2)}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        <div className="flex gap-4 justify-end">
-          <Link href="/sales/invoices">
-            <Button type="button" variant="outline">Cancel</Button>
-          </Link>
-          <Button 
-            type="button" 
-            variant="secondary" 
-            disabled={createMutation.isPending}
-            onClick={(e) => handleSubmit(e, "DRAFT")}
-          >
-            {createMutation.isPending ? "Creating..." : "Save as Draft"}
-          </Button>
-          <Button 
-            type="button" 
-            disabled={createMutation.isPending}
-            onClick={(e) => handleSubmit(e, "ISSUED")}
-          >
-            {createMutation.isPending ? "Creating..." : "Issue & Deduct Stock"}
-          </Button>
+              {parsedBank.bankName || parsedBank.accountNumber ? (
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-400">Bank Name:</span>
+                    <p className="font-medium text-white">{parsedBank.bankName || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Account Number:</span>
+                    <p className="font-mono font-medium text-white">{parsedBank.accountNumber || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">IFSC Code:</span>
+                    <p className="font-mono font-medium text-white">{parsedBank.ifscCode || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Account Holder:</span>
+                    <p className="font-medium text-white">{parsedBank.accountHolder || currentOrg?.name || "—"}</p>
+                  </div>
+                  {parsedBank.branchName && (
+                    <div className="col-span-2">
+                      <span className="text-slate-400">Branch:</span>
+                      <p className="font-medium text-white">{parsedBank.branchName}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="py-2 text-xs text-slate-400 flex items-center justify-between">
+                  <span>No bank deposit details configured in organization settings.</span>
+                  <Link href="/settings/invoice" className="text-indigo-400 hover:underline">
+                    Add Bank Details
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Terms and Conditions Card */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 relative shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-indigo-500/10 text-indigo-400 rounded-md">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold text-white">Terms & Conditions</h3>
+                    <p className="text-[11px] text-slate-400">Default commercial terms applied to this invoice</p>
+                  </div>
+                </div>
+                <Link href="/settings/invoice">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 gap-1"
+                  >
+                    <span>Edit</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </Button>
+                </Link>
+              </div>
+
+              {parsedTerms.length > 0 ? (
+                <ul className="space-y-1.5 text-xs text-slate-300">
+                  {parsedTerms.map((term: string, idx: number) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-indigo-400 font-bold">•</span>
+                      <span>{term}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="py-2 text-xs text-slate-400 flex items-center justify-between">
+                  <span>No custom terms & conditions configured in organization settings.</span>
+                  <Link href="/settings/invoice" className="text-indigo-400 hover:underline">
+                    Add Terms
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column (5 cols): Subtotal & Tax Breakdown Card */}
+          <div className="lg:col-span-5">
+            <Card className="bg-slate-900/90 border-slate-800 backdrop-blur-sm sticky top-6">
+              <CardContent className="pt-6 space-y-3 text-xs">
+                {/* Consolidated Tax Selector inside Summary */}
+                {isConsolidatedTax && (
+                  <div className="pb-3 border-b border-slate-800 space-y-1.5">
+                    <Label className="text-slate-300 font-medium text-xs">
+                      Consolidated Tax Rate (GST)
+                    </Label>
+                    <Select
+                      value={consolidatedTaxRateId}
+                      onValueChange={(val) => val && setConsolidatedTaxRateId(val)}
+                    >
+                      <SelectTrigger className="bg-slate-950/60 border-slate-800 text-white text-xs">
+                        <SelectValue placeholder="Select Tax Rate" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-800 text-white text-xs">
+                        {taxes.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name} ({t.rate}%)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Subtotal */}
+                <div className="flex justify-between text-slate-300">
+                  <span>Subtotal</span>
+                  <span className="font-mono text-white">₹{totals.subtotal.toFixed(2)}</span>
+                </div>
+
+                {/* Divided Total Tax Section */}
+                <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+                  <div className="flex justify-between font-medium text-slate-200">
+                    <span>Total Tax</span>
+                    <span className="font-mono text-emerald-400">₹{totals.taxTotal.toFixed(2)}</span>
+                  </div>
+
+                  {/* Three-part Tax Breakdown: CGST, SGST, IGST */}
+                  <div className="pl-3 border-l-2 border-indigo-500/40 space-y-1 text-[11px] text-slate-400">
+                    <div className="flex justify-between">
+                      <span>CGST (Central Tax)</span>
+                      <span className="font-mono text-slate-300">₹{totals.cgstAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>SGST (State Tax)</span>
+                      <span className="font-mono text-slate-300">₹{totals.sgstAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>IGST (Integrated Tax)</span>
+                      <span className="font-mono text-slate-300">₹{totals.igstAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grand Total */}
+                <div className="border-t border-slate-800 pt-3 mt-3 flex justify-between font-bold text-base text-white">
+                  <span>Grand Total</span>
+                  <span className="font-mono text-indigo-400">₹{totals.total.toFixed(2)}</span>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-4 border-t border-slate-800">
+                  <Link href="/sales/invoices" className="flex-1">
+                    <Button type="button" variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 text-xs">
+                      Cancel
+                    </Button>
+                  </Link>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={createMutation.isPending}
+                    onClick={(e) => handleSubmit(e, "DRAFT")}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs"
+                  >
+                    {createMutation.isPending ? "Saving..." : "Save Draft"}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={createMutation.isPending}
+                    onClick={(e) => handleSubmit(e, "ISSUED")}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs"
+                  >
+                    {createMutation.isPending ? "Issuing..." : "Issue Invoice"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </form>
     </div>

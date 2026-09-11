@@ -106,6 +106,18 @@ export interface Customer extends BaseEntity {
   email?: string;
   phone?: string;
   gstin?: string;
+  billingAddressLine1?: string;
+  billingAddressLine2?: string;
+  billingCity?: string;
+  billingState?: string;
+  billingPincode?: string;
+  billingCountry?: string;
+  shippingAddressLine1?: string;
+  shippingAddressLine2?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  shippingPincode?: string;
+  shippingCountry?: string;
   outstandingBalance?: number;
   organizationId?: string;
   isShared?: boolean;
