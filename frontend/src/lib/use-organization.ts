@@ -19,6 +19,7 @@ export interface Organization {
   parentOrganizationId?: string;
   isPrimary?: boolean;
   branchCode?: string;
+  emailSuffix?: string;
 }
 
 export interface OrganizationTree {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   UserPlus,
   User,
@@ -15,7 +15,6 @@ import {
   EyeOff,
   CheckCircle2,
   AlertTriangle,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,45 +51,12 @@ interface CreateMemberResponse {
 
 export function AddMemberModal({
   onRefresh,
-  emailSuffix,
 }: {
   onRefresh: () => void;
   emailSuffix?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [activeSuffix, setActiveSuffix] = useState(emailSuffix || "");
-
-  // Form Fields
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [countryCode, setCountryCode] = useState("+91");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [role, setRole] = useState("USER");
-
-  // Success State
-  const [createdMember, setCreatedMember] = useState<CreateMemberResponse | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-
-  // Fetch org suffix if not provided as prop
-  useEffect(() => {
-    if (emailSuffix) {
-      setActiveSuffix(emailSuffix);
-      return;
-    }
-    if (open && !activeSuffix) {
-      api.get<Array<{ id: string; emailSuffix?: string }>>("/organizations")
-        .then((orgs) => {
-          const activeId = typeof window !== "undefined" ? localStorage.getItem("active_org_id") : null;
-          const current = orgs.find((o) => o.id === activeId) || orgs[0];
-          if (current?.emailSuffix) {
-            setActiveSuffix(current.emailSuffix);
-          }
-        })
-        .catch((err) => console.warn("Could not load org suffix:", err));
-    }
-  }, [open, emailSuffix, activeSuffix]);
 
   const resetForm = () => {
     setFirstName("");
@@ -109,13 +75,17 @@ export function AddMemberModal({
     }
   };
 
-  // Preview email format
-  const normalizedFirst = firstName.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-  const normalizedLast = lastName.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-  const emailPreview =
-    normalizedFirst || normalizedLast
-      ? `${normalizedFirst || "firstname"}.${normalizedLast || "lastname"}.XX@${activeSuffix || "org"}.billos.app`
-      : `firstname.lastname.XX@${activeSuffix || "org"}.billos.app`;
+  // Form Fields
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [role, setRole] = useState("USER");
+
+  // Success State
+  const [createdMember, setCreatedMember] = useState<CreateMemberResponse | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const rawDigits = phoneNumber.replace(/\s+/g, "");
   const fullPhone = `${countryCode} ${rawDigits}`.trim();
@@ -336,19 +306,6 @@ export function AddMemberModal({
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              {/* Auto-generated Email Preview Box */}
-              <div className="p-3 bg-zinc-950/80 border border-zinc-800 rounded-xl space-y-1">
-                <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">
-                  Auto-Generated Login Email Preview
-                </span>
-                <span className="font-mono text-xs text-teal-300 block break-all">
-                  {emailPreview}
-                </span>
-                <p className="text-[10px] text-zinc-500">
-                  A unique 2-digit number (XX) will be appended to ensure email uniqueness.
-                </p>
               </div>
 
               <DialogFooter className="pt-2 gap-2 sm:gap-2">

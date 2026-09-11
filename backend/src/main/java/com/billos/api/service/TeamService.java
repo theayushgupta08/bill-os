@@ -87,8 +87,23 @@ public class TeamService {
             suffix = parent.getEmailSuffix();
         }
         if (suffix == null || suffix.isBlank()) {
-            throw new RuntimeException("Organization does not have an email suffix configured. "
-                    + "Please set one in your organization settings.");
+            // Auto-generate a safe unique fallback suffix for legacy organizations so member creation never fails
+            String base = org.getName() != null ? org.getName().toLowerCase().replaceAll("[^a-z0-9]", "") : "org";
+            if (base.isBlank()) {
+                base = "org" + org.getId().toString().substring(0, 4);
+            }
+            if (base.length() > 20) {
+                base = base.substring(0, 20);
+            }
+            String candidate = base;
+            int counter = 1;
+            while (organizationRepository.existsByEmailSuffix(candidate)) {
+                candidate = base + counter++;
+            }
+            suffix = candidate;
+            org.setEmailSuffix(suffix);
+            organizationRepository.save(org);
+            log.info("Auto-assigned fallback email suffix '{}' to organization {}", suffix, orgId);
         }
 
         // Generate email: firstname.lastname.XX@suffix.billos.app

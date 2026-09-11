@@ -25,6 +25,7 @@ export interface Organization extends BaseEntity {
   parentOrganizationId?: string;
   isPrimary?: boolean;
   branchCode?: string;
+  emailSuffix?: string;
 }
 
 export interface TaxSettings extends BaseEntity {

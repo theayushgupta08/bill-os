@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Building2, GitBranch, Crown, ArrowRight, ShieldCheck, Upload, Trash2 } from "lucide-react";
+import { Plus, X, Building2, GitBranch, Crown, ArrowRight, ShieldCheck, Upload, Trash2, Check, AlertCircle, Loader2 } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tooltip";
@@ -21,6 +21,11 @@ export function OrganizationSettingsForm() {
   const [createBranchOpen, setCreateBranchOpen] = useState(false);
   const { data: orgTree } = useOrganizationTree();
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // Email Suffix validation state
+  const [suffixChecking, setSuffixChecking] = useState(false);
+  const [suffixAvailable, setSuffixAvailable] = useState<boolean | null>(null);
+  const [suffixError, setSuffixError] = useState<string | null>(null);
 
   const { data: orgData, isLoading } = useQuery({
     queryKey: ["organizations"],
@@ -43,6 +48,60 @@ export function OrganizationSettingsForm() {
     }
   }, [orgData]);
 
+  // Debounced check for email suffix uniqueness when edited
+  useEffect(() => {
+    if (!org?.emailSuffix) {
+      setSuffixAvailable(null);
+      setSuffixError(null);
+      setSuffixChecking(false);
+      return;
+    }
+
+    const currentSaved = orgData?.find((o) => o.id === org.id)?.emailSuffix;
+    const cleaned = org.emailSuffix.trim().toLowerCase();
+
+    // If unchanged from currently saved in DB, it's already theirs
+    if (cleaned === currentSaved) {
+      setSuffixAvailable(true);
+      setSuffixError(null);
+      setSuffixChecking(false);
+      return;
+    }
+
+    const regex = /^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])?$/;
+    if (cleaned.length < 3 || cleaned.length > 30 || !regex.test(cleaned)) {
+      setSuffixAvailable(false);
+      setSuffixError("Suffix must be 3-30 chars: lowercase letters, numbers, and hyphens only");
+      setSuffixChecking(false);
+      return;
+    }
+
+    setSuffixChecking(true);
+    setSuffixError(null);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get<{ available: boolean; reason?: string }>(
+          `/public/check-suffix?suffix=${encodeURIComponent(cleaned)}`
+        );
+        if (res.available) {
+          setSuffixAvailable(true);
+          setSuffixError(null);
+        } else {
+          setSuffixAvailable(false);
+          setSuffixError(res.reason || "This suffix is already taken by another organization");
+        }
+      } catch {
+        setSuffixAvailable(false);
+        setSuffixError("Unable to verify suffix availability");
+      } finally {
+        setSuffixChecking(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [org?.emailSuffix, org?.id, orgData]);
+
   const updateMutation = useMutation({
     mutationFn: (payload: Partial<Organization>) => api.put<Organization>(`/organizations/${payload.id}`, payload),
     onSuccess: () => {
@@ -59,6 +118,10 @@ export function OrganizationSettingsForm() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!org?.id) return;
+    if (suffixAvailable === false) {
+      toast.error(suffixError || "Please provide a valid, available email suffix.");
+      return;
+    }
     updateMutation.mutate(org);
   };
 
@@ -418,6 +481,80 @@ export function OrganizationSettingsForm() {
                 </div>
                 <Input id="email" name="email" type="email" value={org.email || ""} onChange={handleChange} />
               </div>
+            </div>
+
+            {/* Team Email Suffix Section */}
+            <div className="space-y-2 p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Label htmlFor="emailSuffix" className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                    Team Email Suffix
+                  </Label>
+                  <HelpTooltip text="Unique domain suffix for staff login accounts (e.g. firstname.lastname.XX@suffix.billos.app). Branches automatically inherit this suffix." />
+                </div>
+                {org.parentOrganizationId && !org.isPrimary ? (
+                  <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                    Inherited from Primary Organization
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    @{org.emailSuffix || "suffix"}.billos.app
+                  </span>
+                )}
+              </div>
+
+              {org.parentOrganizationId && !org.isPrimary ? (
+                <div className="flex items-center rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2 text-sm text-slate-400 font-mono">
+                  <span>
+                    {orgTree?.find((t) => t.primaryOrganization.id === org.parentOrganizationId)?.primaryOrganization.emailSuffix || org.emailSuffix || "hq"}
+                  </span>
+                  <span className="text-slate-500 ml-1">.billos.app</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center rounded-lg border border-slate-800 bg-slate-900/90 focus-within:border-indigo-500 overflow-hidden">
+                    <Input
+                      id="emailSuffix"
+                      name="emailSuffix"
+                      value={org.emailSuffix || ""}
+                      onChange={(e) => {
+                        const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                        setOrg((prev) => (prev ? { ...prev, emailSuffix: val } : prev));
+                      }}
+                      placeholder="e.g. myshop"
+                      maxLength={30}
+                      className="border-0 bg-transparent text-white font-mono text-sm focus-visible:ring-0 focus-visible:ring-offset-0 h-10"
+                    />
+                    <span className="px-3 text-slate-400 font-mono text-xs bg-slate-800/80 h-10 flex items-center border-l border-slate-800 select-none">
+                      .billos.app
+                    </span>
+                  </div>
+
+                  {suffixChecking && (
+                    <p className="text-[11px] text-slate-400 flex items-center gap-1.5 animate-pulse">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                      Checking availability...
+                    </p>
+                  )}
+                  {!suffixChecking && suffixAvailable === true && (
+                    <div className="space-y-0.5">
+                      <p className="text-[11px] text-emerald-400 flex items-center gap-1.5 font-medium">
+                        <Check className="w-3.5 h-3.5" />
+                        Available! Staff login email format:
+                      </p>
+                      <p className="text-[11px] font-mono text-slate-300 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 inline-block">
+                        firstname.lastname.XX@{org.emailSuffix?.trim().toLowerCase()}.billos.app
+                      </p>
+                    </div>
+                  )}
+                  {!suffixChecking && suffixAvailable === false && (
+                    <p className="text-[11px] text-rose-400 flex items-center gap-1.5 font-medium">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {suffixError || "This suffix is not available. Please choose another."}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

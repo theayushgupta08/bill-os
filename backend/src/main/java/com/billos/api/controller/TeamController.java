@@ -27,7 +27,7 @@ public class TeamController {
         return ResponseEntity.ok(teamService.getTeamMembers());
     }
 
-    @PostMapping("/members")
+    @PostMapping({"", "/members"})
     @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
     public ResponseEntity<CreateMemberResponse> createMember(@Valid @RequestBody CreateMemberRequest request) {
         return ResponseEntity.ok(teamService.createMember(request));

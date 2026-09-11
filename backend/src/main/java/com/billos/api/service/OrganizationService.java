@@ -290,6 +290,20 @@ public class OrganizationService {
         if (updatedDetails.getWebsite() != null) org.setWebsite(updatedDetails.getWebsite());
         if (updatedDetails.getBranchCode() != null) org.setBranchCode(updatedDetails.getBranchCode());
         if (updatedDetails.getIsPrimary() != null) org.setIsPrimary(updatedDetails.getIsPrimary());
+        if (updatedDetails.getSecondaryPhones() != null) org.setSecondaryPhones(updatedDetails.getSecondaryPhones());
+
+        if (updatedDetails.getEmailSuffix() != null
+                && !updatedDetails.getEmailSuffix().isBlank()) {
+            String newSuffix =
+                    updatedDetails.getEmailSuffix().toLowerCase().trim().replaceAll("[^a-z0-9-]", "");
+            if (!newSuffix.equals(org.getEmailSuffix())) {
+                if (organizationRepository.existsByEmailSuffix(newSuffix)) {
+                    throw new RuntimeException(
+                            "Email suffix '" + newSuffix + "' is already taken. Please choose another.");
+                }
+                org.setEmailSuffix(newSuffix);
+            }
+        }
 
         return organizationRepository.save(org);
     }
