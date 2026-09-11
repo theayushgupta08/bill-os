@@ -16,6 +16,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import {
   useOwnerDashboard,
   useUserDashboard,
@@ -267,7 +268,13 @@ export default function CollectionsPage() {
   return (
     <div className="p-6 space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Collections</h1>
+        <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+          Collections
+          <PageHelpTooltip
+            title="Collections Register"
+            description="Daily register to track employee collections, dynamic QR payments, store petty cash expenses, and bank settlement deposits."
+          />
+        </h1>
         <p className="text-sm text-slate-400 mt-1">
           Track employee UPI collections, expenses, and settlement deposits.
         </p>

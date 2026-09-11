@@ -11,6 +11,8 @@ import { FileText, IndianRupee } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { Invoice } from "@/types";
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function SalesReport() {
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
@@ -50,7 +52,13 @@ export function SalesReport() {
           <FileText className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Sales Register</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Sales Register
+            <PageHelpTooltip
+              title="Sales Register"
+              description="Detailed register of sales invoices generated within the selected timeframe, including taxable amounts and tax breakups."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Detailed register of sales invoices generated within the selected timeframe.</p>
         </div>
       </div>

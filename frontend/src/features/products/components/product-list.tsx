@@ -19,6 +19,8 @@ import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Product } from "@/types";
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function ProductList() {
   const queryClient = useQueryClient();
 
@@ -63,7 +65,13 @@ export function ProductList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Products</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Products
+          <PageHelpTooltip
+            title="Product Catalog"
+            description="Maintain your master catalog of sellable items, SKUs, pricing, GST rates, HSN codes, and inventory valuation."
+          />
+        </h1>
         <Link href="/products/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" /> Add Product

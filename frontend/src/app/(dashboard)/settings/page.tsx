@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 const settingsSections = [
   {
@@ -67,7 +68,13 @@ export default function SettingsOverviewPage() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto p-2">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          Settings
+          <PageHelpTooltip
+            title="System & Store Settings"
+            description="Configure organization profile, team members, GST taxation, invoice customization, and display preferences."
+          />
+        </h1>
         <p className="text-muted-foreground text-sm mt-0.5">
           Configure organization settings, team members, taxation, invoicing, and preferences.
         </p>

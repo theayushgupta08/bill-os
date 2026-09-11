@@ -14,6 +14,8 @@ interface ReceivableRecord {
   outstandingBalance: number;
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function ReceivablesReport() {
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["outstanding-receivables"],
@@ -33,7 +35,13 @@ export function ReceivablesReport() {
           <ArrowUpRight className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Outstanding Receivables</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Outstanding Receivables
+            <PageHelpTooltip
+              title="Accounts Receivable & Aging"
+              description="Total payments pending collection from customer invoices, categorized by client and aging brackets."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Total payments pending collection from customer invoices.</p>
         </div>
       </div>

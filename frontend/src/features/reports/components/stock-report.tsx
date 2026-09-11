@@ -13,6 +13,8 @@ interface StockRecord {
   quantity: number;
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function StockReport() {
   const { data: stock = [], isLoading } = useQuery({
     queryKey: ["stock-summary"],
@@ -32,7 +34,13 @@ export function StockReport() {
           <Package className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Stock Summary</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Stock Summary
+            <PageHelpTooltip
+              title="Stock Valuation & Summary"
+              description="Current available inventory quantities categorized by product warehouse locations with valuation."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Current available inventory quantities categorized by product warehouse locations.</p>
         </div>
       </div>

@@ -32,6 +32,8 @@ interface PaymentRecord {
   referenceNumber?: string;
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function PaymentList() {
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
 
@@ -64,7 +66,13 @@ export function PaymentList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Payments</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Payments
+          <PageHelpTooltip
+            title="Payments & Disbursements"
+            description="Review all incoming customer payments and outgoing supplier disbursements across cash, bank transfer, cheque, and UPI."
+          />
+        </h1>
         <Link href="/payments/new">
           <Button><Plus className="mr-2 h-4 w-4" /> Record Payment</Button>
         </Link>

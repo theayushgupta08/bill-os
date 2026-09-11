@@ -20,6 +20,7 @@ import {
 import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery } from "@tanstack/react-query";
 import { PurchaseOrder } from "@/types";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function PurchaseOrderList() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -62,7 +63,13 @@ export function PurchaseOrderList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Purchase Orders</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Purchase Orders
+          <PageHelpTooltip
+            title="Purchase Orders"
+            description="Issue formal purchase orders to suppliers to request inventory replenishment, track fulfillment status, and convert to bills upon receipt."
+          />
+        </h1>
         <div className="flex items-center space-x-2">
           <Link href="/purchases/orders/new">
             <Button><Plus className="mr-2 h-4 w-4" /> Create PO</Button>

@@ -17,6 +17,7 @@ import { api } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { RoleActionMenu } from "./RoleActionMenu";
 import { AddMemberModal } from "./AddMemberModal";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { toast } from "sonner";
 import {
   Users,
@@ -289,7 +290,13 @@ export function TeamTable() {
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       {/* Title Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Team Management</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Team Management
+          <PageHelpTooltip
+            title="Team & Access Control"
+            description="Add staff members, manage role-based access permissions (Owner, Admin, Manager, User), and control account activity."
+          />
+        </h1>
         <AddMemberModal onRefresh={fetchTeam} />
       </div>
 

@@ -20,6 +20,8 @@ import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Warehouse } from "@/types";
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function WarehouseList() {
   const queryClient = useQueryClient();
 
@@ -64,7 +66,13 @@ export function WarehouseList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Warehouses</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Warehouses
+          <PageHelpTooltip
+            title="Warehouses & Locations"
+            description="Manage physical and virtual storage locations, track stock distribution, and coordinate inter-warehouse inventory movements."
+          />
+        </h1>
         <div className="flex items-center space-x-2">
           <Link href="/warehouses/new">
             <Button>

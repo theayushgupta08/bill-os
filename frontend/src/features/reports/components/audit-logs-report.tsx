@@ -17,6 +17,8 @@ interface AuditLogRecord {
   details?: string;
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function AuditLogsReport() {
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["audit-logs"],
@@ -46,7 +48,13 @@ export function AuditLogsReport() {
           <Activity className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">System Audit Logs</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            System Audit Logs
+            <PageHelpTooltip
+              title="System Audit Logs"
+              description="Chronological record of sensitive actions, user logins, entity updates, and deletions across the organization."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Track all create, update, and delete actions performed in your organization.</p>
         </div>
       </div>

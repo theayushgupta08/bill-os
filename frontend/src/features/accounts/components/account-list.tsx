@@ -36,6 +36,8 @@ interface Account {
   isActive: boolean;
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function AccountList() {
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
@@ -85,7 +87,13 @@ export function AccountList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Chart of Accounts</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Chart of Accounts
+          <PageHelpTooltip
+            title="Chart of Accounts"
+            description="View and manage the double-entry accounting ledger accounts categorizing assets, liabilities, equity, revenues, and expenses."
+          />
+        </h1>
         <Link href="/accounts/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" /> Add Account

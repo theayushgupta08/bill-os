@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,7 +91,13 @@ export default function PaymentsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Collection Payments</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            Collection Payments
+            <PageHelpTooltip
+              title="Record Customer Payment"
+              description="Quickly accept and allocate incoming payments against outstanding customer balances with verification."
+            />
+          </h1>
           <p className="text-sm text-slate-400 mt-1">
             Record customer payments and verify collections.
           </p>

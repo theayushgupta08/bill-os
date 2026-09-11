@@ -80,3 +80,4 @@ export function HelpTooltip({ text, className }: { text: string; className?: str
 }
 
 export { HelpTooltip as TooltipCustom };
+export { PageHelpTooltip } from "./page-help-tooltip";

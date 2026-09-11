@@ -22,6 +22,8 @@ interface GSTR1Record {
   totalAmount: number;
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function Gstr1Report() {
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
@@ -58,7 +60,13 @@ export function Gstr1Report() {
           <Building2 className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">GSTR-1 Outward Supplies</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            GSTR-1 Outward Supplies
+            <PageHelpTooltip
+              title="GSTR-1 Return Filing Preview"
+              description="Statement of outward supplies of goods and services with taxable values, CGST, SGST, and IGST breakdowns for GST return filing."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Statement of outward supplies of goods or services for filing monthly/quarterly GST returns.</p>
         </div>
       </div>

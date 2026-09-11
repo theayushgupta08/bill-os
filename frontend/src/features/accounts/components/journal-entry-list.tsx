@@ -37,6 +37,8 @@ interface JournalEntry {
   lines?: unknown[];
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function JournalEntryList() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -69,7 +71,13 @@ export function JournalEntryList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Journal Entries</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Journal Entries
+          <PageHelpTooltip
+            title="General Journal"
+            description="Record manual double-entry transactions, adjustments, depreciation, and closing balance movements across ledger accounts."
+          />
+        </h1>
         <Link href="/journal-entries/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" /> New Entry

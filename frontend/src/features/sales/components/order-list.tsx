@@ -20,6 +20,7 @@ import {
 import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery } from "@tanstack/react-query";
 import { SalesOrder } from "@/types";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function OrderList() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -53,7 +54,13 @@ export function OrderList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Sales Orders</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Sales Orders
+          <PageHelpTooltip
+            title="Sales Orders"
+            description="Manage confirmed customer orders, track delivery and fulfillment stages, and convert accepted orders into sales invoices."
+          />
+        </h1>
         <div className="flex items-center space-x-2">
           <Link href="/sales/orders/new">
             <Button><Plus className="mr-2 h-4 w-4" /> Create Sales Order</Button>

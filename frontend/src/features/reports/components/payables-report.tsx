@@ -14,6 +14,8 @@ interface PayableRecord {
   outstandingBalance: number;
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function PayablesReport() {
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["outstanding-payables"],
@@ -33,7 +35,13 @@ export function PayablesReport() {
           <ArrowDownRight className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Outstanding Payables</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Outstanding Payables
+            <PageHelpTooltip
+              title="Accounts Payable & Aging"
+              description="Total bills pending payment to suppliers, organized by vendor and aging brackets."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Total bills pending payment to suppliers.</p>
         </div>
       </div>

@@ -22,6 +22,7 @@ import {
   Activity,
 } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { api } from "@/lib/api-client";
 import {
   Table,
@@ -190,7 +191,13 @@ export function DashboardContent() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            Dashboard
+            <PageHelpTooltip
+              title="Business Dashboard"
+              description="High-level overview of key retail metrics including revenue, orders, inventory alerts, and quick business actions."
+            />
+          </h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {new Date().toLocaleDateString("en-IN", {
               weekday: "long",

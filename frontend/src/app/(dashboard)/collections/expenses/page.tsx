@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,7 +88,13 @@ export default function ExpensesPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Collection Expenses</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            Collection Expenses
+            <PageHelpTooltip
+              title="Store & Petty Cash Expenses"
+              description="Record incidental operating expenses paid directly from the cash register or collection balance."
+            />
+          </h1>
           <p className="text-sm text-slate-400 mt-1">
             Log business expenses paid from your Collection Balance.
           </p>

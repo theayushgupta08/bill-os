@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 const reportCategories = [
   {
@@ -136,7 +137,13 @@ export default function ReportsOverviewPage() {
           <BarChart3 className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Reports</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Reports
+            <PageHelpTooltip
+              title="Financial & Operational Reports"
+              description="Access business intelligence summaries, P&L statements, tax compliance filing previews, and audit logs."
+            />
+          </h1>
           <p className="text-slate-400 text-sm mt-0.5">
             Access financial statements, transaction registers, outstanding ledgers, and tax compliance summary sheets.
           </p>

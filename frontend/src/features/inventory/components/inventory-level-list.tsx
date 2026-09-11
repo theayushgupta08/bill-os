@@ -37,6 +37,8 @@ interface InventoryLevel {
   minQuantity?: number;
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function InventoryLevelList() {
   const [stockFilter, setStockFilter] = useState<string>("ALL");
 
@@ -70,7 +72,13 @@ export function InventoryLevelList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Stock Levels</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Stock Levels
+          <PageHelpTooltip
+            title="Inventory & Stock Levels"
+            description="Monitor real-time on-hand inventory levels across warehouses, track low-stock thresholds, and view current stock status."
+          />
+        </h1>
         <Link href="/inventory/adjust">
           <Button>
             <ArrowRightLeft className="mr-2 h-4 w-4" /> Adjust Stock

@@ -20,6 +20,7 @@ import {
 import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery } from "@tanstack/react-query";
 import { Quotation } from "@/types";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function QuoteList() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -53,7 +54,13 @@ export function QuoteList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Quotations</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Quotations
+          <PageHelpTooltip
+            title="Sales Quotations"
+            description="Create and send price estimates and commercial proposals to prospective clients before confirming an order."
+          />
+        </h1>
         <div className="flex items-center space-x-2">
           <Link href="/sales/quotes/new">
             <Button><Plus className="mr-2 h-4 w-4" /> Create Quote</Button>

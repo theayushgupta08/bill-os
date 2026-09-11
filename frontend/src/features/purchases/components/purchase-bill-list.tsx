@@ -31,6 +31,8 @@ interface PurchaseBill {
   supplierName?: string;
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function PurchaseBillList() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -102,7 +104,13 @@ export function PurchaseBillList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Purchase Bills</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Purchase Bills
+          <PageHelpTooltip
+            title="Purchase Bills"
+            description="Record and track vendor bills for goods and services received, manage payment due dates, and monitor accounts payable."
+          />
+        </h1>
         <div className="flex items-center space-x-2">
           <Link href="/purchases/bills/new">
             <Button><Plus className="mr-2 h-4 w-4" /> Create Bill</Button>

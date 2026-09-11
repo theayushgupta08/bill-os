@@ -22,6 +22,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Invoice } from "@/types";
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function InvoiceList() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -80,7 +82,13 @@ export function InvoiceList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Sales Invoices</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Sales Invoices
+          <PageHelpTooltip
+            title="Sales Invoices"
+            description="Generate GST-compliant tax invoices, track customer payment receipts, manage due dates, and monitor receivables."
+          />
+        </h1>
         <div className="flex items-center space-x-2">
           <Link href="/sales/invoices/new">
             <Button><Plus className="mr-2 h-4 w-4" /> Create Invoice</Button>

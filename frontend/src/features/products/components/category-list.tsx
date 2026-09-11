@@ -19,6 +19,8 @@ import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ProductCategory } from "@/types";
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function CategoryList() {
   const queryClient = useQueryClient();
 
@@ -63,7 +65,13 @@ export function CategoryList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Product Categories</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Product Categories
+          <PageHelpTooltip
+            title="Product Categories"
+            description="Organize your products into logical categories and subcategories for streamlined catalog navigation and sales reporting."
+          />
+        </h1>
         <Link href="/product-categories/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" /> Add Category

@@ -12,6 +12,8 @@ import { BrandLoader } from "@/components/ui/loader";
 
 import { PurchaseOrder } from "@/types";
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function PurchasesReport() {
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
@@ -51,7 +53,13 @@ export function PurchasesReport() {
           <ShoppingBag className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Purchase Register</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Purchase Register
+            <PageHelpTooltip
+              title="Purchase Register"
+              description="Detailed register of supplier purchase bills logged within the selected timeframe, including tax breakups and totals."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Detailed register of supplier purchase bills logged within the selected timeframe.</p>
         </div>
       </div>

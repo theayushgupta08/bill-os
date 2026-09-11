@@ -11,6 +11,7 @@ import { Plus, Trash2, FileText } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tooltip";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { InvoiceSettings, Organization } from "@/types";
 
 interface BankDetails {
@@ -197,7 +198,13 @@ export function InvoiceSettingsForm() {
           <FileText className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Invoice Settings</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Invoice Settings
+            <PageHelpTooltip
+              title="Invoice Formatting & Payment Terms"
+              description="Customize invoice number prefixes, numbering formats, default payment terms, and printed bank account deposit instructions."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Configure prefix, bank deposit details, and bullet terms for your invoices.</p>
         </div>
       </div>

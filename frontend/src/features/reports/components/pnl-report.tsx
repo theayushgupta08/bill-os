@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IndianRupee, TrendingDown, TrendingUp, BarChart3 } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
@@ -39,7 +40,13 @@ export function PnlReport() {
           <BarChart3 className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Profit & Loss Statement</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Profit & Loss Statement
+            <PageHelpTooltip
+              title="Profit & Loss Statement"
+              description="Summarized snapshot of organization revenues, purchases, operating expenses, and net profit margins."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Summarized snapshot of organization revenues, purchases, and net margins.</p>
         </div>
       </div>

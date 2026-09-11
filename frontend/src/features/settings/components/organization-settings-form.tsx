@@ -11,6 +11,7 @@ import { Plus, X, Building2, GitBranch, Crown, ArrowRight, ShieldCheck, Upload, 
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tooltip";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { Organization } from "@/types";
 import { useOrganizationTree, switchActiveOrganization } from "@/lib/use-organization";
 import { CreateBranchDialog } from "@/components/organization/create-branch-dialog";
@@ -204,7 +205,13 @@ export function OrganizationSettingsForm() {
           <Building2 className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Organization Profile</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Organization Profile
+            <PageHelpTooltip
+              title="Organization Profile"
+              description="Update company legal information, GSTIN, registered addresses, business logo, and email domain suffix."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Update your company details, registered addresses, and GST information.</p>
         </div>
       </div>

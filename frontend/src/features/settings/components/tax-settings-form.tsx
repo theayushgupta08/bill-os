@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { HelpTooltip } from "@/components/ui/tooltip";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { toast } from "sonner";
 import { TaxSettings, Organization } from "@/types";
 import { PageLoader } from "@/components/ui/loader";
@@ -82,7 +83,13 @@ export function TaxSettingsForm() {
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 max-w-2xl">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Tax Settings</h2>
+        <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          Tax Settings
+          <PageHelpTooltip
+            title="GST & Tax Configurations"
+            description="Configure default GST rates, tax inclusive or exclusive pricing preferences, and automated calculation rules."
+          />
+        </h2>
       </div>
 
       <form onSubmit={handleSave}>

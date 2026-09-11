@@ -41,6 +41,8 @@ interface GSTR3BData {
   };
 }
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function Gstr3bReport() {
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
@@ -67,7 +69,13 @@ export function Gstr3bReport() {
           <FileText className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">GSTR-3B Summary</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            GSTR-3B Summary
+            <PageHelpTooltip
+              title="GSTR-3B Tax Liability Computation"
+              description="Monthly self-declaration summary comparing output tax liability against eligible Input Tax Credit (ITC) to compute net payable GST."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Monthly/quarterly summary of inward and outward supplies to compute final tax liability.</p>
         </div>
       </div>

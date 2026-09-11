@@ -21,6 +21,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Customer } from "@/types";
 import { ConsolidatedCustomerLedgerDialog } from "./consolidated-customer-ledger-dialog";
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 export function CustomerList() {
   const queryClient = useQueryClient();
   const [ledgerCustomerId, setLedgerCustomerId] = useState<string | null>(null);
@@ -67,7 +69,13 @@ export function CustomerList() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Customers</h1>
+        <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
+          Customers
+          <PageHelpTooltip
+            title="Customer Directory"
+            description="Manage your client directory, GSTIN details, billing/shipping addresses, payment terms, and outstanding balances."
+          />
+        </h1>
         <Link href="/customers/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" /> Add Customer

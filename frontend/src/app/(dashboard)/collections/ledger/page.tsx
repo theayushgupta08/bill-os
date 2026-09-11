@@ -12,6 +12,8 @@ import {
 import { BrandLoader } from "@/components/ui/loader";
 import { useCollectionLedger } from "@/features/collections/hooks/use-collections";
 
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
 function formatCurrency(amount: number) {
   return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 }
@@ -22,7 +24,13 @@ export default function LedgerPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Collection Ledger</h1>
+        <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+          Collection Ledger
+          <PageHelpTooltip
+            title="Collection Ledger"
+            description="Complete audit log of all verified collections, approved petty cash expenses, and bank settlement deposits."
+          />
+        </h1>
         <p className="text-sm text-slate-400 mt-1">
           Complete history of all verified collections, approved expenses, and settlement deposits.
         </p>

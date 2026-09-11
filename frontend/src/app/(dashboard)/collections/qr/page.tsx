@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { QrCode, Plus, Loader2, Power, Upload, Trash2, Pencil } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import {
   useQrCodes,
   useCreateQrCode,
@@ -195,7 +196,13 @@ export default function QrCodesPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">QR Codes</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            QR Codes
+            <PageHelpTooltip
+              title="Employee UPI QR Codes"
+              description="Manage employee UPI QR codes for on-counter and field collections with real-time payment reconciliation."
+            />
+          </h1>
           <p className="text-sm text-slate-400 mt-1">
             Manage employee UPI QR codes used for collecting payments.
           </p>

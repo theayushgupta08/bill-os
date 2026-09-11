@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import {
   useSettlementDeposits,
   useRecordDeposit,
@@ -60,6 +61,7 @@ export default function DepositsPage() {
   });
 
   const handleRecord = async () => {
+    if (!form.amount || isNaN(parseFloat(form.amount))) return;
     await recordMutation.mutateAsync({
       ...form,
       amount: parseFloat(form.amount),
@@ -76,7 +78,13 @@ export default function DepositsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Settlement Deposits</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            Settlement Deposits
+            <PageHelpTooltip
+              title="Bank Settlement Deposits"
+              description="Log cash and UPI settlements deposited back into the company bank account to reconcile collections."
+            />
+          </h1>
           <p className="text-sm text-slate-400 mt-1">
             Record and approve deposits back to the company bank account.
           </p>

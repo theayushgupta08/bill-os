@@ -11,6 +11,7 @@ import { Settings } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tooltip";
+import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { PreferencesSettings, Organization } from "@/types";
 
 export function PreferencesSettingsForm() {
@@ -92,7 +93,13 @@ export function PreferencesSettingsForm() {
           <Settings className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Preferences</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Preferences
+            <PageHelpTooltip
+              title="System & UI Preferences"
+              description="Customize currency formats, decimal precision, date formats, and theme appearance across your store."
+            />
+          </h2>
           <p className="text-sm text-slate-400">Customize how BillOS looks and formats data for your organization.</p>
         </div>
       </div>
