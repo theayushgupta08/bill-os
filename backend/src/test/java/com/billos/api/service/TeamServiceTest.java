@@ -317,4 +317,107 @@ class TeamServiceTest {
 
         verify(userOrgRoleRepository, never()).delete(any());
     }
+
+    @Test
+    @DisplayName("updateUserRole - should throw exception when trying to change role of organization creator")
+    void updateUserRole_creatorRoleCannotBeChanged_throwsException() {
+        UUID creatorId = UUID.randomUUID();
+        Organization org = new Organization();
+        org.setId(orgId);
+        org.setCreatedBy(creatorId);
+
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+
+        assertThatThrownBy(() -> teamService.updateUserRole(creatorId, "ADMIN"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot change role of the organization creator. The creator must remain OWNER.");
+
+        verify(userOrgRoleRepository, never()).save(any(UserOrgRole.class));
+    }
+
+    @Test
+    @DisplayName("removeUser - should throw exception when trying to remove organization creator")
+    void removeUser_creatorCannotBeRemoved_throwsException() {
+        UUID creatorId = UUID.randomUUID();
+        Organization org = new Organization();
+        org.setId(orgId);
+        org.setCreatedBy(creatorId);
+
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+
+        assertThatThrownBy(() -> teamService.removeUser(creatorId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot remove the organization creator from the organization.");
+
+        verify(userOrgRoleRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("toggleUserStatus - should throw exception when trying to deactivate organization creator")
+    void toggleUserStatus_creatorCannotBeDeactivated_throwsException() {
+        UUID creatorId = UUID.randomUUID();
+        Organization org = new Organization();
+        org.setId(orgId);
+        org.setCreatedBy(creatorId);
+
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+
+        assertThatThrownBy(() -> teamService.toggleUserStatus(creatorId, false))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining(
+                        "Cannot change status of the organization creator. The creator cannot be made inactive.");
+
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("getTeamMembers - should mark isCreator true for creator and false for others")
+    void getTeamMembers_shouldSetIsCreatorFlag() {
+        UUID creatorId = UUID.randomUUID();
+        UUID otherUserId = UUID.randomUUID();
+
+        Organization org = new Organization();
+        org.setId(orgId);
+        org.setCreatedBy(creatorId);
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+
+        User creatorUser = new User();
+        creatorUser.setId(creatorId);
+        creatorUser.setEmail("creator@example.com");
+        creatorUser.setIsActive(true);
+
+        User otherUser = new User();
+        otherUser.setId(otherUserId);
+        otherUser.setEmail("other@example.com");
+        otherUser.setIsActive(true);
+
+        UserOrgRole creatorRole = new UserOrgRole();
+        creatorRole.setOrganizationId(orgId);
+        creatorRole.setUser(creatorUser);
+        creatorRole.setRole("OWNER");
+
+        UserOrgRole otherRole = new UserOrgRole();
+        otherRole.setOrganizationId(orgId);
+        otherRole.setUser(otherUser);
+        otherRole.setRole("ADMIN");
+
+        when(userOrgRoleRepository.findAll()).thenReturn(List.of(creatorRole, otherRole));
+        when(userRepository.findById(creatorId)).thenReturn(Optional.of(creatorUser));
+        when(userRepository.findById(otherUserId)).thenReturn(Optional.of(otherUser));
+
+        List<TeamMemberDto> members = teamService.getTeamMembers();
+
+        assertThat(members).hasSize(2);
+        TeamMemberDto creatorDto = members.stream()
+                .filter(m -> m.getUserId().equals(creatorId))
+                .findFirst()
+                .orElseThrow();
+        TeamMemberDto otherDto = members.stream()
+                .filter(m -> m.getUserId().equals(otherUserId))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(creatorDto.getIsCreator()).isTrue();
+        assertThat(otherDto.getIsCreator()).isFalse();
+    }
 }

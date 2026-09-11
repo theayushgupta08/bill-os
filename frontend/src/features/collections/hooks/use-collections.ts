@@ -116,6 +116,7 @@ export interface TeamMember {
   lastName?: string;
   role: string;
   status: string;
+  isCreator?: boolean;
 }
 
 export function useTeamMembers() {

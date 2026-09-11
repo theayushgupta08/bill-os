@@ -83,4 +83,7 @@ public class Organization extends BaseEntity {
 
     @Column(name = "email_suffix", unique = true, length = 50)
     private String emailSuffix;
+
+    @Column(name = "created_by", updatable = false)
+    private UUID createdBy;
 }

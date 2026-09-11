@@ -42,6 +42,7 @@ public class OrganizationService {
         } else if (orgDetails.getIsPrimary() == null) {
             orgDetails.setIsPrimary(false);
         }
+        orgDetails.setCreatedBy(currentUser.getId());
 
         // Save and flush Organization immediately so it's visible to the seeder's new transaction
         Organization savedOrg = organizationRepository.saveAndFlush(orgDetails);
@@ -96,6 +97,7 @@ public class OrganizationService {
         org.setLogoUrl(request.getLogoUrl());
         org.setIsPrimary(true);
         org.setEmailSuffix(suffix);
+        org.setCreatedBy(currentUser.getId());
         org.setFinancialYearStart(
                 java.time.LocalDate.of(java.time.LocalDate.now().getYear(), 4, 1));
 
@@ -165,6 +167,7 @@ public class OrganizationService {
                         : java.time.LocalDate.of(java.time.LocalDate.now().getYear(), 4, 1));
         branch.setParentOrganizationId(parentOrg.getId());
         branch.setIsPrimary(false);
+        branch.setCreatedBy(currentUser.getId());
 
         // Save branch organization
         Organization savedBranch = organizationRepository.saveAndFlush(branch);

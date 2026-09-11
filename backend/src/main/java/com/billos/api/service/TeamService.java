@@ -47,6 +47,8 @@ public class TeamService {
     @Transactional(readOnly = true)
     public List<TeamMemberDto> getTeamMembers() {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        Organization org = organizationRepository.findById(orgId).orElse(null);
+        UUID creatorId = resolveOrganizationCreator(org);
         List<TeamMemberDto> team = new ArrayList<>();
 
         List<UserOrgRole> roles = userOrgRoleRepository.findAll();
@@ -54,6 +56,7 @@ public class TeamService {
             if (role.getOrganizationId().equals(orgId)) {
                 User user = userRepository.findById(role.getUser().getId()).orElse(null);
                 if (user != null) {
+                    boolean isCreator = creatorId != null && creatorId.equals(user.getId());
                     java.time.OffsetDateTime lastActive =
                             user.getUpdatedAt() != null ? user.getUpdatedAt() : user.getCreatedAt();
                     if (user.getSupabaseId() != null && jdbcTemplate != null) {
@@ -77,6 +80,7 @@ public class TeamService {
                             .role(role.getRole())
                             .status(Boolean.TRUE.equals(user.getIsActive()) ? "ACTIVE" : "INACTIVE")
                             .lastActiveAt(lastActive)
+                            .isCreator(isCreator)
                             .build());
                 }
             }
@@ -203,6 +207,13 @@ public class TeamService {
     public void updateUserRole(UUID userId, String newRole) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
+        Organization org = organizationRepository.findById(orgId).orElse(null);
+        UUID creatorId = resolveOrganizationCreator(org);
+        if (creatorId != null && creatorId.equals(userId)) {
+            throw new RuntimeException(
+                    "Cannot change role of the organization creator. The creator must remain OWNER.");
+        }
+
         UserOrgRole role = userOrgRoleRepository
                 .findByUserIdAndOrganizationId(userId, orgId)
                 .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
@@ -226,6 +237,12 @@ public class TeamService {
     public void removeUser(UUID userId) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
+        Organization org = organizationRepository.findById(orgId).orElse(null);
+        UUID creatorId = resolveOrganizationCreator(org);
+        if (creatorId != null && creatorId.equals(userId)) {
+            throw new RuntimeException("Cannot remove the organization creator from the organization.");
+        }
+
         UserOrgRole role = userOrgRoleRepository
                 .findByUserIdAndOrganizationId(userId, orgId)
                 .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
@@ -246,6 +263,13 @@ public class TeamService {
     @Transactional
     public void toggleUserStatus(UUID targetUserId, boolean active) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+
+        Organization org = organizationRepository.findById(orgId).orElse(null);
+        UUID creatorId = resolveOrganizationCreator(org);
+        if (creatorId != null && creatorId.equals(targetUserId)) {
+            throw new RuntimeException(
+                    "Cannot change status of the organization creator. The creator cannot be made inactive.");
+        }
 
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -362,5 +386,26 @@ public class TeamService {
             sb.append(PASSWORD_CHARS.charAt(RANDOM.nextInt(PASSWORD_CHARS.length())));
         }
         return sb.toString();
+    }
+
+    public UUID resolveOrganizationCreator(Organization org) {
+        if (org == null) {
+            return null;
+        }
+        if (org.getCreatedBy() != null) {
+            return org.getCreatedBy();
+        }
+        // Fallback for legacy organizations: the earliest OWNER in user_org_roles
+        return userOrgRoleRepository.findByOrganizationId(org.getId()).stream()
+                .filter(r -> "OWNER".equalsIgnoreCase(r.getRole()))
+                .min(java.util.Comparator.comparing(
+                        UserOrgRole::getCreatedAt, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .map(r -> r.getUser().getId())
+                .orElseGet(() -> userOrgRoleRepository.findByOrganizationId(org.getId()).stream()
+                        .min(java.util.Comparator.comparing(
+                                UserOrgRole::getCreatedAt,
+                                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                        .map(r -> r.getUser().getId())
+                        .orElse(null));
     }
 }

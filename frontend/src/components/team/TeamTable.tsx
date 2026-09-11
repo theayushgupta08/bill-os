@@ -50,6 +50,7 @@ interface TeamMember {
   role: string;
   status: string; // ACTIVE or INACTIVE
   lastActiveAt?: string;
+  isCreator?: boolean;
 }
 
 export function TeamTable() {
@@ -116,7 +117,7 @@ export function TeamTable() {
   };
 
   const canToggleStatus = (member: TeamMember) => {
-    if (!member.userId) return false;
+    if (!member.userId || member.isCreator) return false;
     if (
       currentUserEmail &&
       member.email.toLowerCase() === currentUserEmail.toLowerCase()
@@ -198,7 +199,29 @@ export function TeamTable() {
     }
   };
 
-  const getRoleBadge = (role: string) => {
+  const getRoleBadge = (role: string, isCreator?: boolean) => {
+    if (isCreator) {
+      return (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge
+            variant="outline"
+            className="border-rose-500/25 bg-rose-500/10 text-rose-400 font-semibold flex items-center gap-1 w-fit"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Owner
+          </Badge>
+          <Badge
+            variant="outline"
+            title="Account that created the organisation. Must remain owner and cannot be deactivated or removed."
+            className="border-amber-500/35 bg-amber-500/15 text-amber-300 font-semibold flex items-center gap-1 w-fit text-[11px] px-2 py-0.5 shadow-sm"
+          >
+            <span>👑</span>
+            Creator
+          </Badge>
+        </div>
+      );
+    }
+
     switch (role) {
       case "OWNER":
         return (
@@ -486,7 +509,7 @@ export function TeamTable() {
                   <TableCell className="text-slate-300 font-mono text-xs">
                     {member.email}
                   </TableCell>
-                  <TableCell>{getRoleBadge(member.role)}</TableCell>
+                  <TableCell>{getRoleBadge(member.role, member.isCreator)}</TableCell>
                   <TableCell>
                     {member.status === "INACTIVE" ? (
                       <span className="inline-flex items-center text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-full">
@@ -512,9 +535,11 @@ export function TeamTable() {
                         }
                         onClick={() => handleToggleUserStatus(member)}
                         title={
-                          currentUserEmail &&
-                          member.email.toLowerCase() ===
-                            currentUserEmail.toLowerCase()
+                          member.isCreator
+                            ? "The organization creator cannot be deactivated"
+                            : currentUserEmail &&
+                              member.email.toLowerCase() ===
+                                currentUserEmail.toLowerCase()
                             ? "You cannot deactivate your own account"
                             : !canToggleStatus(member)
                             ? "You do not have permission to change this user's status"

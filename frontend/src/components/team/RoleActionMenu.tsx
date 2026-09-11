@@ -47,6 +47,7 @@ interface TeamMember {
   lastName?: string;
   role: string;
   status: string;
+  isCreator?: boolean;
 }
 
 export function RoleActionMenu({
@@ -75,6 +76,7 @@ export function RoleActionMenu({
   const targetLevel = hierarchy.indexOf(member.role);
 
   const canToggle =
+    !member.isCreator &&
     canModify &&
     callerLevel !== -1 &&
     targetLevel !== -1 &&
@@ -84,6 +86,10 @@ export function RoleActionMenu({
   const canResetPassword = canModify && !isSelf;
 
   const handleRoleChange = async (newRole: string) => {
+    if (member.isCreator) {
+      toast.error("The organization creator must remain OWNER.");
+      return;
+    }
     if (newRole === member.role) return;
     setLoading(true);
     try {
@@ -98,6 +104,10 @@ export function RoleActionMenu({
   };
 
   const handleToggleStatus = async () => {
+    if (member.isCreator) {
+      toast.error("The organization creator cannot be deactivated.");
+      return;
+    }
     const isActivating = member.status === "INACTIVE";
     const actionText = isActivating ? "activate" : "deactivate";
     if (!confirm(`Are you sure you want to ${actionText} this user?`)) return;
@@ -147,6 +157,10 @@ export function RoleActionMenu({
   };
 
   const handleRemove = async () => {
+    if (member.isCreator) {
+      toast.error("The organization creator cannot be removed.");
+      return;
+    }
     if (!confirm("Are you sure you want to remove this user from the organization?")) return;
     setLoading(true);
     try {
@@ -178,22 +192,31 @@ export function RoleActionMenu({
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem onClick={() => handleRoleChange("OWNER")} className="cursor-pointer">
-              <ShieldAlert className="mr-2 h-4 w-4 text-rose-500" />
-              <span>Make Owner</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleRoleChange("ADMIN")} className="cursor-pointer">
-              <Shield className="mr-2 h-4 w-4 text-emerald-500" />
-              <span>Make Admin</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleRoleChange("MANAGER")} className="cursor-pointer">
-              <Users className="mr-2 h-4 w-4 text-blue-400" />
-              <span>Make Manager</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleRoleChange("USER")} className="cursor-pointer">
-              <User className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Make User</span>
-            </DropdownMenuItem>
+            {member.isCreator ? (
+              <div className="px-2 py-1.5 text-xs font-medium text-amber-300 flex items-center gap-1.5 bg-amber-500/10 rounded-md my-1 border border-amber-500/20">
+                <span>👑</span>
+                <span>Role Locked (Creator)</span>
+              </div>
+            ) : (
+              <>
+                <DropdownMenuItem onClick={() => handleRoleChange("OWNER")} className="cursor-pointer">
+                  <ShieldAlert className="mr-2 h-4 w-4 text-rose-500" />
+                  <span>Make Owner</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleRoleChange("ADMIN")} className="cursor-pointer">
+                  <Shield className="mr-2 h-4 w-4 text-emerald-500" />
+                  <span>Make Admin</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleRoleChange("MANAGER")} className="cursor-pointer">
+                  <Users className="mr-2 h-4 w-4 text-blue-400" />
+                  <span>Make Manager</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleRoleChange("USER")} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4 text-zinc-400" />
+                  <span>Make User</span>
+                </DropdownMenuItem>
+              </>
+            )}
 
             <DropdownMenuSeparator />
 
@@ -220,15 +243,18 @@ export function RoleActionMenu({
               </DropdownMenuItem>
             )}
 
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              onClick={handleRemove}
-              className="cursor-pointer text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Remove User</span>
-            </DropdownMenuItem>
+            {!member.isCreator && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleRemove}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Remove User</span>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
