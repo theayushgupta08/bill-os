@@ -52,4 +52,9 @@ public class SalesInvoiceController {
     public ResponseEntity<Map<String, Object>> getEInvoiceJson(@PathVariable UUID id) {
         return ResponseEntity.ok(salesInvoiceService.generateEInvoiceJson(id));
     }
+
+    @GetMapping("/next-number")
+    public ResponseEntity<Map<String, String>> getNextInvoiceNumber() {
+        return ResponseEntity.ok(Map.of("nextInvoiceNumber", salesInvoiceService.getNextInvoiceNumberPreview()));
+    }
 }

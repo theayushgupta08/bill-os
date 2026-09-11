@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.billos.api.entity.DocumentType;
 import com.billos.api.entity.NumberingSequence;
 import com.billos.api.repository.NumberingSequenceRepository;
+import com.billos.api.repository.OrganizationSettingsRepository;
 import com.billos.api.tenant.TenantContext;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,6 +24,9 @@ class SequenceGeneratorServiceTest {
 
     @Mock
     private NumberingSequenceRepository numberingSequenceRepository;
+
+    @Mock
+    private OrganizationSettingsRepository organizationSettingsRepository;
 
     @InjectMocks
     private SequenceGeneratorService sequenceGeneratorService;
@@ -47,5 +51,22 @@ class SequenceGeneratorServiceTest {
 
         assertEquals("INV-0015", result);
         assertEquals(16L, seq.getNextNumber());
+    }
+
+    @Test
+    void peekNextDocumentNumber_doesNotIncrement() {
+        NumberingSequence seq = new NumberingSequence();
+        seq.setPrefix("INV-");
+        seq.setNextNumber(15L);
+        seq.setPaddingLength(4);
+
+        when(numberingSequenceRepository.findByOrganizationIdAndDocumentType(any(UUID.class), eq(DocumentType.INVOICE)))
+                .thenReturn(Optional.of(seq));
+
+        String result = sequenceGeneratorService.peekNextDocumentNumber(DocumentType.INVOICE);
+
+        assertEquals("INV-0015", result);
+        assertEquals(15L, seq.getNextNumber());
+        verify(numberingSequenceRepository, never()).save(any(NumberingSequence.class));
     }
 }

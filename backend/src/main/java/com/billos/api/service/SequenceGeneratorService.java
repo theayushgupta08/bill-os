@@ -2,7 +2,9 @@ package com.billos.api.service;
 
 import com.billos.api.entity.DocumentType;
 import com.billos.api.entity.NumberingSequence;
+import com.billos.api.entity.OrganizationSettings;
 import com.billos.api.repository.NumberingSequenceRepository;
+import com.billos.api.repository.OrganizationSettingsRepository;
 import com.billos.api.tenant.TenantContext;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SequenceGeneratorService {
 
     private final NumberingSequenceRepository numberingSequenceRepository;
+    private final OrganizationSettingsRepository organizationSettingsRepository;
 
     @Transactional
     public String getNextDocumentNumber(DocumentType documentType) {
@@ -23,11 +26,37 @@ public class SequenceGeneratorService {
                 .findByOrganizationIdAndDocumentType(orgId, documentType)
                 .orElseGet(() -> createDefaultSequence(orgId, documentType));
 
+        syncInvoicePrefix(orgId, documentType, sequence);
+
         Long currentNumber = sequence.getNextNumber();
         sequence.setNextNumber(currentNumber + 1);
         numberingSequenceRepository.save(sequence);
 
         return String.format("%s%0" + sequence.getPaddingLength() + "d", sequence.getPrefix(), currentNumber);
+    }
+
+    @Transactional(readOnly = true)
+    public String peekNextDocumentNumber(DocumentType documentType) {
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+
+        NumberingSequence sequence = numberingSequenceRepository
+                .findByOrganizationIdAndDocumentType(orgId, documentType)
+                .orElseGet(() -> createDefaultSequence(orgId, documentType));
+
+        syncInvoicePrefix(orgId, documentType, sequence);
+
+        Long currentNumber = sequence.getNextNumber();
+        return String.format("%s%0" + sequence.getPaddingLength() + "d", sequence.getPrefix(), currentNumber);
+    }
+
+    private void syncInvoicePrefix(UUID orgId, DocumentType documentType, NumberingSequence sequence) {
+        if (documentType == DocumentType.INVOICE && organizationSettingsRepository != null) {
+            organizationSettingsRepository
+                    .findByOrganizationId(orgId)
+                    .map(OrganizationSettings::getInvoicePrefix)
+                    .filter(p -> p != null && !p.trim().isEmpty())
+                    .ifPresent(sequence::setPrefix);
+        }
     }
 
     private NumberingSequence createDefaultSequence(UUID orgId, DocumentType type) {
@@ -45,7 +74,15 @@ public class SequenceGeneratorService {
                 seq.setPrefix("SO-");
                 break;
             case INVOICE:
-                seq.setPrefix("INV-");
+                String prefix = "INV-";
+                if (organizationSettingsRepository != null) {
+                    prefix = organizationSettingsRepository
+                            .findByOrganizationId(orgId)
+                            .map(OrganizationSettings::getInvoicePrefix)
+                            .filter(p -> p != null && !p.trim().isEmpty())
+                            .orElse("INV-");
+                }
+                seq.setPrefix(prefix);
                 break;
             case PURCHASE_ORDER:
                 seq.setPrefix("PO-");

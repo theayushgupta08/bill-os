@@ -279,4 +279,9 @@ public class SalesInvoiceService {
 
         return eInvoice;
     }
+
+    @Transactional(readOnly = true)
+    public String getNextInvoiceNumberPreview() {
+        return sequenceGeneratorService.peekNextDocumentNumber(DocumentType.INVOICE);
+    }
 }

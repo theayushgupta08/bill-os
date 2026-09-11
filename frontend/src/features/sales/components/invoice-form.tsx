@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash, ArrowLeft, Building2, FileText, ExternalLink, Package, Layers } from "lucide-react";
+import { Plus, Trash, ArrowLeft, Building2, FileText, ExternalLink, Package, Layers, Lock } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -64,7 +64,7 @@ export function InvoiceForm() {
   const [formData, setFormData] = useState(() => ({
     customerId: "",
     soId: soId || "",
-    invoiceNumber: "INV-" + Math.floor(10000 + Math.random() * 90000),
+    invoiceNumber: "",
     invoiceDate: new Date().toISOString().split("T")[0],
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
   }));
@@ -127,6 +127,90 @@ export function InvoiceForm() {
     enabled: !!orgId
   });
 
+  // Query sales invoices for sequential numbering fallback & history
+  const { data: existingInvoices = [] } = useQuery({
+    queryKey: ["sales-invoices"],
+    queryFn: async () => {
+      const res = await api.get<any[]>("/sales-invoices");
+      return res || [];
+    }
+  });
+
+  // Query backend next invoice number preview
+  const { data: nextNumberData } = useQuery({
+    queryKey: ["next-invoice-number", orgId],
+    queryFn: async () => {
+      try {
+        const res = await api.get<{ nextInvoiceNumber: string }>("/sales-invoices/next-number");
+        return res?.nextInvoiceNumber;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!orgId,
+  });
+
+  // Company Invoice Prefix from settings (default "INV-")
+  const companyPrefix = useMemo(() => {
+    return invoiceSettings?.invoicePrefix?.trim() || "INV-";
+  }, [invoiceSettings?.invoicePrefix]);
+
+  // System-generated sequential invoice number: Prefix + 0001, 0002...
+  const sequentialInvoiceNumber = useMemo(() => {
+    if (nextNumberData) return nextNumberData;
+
+    if (!existingInvoices || existingInvoices.length === 0) {
+      return `${companyPrefix}0001`;
+    }
+
+    const sequenceNumbers = existingInvoices
+      .map((inv: any) => inv.invoiceNumber)
+      .filter(Boolean)
+      .map((numStr: string) => {
+        if (numStr.toLowerCase().startsWith(companyPrefix.toLowerCase())) {
+          const suffix = numStr.substring(companyPrefix.length);
+          const parsed = parseInt(suffix, 10);
+          return isNaN(parsed) ? null : parsed;
+        }
+        const match = numStr.match(/(\d+)$/);
+        return match ? parseInt(match[1], 10) : null;
+      })
+      .filter((n: number | null): n is number => n !== null);
+
+    const highest = sequenceNumbers.length > 0 ? Math.max(...sequenceNumbers) : 0;
+    const nextSeq = highest + 1;
+    return `${companyPrefix}${String(nextSeq).padStart(4, "0")}`;
+  }, [nextNumberData, existingInvoices, companyPrefix]);
+
+  // Sync sequential invoice number into formData
+  useEffect(() => {
+    if (sequentialInvoiceNumber) {
+      setFormData((prev) => ({
+        ...prev,
+        invoiceNumber: sequentialInvoiceNumber,
+      }));
+    }
+  }, [sequentialInvoiceNumber]);
+
+  // Default tax rate (from org settings or 18% GST standard or first active)
+  const defaultTaxRate = useMemo(() => {
+    if (!taxes || taxes.length === 0) return null;
+    if (invoiceSettings?.defaultGstRate) {
+      const matched = taxes.find(
+        (t) => Math.abs(Number(t.rate) - Number(invoiceSettings.defaultGstRate)) < 0.01
+      );
+      if (matched) return matched;
+    }
+    return taxes.find((t) => Number(t.rate) === 18) || taxes[0];
+  }, [taxes, invoiceSettings?.defaultGstRate]);
+
+  // Pre-select default tax rate in consolidated tax mode
+  useEffect(() => {
+    if (defaultTaxRate && !consolidatedTaxRateId) {
+      setConsolidatedTaxRateId(defaultTaxRate.id);
+    }
+  }, [defaultTaxRate, consolidatedTaxRateId]);
+
   // Default warehouse (Main / code=MAIN / first)
   const defaultWarehouse = useMemo(() => {
     if (!warehouses || warehouses.length === 0) return null;
@@ -147,16 +231,6 @@ export function InvoiceForm() {
       );
     }
   }, [defaultWarehouse]);
-
-  // Set default consolidated tax rate (e.g. 18% or first available)
-  useEffect(() => {
-    if (taxes && taxes.length > 0 && !consolidatedTaxRateId) {
-      const defaultTax = taxes.find((t) => Number(t.rate) === 18) || taxes[0];
-      if (defaultTax) {
-        setConsolidatedTaxRateId(defaultTax.id);
-      }
-    }
-  }, [taxes, consolidatedTaxRateId]);
 
   const initialLoading = loadingCustomers || loadingProducts || loadingTaxes || loadingWarehouses;
 
@@ -180,25 +254,81 @@ export function InvoiceForm() {
     }
   };
 
+  // Dedicated Product selection handler: auto-populates unitPrice and tax rate
+  const handleProductSelect = (lineId: string, productId: string, product?: Product) => {
+    const prod = product || products.find((p) => p.id === productId);
+    setLines((prev) =>
+      prev.map((line) => {
+        if (line.id !== lineId) return line;
+        if (!productId || !prod) {
+          return { ...line, productId: "", unitPrice: 0 };
+        }
+
+        // Auto-populate price from product (can be edited directly in the table)
+        const autoPrice = Number(prod.price ?? prod.basePrice ?? 0);
+
+        // Auto-populate tax rate (for product-specific tax mode)
+        let resolvedTaxRateId = line.taxRateId;
+        if (prod.taxRateId) {
+          resolvedTaxRateId = prod.taxRateId;
+        } else if (prod.taxRate !== undefined && prod.taxRate !== null && taxes.length > 0) {
+          const match = taxes.find(
+            (t) => Math.abs(Number(t.rate) - Number(prod.taxRate)) < 0.01
+          );
+          if (match) {
+            resolvedTaxRateId = match.id;
+          }
+        }
+
+        return {
+          ...line,
+          productId: prod.id,
+          unitPrice: autoPrice,
+          taxRateId: isConsolidatedTax ? line.taxRateId : (resolvedTaxRateId || line.taxRateId),
+        };
+      })
+    );
+  };
+
+  // General field change (e.g. quantity, unitPrice, warehouseId, taxRateId)
   const handleLineChange = (id: string, field: keyof LineItem, value: any) => {
     setLines((prev) =>
       prev.map((line) => {
         if (line.id === id) {
-          const updatedLine = { ...line, [field]: value };
-          if (field === "productId") {
-            const product = products.find((p) => p.id === value);
-            if (product) {
-              updatedLine.unitPrice = Number(product.price ?? product.basePrice) || 0;
-              if (product.taxRateId && !isConsolidatedTax) {
-                updatedLine.taxRateId = product.taxRateId;
-              }
-            }
-          }
-          return updatedLine;
+          return { ...line, [field]: value };
         }
         return line;
       })
     );
+  };
+
+  // Switch between Consolidated and Product-Specific Tax Mode
+  const handleSwitchTaxMode = (consolidated: boolean) => {
+    setIsConsolidatedTax(consolidated);
+    if (!consolidated) {
+      // In product specific mode, ensure any existing line with a product has its tax rate auto-populated
+      setLines((prev) =>
+        prev.map((line) => {
+          if (!line.productId) return line;
+          const prod = products.find((p) => p.id === line.productId);
+          if (!prod) return line;
+
+          let targetTaxId = line.taxRateId;
+          if (prod.taxRateId) {
+            targetTaxId = prod.taxRateId;
+          } else if (prod.taxRate !== undefined && prod.taxRate !== null && taxes.length > 0) {
+            const match = taxes.find(
+              (t) => Math.abs(Number(t.rate) - Number(prod.taxRate)) < 0.01
+            );
+            if (match) targetTaxId = match.id;
+          }
+          return {
+            ...line,
+            taxRateId: targetTaxId || line.taxRateId,
+          };
+        })
+      );
+    }
   };
 
   // Check interstate status
@@ -307,6 +437,7 @@ export function InvoiceForm() {
 
     const payload = {
       ...formData,
+      invoiceNumber: formData.invoiceNumber || sequentialInvoiceNumber,
       status,
       notes: invoiceSettings?.invoiceTerms || "",
       lines: lines.map((l) => ({
@@ -348,19 +479,31 @@ export function InvoiceForm() {
           <span className="text-xs text-slate-400 font-medium px-2">Tax Mode:</span>
           <button
             type="button"
-            onClick={() => setIsConsolidatedTax(true)}
+            onClick={() => handleSwitchTaxMode(true)}
             className={cn(
-              "px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
+              "px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5",
               isConsolidatedTax
                 ? "bg-indigo-600 text-white shadow-sm"
                 : "text-slate-400 hover:text-slate-200"
             )}
           >
-            Consolidated Tax Rate
+            <span>Consolidated Tax Rate</span>
+            {defaultTaxRate && (
+              <span
+                className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded font-normal",
+                  isConsolidatedTax
+                    ? "bg-indigo-700/90 text-indigo-100"
+                    : "bg-slate-800 text-slate-400"
+                )}
+              >
+                {defaultTaxRate.rate}% Default
+              </span>
+            )}
           </button>
           <button
             type="button"
-            onClick={() => setIsConsolidatedTax(false)}
+            onClick={() => handleSwitchTaxMode(false)}
             className={cn(
               "px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
               !isConsolidatedTax
@@ -388,12 +531,22 @@ export function InvoiceForm() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-300">Invoice Number *</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                  <Lock className="h-3 w-3 text-indigo-400" />
+                  Invoice Number *
+                </Label>
+                <span className="text-[10px] text-indigo-400 font-medium bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">
+                  System Generated
+                </span>
+              </div>
               <Input
-                value={formData.invoiceNumber}
-                onChange={(e) => setFormData((prev) => ({ ...prev, invoiceNumber: e.target.value }))}
-                required
-                className="bg-slate-950/60 border-slate-800 text-white font-mono text-xs"
+                value={formData.invoiceNumber || sequentialInvoiceNumber}
+                readOnly
+                disabled
+                tabIndex={-1}
+                title="System generated sequential invoice number cannot be edited"
+                className="bg-slate-950/80 border-slate-800 text-indigo-300 font-mono text-xs cursor-not-allowed select-none opacity-95 focus-visible:ring-0 focus-visible:border-slate-800"
               />
             </div>
 
@@ -462,12 +615,7 @@ export function InvoiceForm() {
                           <ProductCombobox
                             products={products}
                             value={line.productId}
-                            onChange={(val, prod) => {
-                              handleLineChange(line.id, "productId", val);
-                              if (prod && !isConsolidatedTax && prod.taxRateId) {
-                                handleLineChange(line.id, "taxRateId", prod.taxRateId);
-                              }
-                            }}
+                            onChange={(val, prod) => handleProductSelect(line.id, val, prod)}
                           />
                         </TableCell>
 
@@ -705,9 +853,16 @@ export function InvoiceForm() {
                 {/* Consolidated Tax Selector inside Summary */}
                 {isConsolidatedTax && (
                   <div className="pb-3 border-b border-slate-800 space-y-1.5">
-                    <Label className="text-slate-300 font-medium text-xs">
-                      Consolidated Tax Rate (GST)
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-slate-300 font-medium text-xs">
+                        Consolidated Tax Rate (GST)
+                      </Label>
+                      {defaultTaxRate && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-medium border border-emerald-500/20">
+                          Default: {defaultTaxRate.rate}%
+                        </span>
+                      )}
+                    </div>
                     <Select
                       value={consolidatedTaxRateId}
                       onValueChange={(val) => val && setConsolidatedTaxRateId(val)}
@@ -716,11 +871,14 @@ export function InvoiceForm() {
                         <SelectValue placeholder="Select Tax Rate" />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-900 border-slate-800 text-white text-xs">
-                        {taxes.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name} ({t.rate}%)
-                          </SelectItem>
-                        ))}
+                        {taxes.map((t) => {
+                          const isDefault = defaultTaxRate?.id === t.id;
+                          return (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name} ({t.rate}%) {isDefault ? "★ Default" : ""}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
