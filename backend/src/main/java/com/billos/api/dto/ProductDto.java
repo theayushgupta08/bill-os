@@ -1,11 +1,14 @@
 package com.billos.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ProductDto {
+
     private UUID id;
     private UUID categoryId;
     private String name;

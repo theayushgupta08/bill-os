@@ -246,10 +246,12 @@ export function BulkImportDialog({
                 billingCity: billingCity || null,
                 billingState: billingState || null,
                 billingPincode: billingPincode || null,
+                billingCountry: "India",
                 isShared: true,
               },
               errors,
             };
+
           },
         };
 
@@ -461,14 +463,18 @@ export function BulkImportDialog({
         );
       }
     } catch (err: any) {
-      console.error(err);
-      toast.error(
-        err.response?.data?.message || `Failed to import ${entity}. Please check server logs.`
-      );
+      console.error("Bulk import failed:", err);
+      const errorMsg =
+        err?.message ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        `Failed to import ${entity}. Please check server logs.`;
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -148,6 +148,13 @@ public class CustomerService {
         } else {
             customer.setIsShared(true);
         }
+        if (customer.getOutstandingBalance() == null) {
+            customer.setOutstandingBalance(java.math.BigDecimal.ZERO);
+        }
+        if (customer.getBillingCountry() == null
+                || customer.getBillingCountry().trim().isEmpty()) {
+            customer.setBillingCountry("India");
+        }
         Customer savedCustomer = customerRepository.save(customer);
         return customerMapper.toDto(savedCustomer);
     }
@@ -196,6 +203,13 @@ public class CustomerService {
             customer.setOrganizationId(currentOrgId);
             customer.setOriginatingOrgId(currentOrgId);
             customer.setIsShared(dto.getIsShared() != null ? dto.getIsShared() : true);
+            if (customer.getOutstandingBalance() == null) {
+                customer.setOutstandingBalance(java.math.BigDecimal.ZERO);
+            }
+            if (customer.getBillingCountry() == null
+                    || customer.getBillingCountry().trim().isEmpty()) {
+                customer.setBillingCountry("India");
+            }
 
             customersToSave.add(customer);
         }

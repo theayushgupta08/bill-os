@@ -9,6 +9,7 @@ import org.mapstruct.MappingTarget;
 public interface CustomerMapper {
     CustomerDto toDto(Customer customer);
 
+    @org.mapstruct.Mapping(target = "outstandingBalance", defaultExpression = "java(java.math.BigDecimal.ZERO)")
     Customer toEntity(CustomerDto customerDto);
 
     @org.mapstruct.Mapping(target = "outstandingBalance", ignore = true)
