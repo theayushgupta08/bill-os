@@ -1,23 +1,33 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { api, downloadPdf } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Plus, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { PageLoader } from "@/components/ui/loader";
+import { BrandLoader } from "@/components/ui/loader";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQueryState } from 'nuqs';
 import { toast } from "sonner";
 import { Invoice } from "@/types";
 
 export function InvoiceList() {
   const queryClient = useQueryClient();
-  const [page] = useQueryState('page', { defaultValue: '1' });
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const { data: invoices = [], isLoading } = useQuery({
-    queryKey: ["sales-invoices", page],
+    queryKey: ["sales-invoices"],
     queryFn: async () => {
       const res = await api.get<Invoice[]>("/sales-invoices");
       return res;
@@ -49,7 +59,23 @@ export function InvoiceList() {
     }
   });
 
-  if (isLoading) return <PageLoader text="Loading sales invoices..." />;
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    paginatedData,
+  } = useDataTable<Invoice>({
+    data: invoices,
+    searchFields: ["invoiceNumber", "customerName"],
+    filterFn: (inv) => {
+      if (statusFilter === "ALL") return true;
+      return inv.status?.toUpperCase() === statusFilter;
+    },
+  });
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
@@ -61,6 +87,33 @@ export function InvoiceList() {
           </Link>
         </div>
       </div>
+
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search invoices by number or customer..."
+        hasActiveFilters={statusFilter !== "ALL" || !!searchTerm}
+        onResetFilters={() => {
+          setSearchTerm("");
+          setStatusFilter("ALL");
+        }}
+      >
+        <div className="flex items-center gap-1.5">
+          <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v ?? "ALL"); setPage(1); }}>
+            <SelectTrigger className="w-[140px] h-9 bg-slate-950/70 border-border text-foreground text-xs">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent className="rounded-lg border border-slate-800 bg-slate-900/95 backdrop-blur-xl shadow-xl text-slate-200">
+              <SelectItem value="ALL" className="text-xs">All Statuses</SelectItem>
+              <SelectItem value="PAID" className="text-xs">Paid</SelectItem>
+              <SelectItem value="UNPAID" className="text-xs">Unpaid</SelectItem>
+              <SelectItem value="OVERDUE" className="text-xs">Overdue</SelectItem>
+              <SelectItem value="DRAFT" className="text-xs">Draft</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </TableToolbar>
       
       <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
@@ -75,30 +128,53 @@ export function InvoiceList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {invoices.map((inv: any) => (
-              <TableRow key={inv.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
-                <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                <TableCell>{inv.invoiceDate}</TableCell>
-                <TableCell>{inv.customerName}</TableCell>
-                <TableCell><Badge variant="default" className={inv.status === 'PAID' ? "bg-green-500" : "bg-blue-500"}>{inv.status}</Badge></TableCell>
-                <TableCell className="text-right">₹{inv.totalAmount.toFixed(2)}</TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => downloadPdf(`/sales-invoices/${inv.id}/pdf`, `Invoice-${inv.invoiceNumber}.pdf`)}>
-                    PDF
-                  </Button>
-                  {inv.status !== 'PAID' && (
-                    <Button variant="outline" size="sm" onClick={() => payMutation.mutate(inv)} disabled={payMutation.isPending}>
-                      Record Payment
-                    </Button>
-                  )}
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading sales invoices..." size="lg" />
                 </TableCell>
               </TableRow>
-            ))}
-            {invoices.length === 0 && (
-               <TableRow><TableCell colSpan={6} className="text-center h-24">No sales invoices found.</TableCell></TableRow>
+            ) : totalCount === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center h-24">
+                  {searchTerm || statusFilter !== "ALL" ? "No invoices matching your search filters." : "No sales invoices found."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedData.map((inv: Invoice) => (
+                <TableRow key={inv.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
+                  <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                  <TableCell>{inv.invoiceDate}</TableCell>
+                  <TableCell>{inv.customerName}</TableCell>
+                  <TableCell>
+                    <Badge variant="default" className={inv.status === 'PAID' ? "bg-green-500" : "bg-blue-500"}>
+                      {inv.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-medium">₹{inv.totalAmount?.toFixed(2)}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => downloadPdf(`/sales-invoices/${inv.id}/pdf`, `Invoice-${inv.invoiceNumber}.pdf`)}>
+                      PDF
+                    </Button>
+                    {inv.status !== 'PAID' && (
+                      <Button variant="outline" size="sm" onClick={() => payMutation.mutate(inv)} disabled={payMutation.isPending}>
+                        Record Payment
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

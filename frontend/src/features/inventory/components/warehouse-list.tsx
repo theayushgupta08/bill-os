@@ -13,17 +13,18 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { PageLoader } from "@/components/ui/loader";
+import { BrandLoader } from "@/components/ui/loader";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQueryState } from 'nuqs';
 import { Warehouse } from "@/types";
 
 export function WarehouseList() {
   const queryClient = useQueryClient();
-  const [page] = useQueryState('page', { defaultValue: '1' });
 
   const { data: warehouses = [] as Warehouse[], isLoading } = useQuery({
-    queryKey: ["warehouses", page],
+    queryKey: ["warehouses"],
     queryFn: async () => {
       const res = await api.get<Warehouse[]>("/inventory/warehouses");
       return res;
@@ -46,7 +47,19 @@ export function WarehouseList() {
     }
   };
 
-  if (isLoading) return <PageLoader text="Loading warehouses..." />;
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    paginatedData,
+  } = useDataTable<Warehouse>({
+    data: warehouses,
+    searchFields: ["name", "code", "city", "state"],
+  });
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
@@ -60,6 +73,12 @@ export function WarehouseList() {
           </Link>
         </div>
       </div>
+
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search warehouses by name, code, city..."
+      />
       
       <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
@@ -73,14 +92,20 @@ export function WarehouseList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {warehouses.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading warehouses..." size="lg" />
+                </TableCell>
+              </TableRow>
+            ) : totalCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center h-24">
-                  No warehouses found.
+                  {searchTerm ? "No warehouses matching your search." : "No warehouses found."}
                 </TableCell>
               </TableRow>
             ) : (
-              warehouses.map((warehouse: Warehouse) => (
+              paginatedData.map((warehouse: Warehouse) => (
                 <TableRow key={warehouse.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{warehouse.code}</TableCell>
                   <TableCell>{warehouse.name}</TableCell>
@@ -95,11 +120,11 @@ export function WarehouseList() {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Link href={`/warehouses/${warehouse.id}`}>
-                        <Button variant="outline" size="icon">
+                        <Button variant="ghost" size="icon">
                           <Edit className="h-4 w-4" />
                         </Button>
                       </Link>
-                      <Button variant="destructive" size="icon" onClick={() => handleDelete(warehouse.id)} disabled={deleteMutation.isPending}>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(warehouse.id)} disabled={deleteMutation.isPending}>
                         <Trash className="h-4 w-4" />
                       </Button>
                     </div>
@@ -109,6 +134,14 @@ export function WarehouseList() {
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

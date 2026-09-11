@@ -12,17 +12,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useDataTable } from "@/hooks/use-data-table";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQueryState } from 'nuqs';
 import { Supplier } from "@/types";
 
 export function SupplierList() {
   const queryClient = useQueryClient();
-  const [page] = useQueryState('page', { defaultValue: '1' });
 
-  const { data: suppliers = [], isLoading } = useQuery({
-    queryKey: ["suppliers", page],
+  const { data: suppliers = [] as Supplier[], isLoading } = useQuery({
+    queryKey: ["suppliers"],
     queryFn: async () => {
       const res = await api.get<Supplier[]>("/suppliers");
       return res;
@@ -45,6 +46,20 @@ export function SupplierList() {
     }
   };
 
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    paginatedData,
+  } = useDataTable<Supplier>({
+    data: suppliers,
+    searchFields: ["name", "email", "phone", "gstin"],
+  });
+
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
@@ -55,6 +70,12 @@ export function SupplierList() {
           </Button>
         </Link>
       </div>
+
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search suppliers by name, phone, email, GSTIN..."
+      />
 
       <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
@@ -75,14 +96,14 @@ export function SupplierList() {
                   <BrandLoader variant="card" text="Loading suppliers..." size="lg" />
                 </TableCell>
               </TableRow>
-            ) : suppliers.length === 0 ? (
+            ) : totalCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24">
-                  No suppliers found.
+                  {searchTerm ? "No suppliers matching your search." : "No suppliers found."}
                 </TableCell>
               </TableRow>
             ) : (
-              suppliers.map((supplier: Supplier) => (
+              paginatedData.map((supplier: Supplier) => (
                 <TableRow key={supplier.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell>{supplier.email || "-"}</TableCell>
@@ -112,6 +133,14 @@ export function SupplierList() {
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

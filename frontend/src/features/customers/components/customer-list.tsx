@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Plus, Edit, Trash2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,23 +13,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useDataTable } from "@/hooks/use-data-table";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQueryState } from 'nuqs';
 import { Customer } from "@/types";
-import { useState } from "react";
 import { ConsolidatedCustomerLedgerDialog } from "./consolidated-customer-ledger-dialog";
 
 export function CustomerList() {
   const queryClient = useQueryClient();
   const [ledgerCustomerId, setLedgerCustomerId] = useState<string | null>(null);
   const [ledgerCustomerName, setLedgerCustomerName] = useState<string>("");
-  
-  // Using nuqs for URL state (e.g. ?page=1) - we can expand this to search later
-  const [page] = useQueryState('page', { defaultValue: '1' });
 
   const { data: customers = [] as Customer[], isLoading } = useQuery({
-    queryKey: ["customers", page],
+    queryKey: ["customers"],
     queryFn: async () => {
       const res = await api.get<Customer[]>("/customers");
       return res;
@@ -51,6 +50,20 @@ export function CustomerList() {
     }
   };
 
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    paginatedData,
+  } = useDataTable<Customer>({
+    data: customers,
+    searchFields: ["name", "email", "phone", "gstin"],
+  });
+
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
@@ -61,6 +74,12 @@ export function CustomerList() {
           </Button>
         </Link>
       </div>
+
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search customers by name, phone, email, GSTIN..."
+      />
 
       <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
@@ -81,14 +100,14 @@ export function CustomerList() {
                   <BrandLoader variant="card" text="Loading customers..." size="lg" />
                 </TableCell>
               </TableRow>
-            ) : customers.length === 0 ? (
+            ) : totalCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24">
-                  No customers found.
+                  {searchTerm ? "No customers matching your search." : "No customers found."}
                 </TableCell>
               </TableRow>
             ) : (
-              customers.map((customer: Customer) => (
+              paginatedData.map((customer: Customer) => (
                 <TableRow key={customer.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{customer.name}</TableCell>
                   <TableCell>{customer.email || "-"}</TableCell>
@@ -131,6 +150,14 @@ export function CustomerList() {
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
 
       <ConsolidatedCustomerLedgerDialog

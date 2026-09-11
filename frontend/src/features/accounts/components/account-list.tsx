@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -11,11 +12,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash } from "lucide-react";
+import { Plus, Edit, Trash, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BrandLoader } from "@/components/ui/loader";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQueryState } from 'nuqs';
 
 interface Account {
   id: string;
@@ -28,10 +38,10 @@ interface Account {
 
 export function AccountList() {
   const queryClient = useQueryClient();
-  const [page] = useQueryState('page', { defaultValue: '1' });
+  const [typeFilter, setTypeFilter] = useState<string>("ALL");
 
   const { data: accounts = [] as Account[], isLoading } = useQuery({
-    queryKey: ["accounts", page],
+    queryKey: ["accounts"],
     queryFn: async () => {
       const res = await api.get<unknown[]>("/accounts");
       return res as Account[];
@@ -54,6 +64,24 @@ export function AccountList() {
     }
   };
 
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    paginatedData,
+  } = useDataTable<Account>({
+    data: accounts,
+    searchFields: ["accountCode", "name", "type"],
+    filterFn: (acc) => {
+      if (typeFilter === "ALL") return true;
+      return acc.type?.toUpperCase() === typeFilter;
+    },
+  });
+
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
@@ -64,6 +92,34 @@ export function AccountList() {
           </Button>
         </Link>
       </div>
+
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search accounts by code, name, or type..."
+        hasActiveFilters={typeFilter !== "ALL" || !!searchTerm}
+        onResetFilters={() => {
+          setSearchTerm("");
+          setTypeFilter("ALL");
+        }}
+      >
+        <div className="flex items-center gap-1.5">
+          <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v ?? "ALL"); setPage(1); }}>
+            <SelectTrigger className="w-[140px] h-9 bg-slate-950/70 border-border text-foreground text-xs">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent className="rounded-lg border border-slate-800 bg-slate-900/95 backdrop-blur-xl shadow-xl text-slate-200">
+              <SelectItem value="ALL" className="text-xs">All Types</SelectItem>
+              <SelectItem value="ASSET" className="text-xs">Asset</SelectItem>
+              <SelectItem value="LIABILITY" className="text-xs">Liability</SelectItem>
+              <SelectItem value="EQUITY" className="text-xs">Equity</SelectItem>
+              <SelectItem value="REVENUE" className="text-xs">Revenue</SelectItem>
+              <SelectItem value="EXPENSE" className="text-xs">Expense</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </TableToolbar>
       
       <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
@@ -84,14 +140,14 @@ export function AccountList() {
                   <BrandLoader variant="card" text="Loading chart of accounts..." size="lg" />
                 </TableCell>
               </TableRow>
-            ) : accounts.length === 0 ? (
+            ) : totalCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24">
-                  No accounts found.
+                  {searchTerm || typeFilter !== "ALL" ? "No accounts matching your search filters." : "No accounts found."}
                 </TableCell>
               </TableRow>
             ) : (
-              accounts.map((account: Account) => (
+              paginatedData.map((account: Account) => (
                 <TableRow key={account.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{account.accountCode}</TableCell>
                   <TableCell>{account.name}</TableCell>
@@ -125,6 +181,14 @@ export function AccountList() {
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

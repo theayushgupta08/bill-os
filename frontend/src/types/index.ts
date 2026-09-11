@@ -167,9 +167,12 @@ export interface LineItem {
 }
 
 export interface SalesOrder extends BaseEntity {
-  orderNumber: string;
+  orderNumber?: string;
+  soNumber?: string;
   customerId: string;
-  date: string;
+  customerName?: string;
+  date?: string;
+  orderDate?: string;
   status: string;
   totalAmount: number;
   notes?: string;
@@ -180,7 +183,9 @@ export interface SalesOrder extends BaseEntity {
 export interface Quotation extends BaseEntity {
   quoteNumber: string;
   customerId: string;
-  date: string;
+  customerName?: string;
+  date?: string;
+  quoteDate?: string;
   status: string;
   totalAmount: number;
   notes?: string;
@@ -191,7 +196,9 @@ export interface Quotation extends BaseEntity {
 export interface Invoice extends BaseEntity {
   invoiceNumber: string;
   customerId: string;
-  date: string;
+  customerName?: string;
+  date?: string;
+  invoiceDate?: string;
   dueDate?: string;
   status: string;
   totalAmount: number;

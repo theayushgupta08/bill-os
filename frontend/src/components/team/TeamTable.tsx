@@ -27,6 +27,7 @@ import {
   UserCheck,
   Filter,
   UserX,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +37,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useDataTable } from "@/hooks/use-data-table";
 
 interface TeamMember {
   userId: string;
@@ -49,11 +53,31 @@ interface TeamMember {
 export function TeamTable() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [currentUserRole, setCurrentUserRole] = useState<string>("USER");
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount: filteredCount,
+    paginatedData: paginatedMembers,
+  } = useDataTable<TeamMember>({
+    data: members,
+    searchFields: [
+      (m) => `${m.firstName || ""} ${m.lastName || ""}`,
+      "email",
+    ],
+    filterFn: (m) => {
+      if (roleFilter === "ALL") return true;
+      return m.role === roleFilter;
+    },
+  });
 
   const fetchTeam = async () => {
     try {
@@ -215,17 +239,7 @@ export function TeamTable() {
     }
   };
 
-  const filteredMembers = members.filter((member) => {
-    const name = `${member.firstName || ""} ${member.lastName || ""}`.toLowerCase();
-    const email = member.email.toLowerCase();
-    const searchMatch =
-      name.includes(searchTerm.toLowerCase()) ||
-      email.includes(searchTerm.toLowerCase());
 
-    const roleMatch = roleFilter === "ALL" || member.role === roleFilter;
-
-    return searchMatch && roleMatch;
-  });
 
   const totalCount = members.length;
   const activeCount = members.filter((m) => m.status === "ACTIVE").length;
@@ -292,13 +306,23 @@ export function TeamTable() {
       {/* Table Filters & Controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between p-4 rounded-md border bg-card text-card-foreground shadow-sm">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-slate-950/70 border-border text-foreground placeholder:text-muted-foreground focus:border-indigo-500"
+            className="pl-9 pr-8 bg-slate-950/70 border-border text-foreground placeholder:text-muted-foreground focus:border-indigo-500"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm("")}
+              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+              title="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -389,7 +413,7 @@ export function TeamTable() {
                   />
                 </TableCell>
               </TableRow>
-            ) : filteredMembers.length === 0 ? (
+            ) : filteredCount === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={5}
@@ -400,7 +424,7 @@ export function TeamTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredMembers.map((member) => (
+              paginatedMembers.map((member) => (
                 <TableRow
                   key={member.userId}
                   className="border-b border-slate-800/50 hover:bg-white/5 transition-colors"
@@ -490,6 +514,14 @@ export function TeamTable() {
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={filteredCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

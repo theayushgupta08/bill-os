@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -11,11 +12,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Plus, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BrandLoader } from "@/components/ui/loader";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery } from "@tanstack/react-query";
-import { useQueryState } from 'nuqs';
 
 interface JournalEntry {
   id: string;
@@ -28,14 +38,31 @@ interface JournalEntry {
 }
 
 export function JournalEntryList() {
-  const [page] = useQueryState('page', { defaultValue: '1' });
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const { data: entries = [] as JournalEntry[], isLoading } = useQuery({
-    queryKey: ["journal-entries", page],
+    queryKey: ["journal-entries"],
     queryFn: async () => {
-      // Changed fetchApi to apiClient.get for consistency
       const res = await api.get<JournalEntry[]>("/journal-entries");
       return res;
+    },
+  });
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    paginatedData,
+  } = useDataTable<JournalEntry>({
+    data: entries,
+    searchFields: ["referenceNumber", "description", "entryDate"],
+    filterFn: (entry) => {
+      if (statusFilter === "ALL") return true;
+      return entry.status?.toUpperCase() === statusFilter;
     },
   });
 
@@ -49,6 +76,31 @@ export function JournalEntryList() {
           </Button>
         </Link>
       </div>
+
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search entries by reference, memo, date..."
+        hasActiveFilters={statusFilter !== "ALL" || !!searchTerm}
+        onResetFilters={() => {
+          setSearchTerm("");
+          setStatusFilter("ALL");
+        }}
+      >
+        <div className="flex items-center gap-1.5">
+          <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v ?? "ALL"); setPage(1); }}>
+            <SelectTrigger className="w-[140px] h-9 bg-slate-950/70 border-border text-foreground text-xs">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent className="rounded-lg border border-slate-800 bg-slate-900/95 backdrop-blur-xl shadow-xl text-slate-200">
+              <SelectItem value="ALL" className="text-xs">All Statuses</SelectItem>
+              <SelectItem value="DRAFT" className="text-xs">Draft</SelectItem>
+              <SelectItem value="POSTED" className="text-xs">Posted</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </TableToolbar>
       
       <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
@@ -68,14 +120,14 @@ export function JournalEntryList() {
                   <BrandLoader variant="card" text="Loading journal entries..." size="lg" />
                 </TableCell>
               </TableRow>
-            ) : entries.length === 0 ? (
+            ) : totalCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center h-24">
-                  No journal entries found.
+                  {searchTerm || statusFilter !== "ALL" ? "No journal entries matching your search filters." : "No journal entries found."}
                 </TableCell>
               </TableRow>
             ) : (
-              entries.map((entry: JournalEntry) => (
+              paginatedData.map((entry: JournalEntry) => (
                 <TableRow key={entry.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{entry.entryDate}</TableCell>
                   <TableCell>{entry.referenceNumber || "-"}</TableCell>
@@ -91,6 +143,14 @@ export function JournalEntryList() {
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

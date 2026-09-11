@@ -12,17 +12,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useDataTable } from "@/hooks/use-data-table";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQueryState } from 'nuqs';
 import { ProductCategory } from "@/types";
 
 export function CategoryList() {
   const queryClient = useQueryClient();
-  const [page] = useQueryState('page', { defaultValue: '1' });
 
   const { data: categories = [] as ProductCategory[], isLoading } = useQuery({
-    queryKey: ["product-categories", page],
+    queryKey: ["product-categories"],
     queryFn: async () => {
       const res = await api.get<ProductCategory[]>("/product-categories");
       return res;
@@ -45,6 +46,20 @@ export function CategoryList() {
     }
   };
 
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    paginatedData,
+  } = useDataTable<ProductCategory>({
+    data: categories,
+    searchFields: ["name", "description"],
+  });
+
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
@@ -55,6 +70,12 @@ export function CategoryList() {
           </Button>
         </Link>
       </div>
+
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search categories by name or description..."
+      />
 
       <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
@@ -72,14 +93,14 @@ export function CategoryList() {
                   <BrandLoader variant="card" text="Loading categories..." size="lg" />
                 </TableCell>
               </TableRow>
-            ) : categories.length === 0 ? (
+            ) : totalCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center h-24">
-                  No categories found.
+                  {searchTerm ? "No categories matching your search." : "No categories found."}
                 </TableCell>
               </TableRow>
             ) : (
-              categories.map((category: ProductCategory) => (
+              paginatedData.map((category: ProductCategory) => (
                 <TableRow key={category.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell>{category.description || "-"}</TableCell>
@@ -106,6 +127,14 @@ export function CategoryList() {
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

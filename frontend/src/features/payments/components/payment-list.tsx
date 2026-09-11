@@ -1,14 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Plus, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BrandLoader } from "@/components/ui/loader";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery } from "@tanstack/react-query";
-import { useQueryState } from 'nuqs';
 
 interface PaymentRecord {
   id: string;
@@ -23,13 +33,31 @@ interface PaymentRecord {
 }
 
 export function PaymentList() {
-  const [page] = useQueryState('page', { defaultValue: '1' });
+  const [typeFilter, setTypeFilter] = useState<string>("ALL");
 
-  const { data: payments = [], isLoading } = useQuery({
-    queryKey: ["payments", page],
+  const { data: payments = [] as PaymentRecord[], isLoading } = useQuery({
+    queryKey: ["payments"],
     queryFn: async () => {
       const res = await api.get<PaymentRecord[]>("/payments");
       return res;
+    },
+  });
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    paginatedData,
+  } = useDataTable<PaymentRecord>({
+    data: payments,
+    searchFields: ["paymentNumber", "referenceNumber", "entityName", "paymentMethod"],
+    filterFn: (p) => {
+      if (typeFilter === "ALL") return true;
+      return (p.paymentType || p.type)?.toUpperCase() === typeFilter;
     },
   });
 
@@ -41,6 +69,31 @@ export function PaymentList() {
           <Button><Plus className="mr-2 h-4 w-4" /> Record Payment</Button>
         </Link>
       </div>
+
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search payments by number, reference, or party..."
+        hasActiveFilters={typeFilter !== "ALL" || !!searchTerm}
+        onResetFilters={() => {
+          setSearchTerm("");
+          setTypeFilter("ALL");
+        }}
+      >
+        <div className="flex items-center gap-1.5">
+          <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v ?? "ALL"); setPage(1); }}>
+            <SelectTrigger className="w-[140px] h-9 bg-slate-950/70 border-border text-foreground text-xs">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent className="rounded-lg border border-slate-800 bg-slate-900/95 backdrop-blur-xl shadow-xl text-slate-200">
+              <SelectItem value="ALL" className="text-xs">All Types</SelectItem>
+              <SelectItem value="RECEIPT" className="text-xs">Receipts (Inflow)</SelectItem>
+              <SelectItem value="PAYMENT" className="text-xs">Payments (Outflow)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </TableToolbar>
       
       <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
@@ -60,20 +113,20 @@ export function PaymentList() {
                   <BrandLoader variant="card" text="Loading payments..." size="lg" />
                 </TableCell>
               </TableRow>
-            ) : payments.length === 0 ? (
+            ) : totalCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center h-24">
-                  No payments found.
+                  {searchTerm || typeFilter !== "ALL" ? "No payments matching your search filters." : "No payments found."}
                 </TableCell>
               </TableRow>
             ) : (
-              payments.map((p: PaymentRecord) => (
+              paginatedData.map((p: PaymentRecord) => (
                 <TableRow key={p.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{p.paymentNumber}</TableCell>
                   <TableCell>{p.paymentDate}</TableCell>
                   <TableCell>
-                    <Badge variant="default" className={p.paymentType === 'RECEIPT' ? "bg-green-500" : "bg-red-500"}>
-                      {p.paymentType}
+                    <Badge variant="default" className={(p.paymentType || p.type) === 'RECEIPT' ? "bg-green-500" : "bg-red-500"}>
+                      {p.paymentType || p.type}
                     </Badge>
                   </TableCell>
                   <TableCell>{p.referenceNumber || "-"}</TableCell>
@@ -83,6 +136,14 @@ export function PaymentList() {
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

@@ -12,17 +12,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useDataTable } from "@/hooks/use-data-table";
 import { api } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQueryState } from 'nuqs';
 import { Product } from "@/types";
 
 export function ProductList() {
   const queryClient = useQueryClient();
-  const [page] = useQueryState('page', { defaultValue: '1' });
 
   const { data: products = [] as Product[], isLoading } = useQuery({
-    queryKey: ["products", page],
+    queryKey: ["products"],
     queryFn: async () => {
       const res = await api.get<Product[]>("/products");
       return res;
@@ -45,6 +46,20 @@ export function ProductList() {
     }
   };
 
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    paginatedData,
+  } = useDataTable<Product>({
+    data: products,
+    searchFields: ["name", "sku", "description"],
+  });
+
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <div className="flex items-center justify-between">
@@ -55,6 +70,12 @@ export function ProductList() {
           </Button>
         </Link>
       </div>
+
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search products by name, SKU..."
+      />
 
       <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
@@ -74,19 +95,19 @@ export function ProductList() {
                   <BrandLoader variant="card" text="Loading products..." size="lg" />
                 </TableCell>
               </TableRow>
-            ) : products.length === 0 ? (
+            ) : totalCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center h-24">
-                  No products found.
+                  {searchTerm ? "No products matching your search." : "No products found."}
                 </TableCell>
               </TableRow>
             ) : (
-              products.map((product: Product) => (
+              paginatedData.map((product: Product) => (
                 <TableRow key={product.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.sku || "-"}</TableCell>
-                  <TableCell>{product.basePrice}</TableCell>
-                  <TableCell>{product.taxRate}</TableCell>
+                  <TableCell>₹{product.basePrice}</TableCell>
+                  <TableCell>{product.taxRate}%</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Link href={`/products/${product.id}`}>
@@ -110,6 +131,14 @@ export function ProductList() {
             )}
           </TableBody>
         </Table>
+
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );
