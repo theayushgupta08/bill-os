@@ -336,11 +336,11 @@ export function AddMemberModal({
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl font-bold text-white tracking-tight">
-                    Member Created!
+                  <DialogTitle className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                    Member Account Created!
                   </DialogTitle>
                   <DialogDescription className="text-zinc-400 text-xs sm:text-sm">
-                    Account created for {createdMember.firstName} {createdMember.lastName}. Share the credentials below.
+                    Account created for {createdMember.firstName} {createdMember.lastName}. Share the temporary credentials below.
                   </DialogDescription>
                 </div>
               </div>
@@ -348,67 +348,105 @@ export function AddMemberModal({
 
             {/* Credentials Card */}
             <div className="rounded-2xl bg-zinc-950/80 border border-zinc-800 p-4 space-y-3.5">
+              {/* Member Summary Header */}
+              <div className="flex items-center justify-between pb-2.5 border-b border-zinc-800/80">
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-zinc-100">
+                    {createdMember.firstName} {createdMember.lastName}
+                  </span>
+                  <span className="text-[11px] text-zinc-500 font-mono">
+                    New Staff Account
+                  </span>
+                </div>
+                <div>{getRoleBadge(createdMember.role)}</div>
+              </div>
+
               {/* Login Email */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[10px]">
-                    Login Email
+                    Login Email ID
                   </span>
-                  <div>{getRoleBadge(createdMember.role)}</div>
+                  <span className="text-[10px] text-zinc-500 font-mono">billOS Assigned Email</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Input
                     readOnly
                     value={createdMember.email}
-                    className="h-9 font-mono text-xs bg-zinc-900 border-zinc-800 text-zinc-200 select-all"
+                    className="h-10 font-mono text-xs bg-zinc-900 border-zinc-800 text-zinc-100 select-all"
                   />
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => copyToClipboard(createdMember.email, "email", "Email")}
+                    onClick={() => copyToClipboard(createdMember.email, "email", "Email ID")}
                     className={cn(
-                      "h-9 px-3 rounded-lg text-xs font-medium shrink-0",
-                      copiedField === "email" && "text-emerald-400 border-emerald-500/40"
+                      "h-10 px-3.5 rounded-xl text-xs font-medium shrink-0 flex items-center gap-1.5 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 transition-colors",
+                      copiedField === "email" && "text-emerald-400 border-emerald-500/50 bg-emerald-500/10"
                     )}
                   >
-                    {copiedField === "email" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedField === "email" ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400 font-semibold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Email</span>
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
 
               {/* Temporary Password */}
-              <div className="space-y-1">
-                <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[10px]">
-                  Generated Password
-                </span>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[10px]">
+                    Temporary Password
+                  </span>
+                  <span className="text-[10px] text-amber-400 font-medium">Must be changed on login</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <Input
                       readOnly
                       type={showPassword ? "text" : "password"}
                       value={createdMember.generatedPassword}
-                      className="h-9 font-mono text-xs bg-zinc-900 border-zinc-800 text-zinc-200 select-all pr-9"
+                      className="h-10 font-mono text-sm bg-zinc-900 border-zinc-800 text-zinc-100 select-all pr-10 tracking-wider"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                      title={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   <Button
                     type="button"
                     size="sm"
-                    variant="outline"
-                    onClick={() => copyToClipboard(createdMember.generatedPassword, "pwd", "Password")}
+                    onClick={() => copyToClipboard(createdMember.generatedPassword, "pwd", "Temporary Password")}
                     className={cn(
-                      "h-9 px-3 rounded-lg text-xs font-medium shrink-0",
-                      copiedField === "pwd" && "text-emerald-400 border-emerald-500/40"
+                      "h-10 px-3.5 rounded-xl text-xs font-medium shrink-0 flex items-center gap-1.5 transition-all",
+                      copiedField === "pwd"
+                        ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                        : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20"
                     )}
                   >
-                    {copiedField === "pwd" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedField === "pwd" ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span className="font-semibold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Password</span>
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -417,51 +455,54 @@ export function AddMemberModal({
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2 text-xs text-amber-300 leading-relaxed">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <span>
-                  This password is shown <strong>only once</strong> and cannot be retrieved later. Copy it now. The user will be required to change it on their first login.
+                  This password is shown <strong>only once</strong> and cannot be retrieved later. Copy it now. The user will be prompted to set a new password on their first login.
                 </span>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="space-y-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={copyAllCredentials}
                 className={cn(
-                  "flex-1 h-10 rounded-xl border-zinc-800 bg-zinc-950/50 text-zinc-200 hover:bg-zinc-800 text-xs font-medium gap-1.5",
-                  copiedField === "all" && "border-emerald-500/50 text-emerald-400"
+                  "w-full h-10 rounded-xl border-zinc-700 bg-zinc-950/60 text-zinc-200 hover:bg-zinc-800 text-xs font-medium flex items-center justify-center gap-2 transition-colors",
+                  copiedField === "all" && "border-emerald-500/50 text-emerald-400 bg-emerald-500/10"
                 )}
               >
                 {copiedField === "all" ? (
                   <>
                     <Check className="w-4 h-4 text-emerald-400" />
-                    <span>Credentials Copied!</span>
+                    <span className="text-emerald-400 font-semibold">All Credentials Copied to Clipboard!</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4" />
-                    <span>Copy All Credentials</span>
+                    <span>Copy All Credentials (Ready to Share)</span>
                   </>
                 )}
               </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  resetForm();
-                }}
-                className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md shadow-blue-500/20"
-              >
-                Add Another Member
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => handleOpenChange(false)}
-                className="h-10 px-4 rounded-xl text-zinc-400 hover:text-white text-xs"
-              >
-                Done
-              </Button>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    resetForm();
+                  }}
+                  className="flex-1 h-10 rounded-xl border-zinc-800 bg-zinc-950/50 text-zinc-300 hover:bg-zinc-800 hover:text-white text-xs font-medium"
+                >
+                  Add Another Member
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleOpenChange(false)}
+                  className="flex-1 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-medium"
+                >
+                  Done
+                </Button>
+              </div>
             </div>
           </div>
         )}

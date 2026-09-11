@@ -82,9 +82,11 @@ export function TeamTable() {
     },
   });
 
-  const fetchTeam = async () => {
+  const fetchTeam = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const data = await api.get<TeamMember[]>("/team");
       setMembers(data);
 
@@ -112,7 +114,9 @@ export function TeamTable() {
     } catch {
       toast.error("Failed to load team members");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -166,7 +170,7 @@ export function TeamTable() {
             : m
         )
       );
-      fetchTeam();
+      fetchTeam(true);
     } catch (err: unknown) {
       toast.error((err as Error).message || `Failed to ${actionText} user`);
     } finally {
@@ -320,7 +324,7 @@ export function TeamTable() {
             description="Add staff members, manage role-based access permissions (Owner, Admin, Manager, User), and control account activity."
           />
         </h1>
-        <AddMemberModal onRefresh={fetchTeam} />
+        <AddMemberModal onRefresh={() => fetchTeam(true)} />
       </div>
 
       {/* Top Banner / Summary */}
@@ -591,7 +595,7 @@ export function TeamTable() {
                   <TableCell className="text-right">
                     <RoleActionMenu
                       member={member}
-                      onRefresh={fetchTeam}
+                      onRefresh={() => fetchTeam(true)}
                       currentUserRole={currentUserRole}
                       currentUserEmail={currentUserEmail}
                     />
