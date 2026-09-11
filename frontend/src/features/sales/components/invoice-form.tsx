@@ -605,7 +605,7 @@ export function InvoiceForm() {
                       const tax = taxes.find((t) => t.id === activeTaxId);
                       if (tax) lineTax = (lineSub * (Number(tax.rate) || 0)) / 100;
                     }
-                    const lineTotal = lineSub + lineTax;
+                    const lineTotal = isConsolidatedTax ? lineSub : lineSub + lineTax;
 
                     return (
                       <TableRow
@@ -671,7 +671,14 @@ export function InvoiceForm() {
                               }
                             >
                               <SelectTrigger className="bg-slate-950/60 border-slate-800 text-white text-xs">
-                                <SelectValue placeholder="None" />
+                                <SelectValue placeholder="None">
+                                  {(val) => {
+                                    if (!val || val === "none") return "None (0%)";
+                                    const t = taxes.find((tax) => tax.id === val);
+                                    if (!t) return "None (0%)";
+                                    return t.name.includes(`${t.rate}%`) ? t.name : `${t.name} (${t.rate}%)`;
+                                  }}
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent className="bg-slate-900 border-slate-800 text-white text-xs">
                                 <SelectItem value="none">None (0%)</SelectItem>
@@ -870,7 +877,14 @@ export function InvoiceForm() {
                       onValueChange={(val) => val && setConsolidatedTaxRateId(val)}
                     >
                       <SelectTrigger className="bg-slate-950/60 border-slate-800 text-white text-xs">
-                        <SelectValue placeholder="Select Tax Rate" />
+                        <SelectValue placeholder="Select Tax Rate">
+                          {(val) => {
+                            if (!val) return "Select Tax Rate";
+                            const t = taxes.find((tax) => tax.id === val);
+                            if (!t) return "Select Tax Rate";
+                            return t.name.includes(`${t.rate}%`) ? t.name : `${t.name} (${t.rate}%)`;
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="bg-slate-900 border-slate-800 text-white text-xs">
                         {taxes.map((t) => {

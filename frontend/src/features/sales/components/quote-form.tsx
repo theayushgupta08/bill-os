@@ -285,7 +285,14 @@ export function QuoteForm() {
                             onValueChange={(val: string | null) => val && handleLineChange(line.id, "taxRateId", val === "none" ? "" : val)}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="None" />
+                              <SelectValue placeholder="None">
+                                {(val) => {
+                                  if (!val || val === "none") return "None";
+                                  const t = taxes.find((tax: any) => tax.id === val);
+                                  if (!t) return "None";
+                                  return t.name.includes(`${t.rate}%`) ? t.name : `${t.name} (${t.rate}%)`;
+                                }}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">None</SelectItem>
