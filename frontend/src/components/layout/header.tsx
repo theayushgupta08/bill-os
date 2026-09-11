@@ -71,6 +71,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "audit-logs": "Audit Logs",
   settings: "Settings",
   organization: "Organization",
+  team: "Team Management",
   tax: "Tax Settings",
   taxes: "Tax Settings",
   invoice: "Invoice Settings",

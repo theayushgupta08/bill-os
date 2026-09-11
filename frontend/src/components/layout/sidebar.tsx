@@ -120,6 +120,7 @@ const navGroups: NavGroup[] = [
     defaultOpen: false,
     items: [
       { label: "Organization", href: "/settings/organization", icon: Building2 },
+      { label: "Team Management", href: "/settings/team", icon: Users },
       { label: "Tax Settings", href: "/settings/taxes", icon: Percent },
       { label: "Invoice Settings", href: "/settings/invoice", icon: FileText },
       { label: "Preferences", href: "/settings/preferences", icon: Settings },
