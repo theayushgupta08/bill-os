@@ -17,6 +17,7 @@ import { api } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { RoleActionMenu } from "./RoleActionMenu";
 import { AddMemberModal } from "./AddMemberModal";
+import { MemberCredentialsDialog, MemberCredentials } from "./MemberCredentialsDialog";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { toast } from "sonner";
 import {
@@ -60,6 +61,14 @@ export function TeamTable() {
   const [currentUserRole, setCurrentUserRole] = useState<string>("USER");
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
+  const [newMemberCredentials, setNewMemberCredentials] = useState<MemberCredentials | null>(null);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+
+  const handleMemberCreated = (credentials: MemberCredentials) => {
+    setNewMemberCredentials(credentials);
+    setShowCredentialsModal(true);
+    fetchTeam(true);
+  };
 
   const {
     searchTerm,
@@ -324,7 +333,10 @@ export function TeamTable() {
             description="Add staff members, manage role-based access permissions (Owner, Admin, Manager, User), and control account activity."
           />
         </h1>
-        <AddMemberModal onRefresh={() => fetchTeam(true)} />
+        <AddMemberModal
+          onRefresh={() => fetchTeam(true)}
+          onMemberCreated={handleMemberCreated}
+        />
       </div>
 
       {/* Top Banner / Summary */}
@@ -614,6 +626,12 @@ export function TeamTable() {
           onPageSizeChange={setPageSize}
         />
       </div>
+
+      <MemberCredentialsDialog
+        open={showCredentialsModal}
+        onOpenChange={setShowCredentialsModal}
+        credentials={newMemberCredentials}
+      />
     </div>
   );
 }
