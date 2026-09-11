@@ -54,13 +54,30 @@ public class TeamService {
             if (role.getOrganizationId().equals(orgId)) {
                 User user = userRepository.findById(role.getUser().getId()).orElse(null);
                 if (user != null) {
-                    team.add(new TeamMemberDto(
-                            user.getId(),
-                            user.getEmail(),
-                            user.getFirstName(),
-                            user.getLastName(),
-                            role.getRole(),
-                            Boolean.TRUE.equals(user.getIsActive()) ? "ACTIVE" : "INACTIVE"));
+                    java.time.OffsetDateTime lastActive =
+                            user.getUpdatedAt() != null ? user.getUpdatedAt() : user.getCreatedAt();
+                    if (user.getSupabaseId() != null && jdbcTemplate != null) {
+                        try {
+                            List<java.time.OffsetDateTime> logins = jdbcTemplate.query(
+                                    "SELECT last_sign_in_at FROM auth.users WHERE id = ? AND last_sign_in_at IS NOT NULL",
+                                    (rs, rowNum) -> rs.getObject("last_sign_in_at", java.time.OffsetDateTime.class),
+                                    user.getSupabaseId());
+                            if (!logins.isEmpty() && logins.get(0) != null) {
+                                lastActive = logins.get(0);
+                            }
+                        } catch (Exception ignored) {
+                            // Supabase auth schema may not exist in test environments
+                        }
+                    }
+                    team.add(TeamMemberDto.builder()
+                            .userId(user.getId())
+                            .email(user.getEmail())
+                            .firstName(user.getFirstName())
+                            .lastName(user.getLastName())
+                            .role(role.getRole())
+                            .status(Boolean.TRUE.equals(user.getIsActive()) ? "ACTIVE" : "INACTIVE")
+                            .lastActiveAt(lastActive)
+                            .build());
                 }
             }
         }

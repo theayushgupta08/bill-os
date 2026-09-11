@@ -48,6 +48,7 @@ interface TeamMember {
   lastName?: string;
   role: string;
   status: string; // ACTIVE or INACTIVE
+  lastActiveAt?: string;
 }
 
 export function TeamTable() {
@@ -239,7 +240,35 @@ export function TeamTable() {
     }
   };
 
+  const formatLastActive = (dateString?: string) => {
+    if (!dateString) return "Never";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Never";
 
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      if (diffMs < 0) return "Just now";
+      const diffSecs = Math.floor(diffMs / 1000);
+      const diffMins = Math.floor(diffSecs / 60);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffSecs < 60) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays === 1) return "Yesterday";
+      if (diffDays < 7) return `${diffDays}d ago`;
+
+      return new Intl.DateTimeFormat("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(date);
+    } catch {
+      return "Never";
+    }
+  };
 
   const totalCount = members.length;
   const activeCount = members.filter((m) => m.status === "ACTIVE").length;
@@ -399,13 +428,15 @@ export function TeamTable() {
               <TableHead>Email Address</TableHead>
               <TableHead>Access Role</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-center">Active/Inactive</TableHead>
+              <TableHead>Last Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-64 text-center">
+                <TableCell colSpan={7} className="h-64 text-center">
                   <BrandLoader
                     variant="card"
                     text="Loading team members..."
@@ -416,7 +447,7 @@ export function TeamTable() {
             ) : filteredCount === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={7}
                   className="text-center py-12 text-muted-foreground"
                 >
                   <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -450,7 +481,20 @@ export function TeamTable() {
                   </TableCell>
                   <TableCell>{getRoleBadge(member.role)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-3">
+                    {member.status === "INACTIVE" ? (
+                      <span className="inline-flex items-center text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
+                        Inactive
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+                        Active
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center">
                       <button
                         type="button"
                         role="switch"
@@ -487,16 +531,27 @@ export function TeamTable() {
                           )}
                         />
                       </button>
-
-                      {member.status === "INACTIVE" ? (
-                        <span className="inline-flex items-center text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
-                          Inactive
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-                          Active
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span
+                        className="text-xs text-slate-300"
+                        title={
+                          member.lastActiveAt
+                            ? new Date(member.lastActiveAt).toLocaleString()
+                            : "No activity recorded"
+                        }
+                      >
+                        {formatLastActive(member.lastActiveAt)}
+                      </span>
+                      {member.lastActiveAt && (
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {new Intl.DateTimeFormat("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }).format(new Date(member.lastActiveAt))}
                         </span>
                       )}
                     </div>

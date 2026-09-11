@@ -19,9 +19,10 @@ public class TeamMemberDto {
     private String status; // ACTIVE or INVITED
     private String inviteToken;
     private UUID invitationId;
+    private java.time.OffsetDateTime lastActiveAt;
 
     public TeamMemberDto(UUID userId, String email, String firstName, String lastName, String role, String status) {
-        this(userId, email, firstName, lastName, role, status, null, null);
+        this(userId, email, firstName, lastName, role, status, null, null, null);
     }
 
     public TeamMemberDto(
@@ -32,6 +33,6 @@ public class TeamMemberDto {
             String role,
             String status,
             String inviteToken) {
-        this(userId, email, firstName, lastName, role, status, inviteToken, null);
+        this(userId, email, firstName, lastName, role, status, inviteToken, null, null);
     }
 }
