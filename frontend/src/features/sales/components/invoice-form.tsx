@@ -576,11 +576,11 @@ export function InvoiceForm() {
         </Card>
 
         {/* Line Items Table with Sticky Header */}
-        <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-sm relative z-10">
-          <CardContent className="pt-6 space-y-4">
+        <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-sm relative z-20 overflow-visible">
+          <CardContent className="pt-6 space-y-4 overflow-visible">
 
-            <div className="max-h-[460px] overflow-y-auto relative rounded-md border border-slate-800 bg-slate-950/40 shadow-sm scrollbar-thin scrollbar-thumb-slate-700">
-              <Table>
+            <div className="overflow-visible relative rounded-md border border-slate-800 bg-slate-950/40 shadow-sm">
+              <Table containerClassName="overflow-visible">
                 <TableHeader className="sticky top-0 z-20 bg-slate-900 shadow-md">
                   <TableRow className="border-b border-slate-800 hover:bg-transparent">
                     <TableHead className="w-[30%] text-slate-300 font-semibold text-xs py-3">Product *</TableHead>
@@ -595,7 +595,7 @@ export function InvoiceForm() {
                   </TableRow>
                 </TableHeader>
 
-                <TableBody>
+                <TableBody className="overflow-visible">
                   {lines.map((line: LineItem) => {
                     const lineSub = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0);
                     let lineTax = 0;
@@ -610,10 +610,10 @@ export function InvoiceForm() {
                     return (
                       <TableRow
                         key={line.id}
-                        className="border-b border-slate-800/60 hover:bg-white/5 transition-colors"
+                        className="border-b border-slate-800/60 hover:bg-white/5 transition-colors relative focus-within:z-30 overflow-visible"
                       >
                         {/* Searchable Product Combobox */}
-                        <TableCell className="py-2.5">
+                        <TableCell className="py-2.5 overflow-visible">
                           <ProductCombobox
                             products={products}
                             value={line.productId}
@@ -622,7 +622,7 @@ export function InvoiceForm() {
                         </TableCell>
 
                         {/* Searchable Warehouse Combobox */}
-                        <TableCell className="py-2.5">
+                        <TableCell className="py-2.5 overflow-visible">
                           <WarehouseCombobox
                             warehouses={warehouses}
                             value={line.warehouseId}

@@ -77,7 +77,7 @@ export function WarehouseCombobox({
   };
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
+    <div ref={containerRef} className={cn("relative w-full", isOpen ? "z-50" : "z-auto", className)}>
       <div className="relative">
         <Input
           type="text"
@@ -89,23 +89,44 @@ export function WarehouseCombobox({
               onChange(""); // Clear selection on edit
             }
           }}
+          onClick={() => {
+            if (!isOpen) {
+              setIsOpen(true);
+              setSearchTerm("");
+            }
+          }}
           onFocus={() => {
-            setIsOpen(true);
-            setSearchTerm("");
+            if (!isOpen) {
+              setIsOpen(true);
+              setSearchTerm("");
+            }
           }}
           placeholder={placeholder}
-          className="w-full pr-8 text-xs bg-slate-950/60 border-slate-800 text-white focus:border-indigo-500 transition-colors"
+          className="w-full pr-8 text-xs bg-slate-950/60 border-slate-800 text-white focus:border-indigo-500 transition-colors cursor-text"
         />
-        <ChevronDown
-          className={cn(
-            "absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground transition-transform duration-200 cursor-pointer pointer-events-none",
-            isOpen && "rotate-180 text-indigo-400"
-          )}
-        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsOpen((prev) => !prev);
+            if (!isOpen) setSearchTerm("");
+          }}
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white cursor-pointer transition-colors"
+          title={isOpen ? "Close dropdown" : "Open dropdown"}
+        >
+          <ChevronDown
+            className={cn(
+              "size-3.5 transition-transform duration-200",
+              isOpen && "rotate-180 text-indigo-400"
+            )}
+          />
+        </button>
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 max-h-60 w-full min-w-[200px] overflow-hidden rounded-md border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl backdrop-blur-md outline-none animate-in fade-in-0 zoom-in-95">
+        <div className="absolute left-0 top-full z-[100] mt-1 max-h-60 w-full min-w-[220px] overflow-hidden rounded-md border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl backdrop-blur-md outline-none animate-in fade-in-0 zoom-in-95">
           <div className="max-h-56 overflow-y-auto p-1">
             {filteredWarehouses.length === 0 ? (
               <div className="p-3 text-center text-xs text-slate-400">
