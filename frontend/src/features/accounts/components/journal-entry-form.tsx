@@ -164,7 +164,7 @@ export function JournalEntryForm() {
         </div>
       </div>
 
-      <div className="rounded-md border mt-8">
+      <div className="rounded-md border bg-card text-card-foreground shadow-sm mt-8">
         <Table>
           <TableHeader>
             <TableRow>
@@ -177,7 +177,7 @@ export function JournalEntryForm() {
           </TableHeader>
           <TableBody>
             {lines.map((line: JournalLine) => (
-              <TableRow key={line.id}>
+              <TableRow key={line.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell>
                   <Select 
                     value={line.accountId} 

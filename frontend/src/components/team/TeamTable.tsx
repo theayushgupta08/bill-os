@@ -243,59 +243,45 @@ export function TeamTable() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       {/* Title Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">
-              Team Management
-            </h2>
-            <p className="text-sm text-slate-400">
-              Manage your organization team members, roles, and access credentials.
-            </p>
-          </div>
-        </div>
-        <div>
-          <AddMemberModal onRefresh={fetchTeam} />
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold md:text-2xl">Team Management</h1>
+        <AddMemberModal onRefresh={fetchTeam} />
       </div>
 
       {/* Top Banner / Summary */}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm">
+        <div className="flex items-center gap-4 p-4 rounded-md border bg-card text-card-foreground shadow-sm">
           <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-lg">
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Total Team
             </p>
-            <p className="text-2xl font-bold text-white">{totalCount}</p>
+            <p className="text-2xl font-bold text-foreground">{totalCount}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm">
+        <div className="flex items-center gap-4 p-4 rounded-md border bg-card text-card-foreground shadow-sm">
           <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-lg">
             <UserCheck className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Active Members
             </p>
-            <p className="text-2xl font-bold text-white">{activeCount}</p>
+            <p className="text-2xl font-bold text-foreground">{activeCount}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm">
+        <div className="flex items-center gap-4 p-4 rounded-md border bg-card text-card-foreground shadow-sm">
           <div className="p-3 bg-rose-500/10 text-rose-400 rounded-lg">
             <UserX className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Inactive
             </p>
             <p className="text-2xl font-bold text-rose-400">{inactiveCount}</p>
@@ -304,24 +290,24 @@ export function TeamTable() {
       </div>
 
       {/* Table Filters & Controls */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between p-4 bg-slate-900/60 border border-slate-700/50 rounded-xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between p-4 rounded-md border bg-card text-card-foreground shadow-sm">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-slate-850 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-indigo-500/20"
+            className="pl-9 bg-slate-950/70 border-border text-foreground placeholder:text-muted-foreground focus:border-indigo-500"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+          <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
           <Select
             value={roleFilter}
             onValueChange={(val) => setRoleFilter(val ?? "ALL")}
           >
-            <SelectTrigger className="w-[150px] h-9 rounded-xl bg-slate-850 border-slate-700 text-slate-200 text-sm focus:border-indigo-500 focus:ring-indigo-500/20">
+            <SelectTrigger className="w-[150px] h-9 rounded-md bg-slate-950/70 border-border text-foreground text-sm focus:border-indigo-500">
               <SelectValue placeholder="All Roles" />
             </SelectTrigger>
             <SelectContent
@@ -381,23 +367,15 @@ export function TeamTable() {
       </div>
 
       {/* Table List */}
-      <div className="border border-slate-700/50 rounded-xl overflow-hidden bg-slate-900/40 backdrop-blur-sm shadow-xl">
+      <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
-          <TableHeader className="bg-slate-950/60 border-b border-slate-700/50">
+          <TableHeader>
             <TableRow>
-              <TableHead className="text-slate-400 font-semibold pl-6">
-                Name
-              </TableHead>
-              <TableHead className="text-slate-400 font-semibold">
-                Email Address
-              </TableHead>
-              <TableHead className="text-slate-400 font-semibold">
-                Access Role
-              </TableHead>
-              <TableHead className="text-slate-400 font-semibold">
-                Status
-              </TableHead>
-              <TableHead className="w-[80px] text-right pr-6"></TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Email Address</TableHead>
+              <TableHead>Access Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -415,7 +393,7 @@ export function TeamTable() {
               <TableRow>
                 <TableCell
                   colSpan={5}
-                  className="text-center py-12 text-slate-500"
+                  className="text-center py-12 text-muted-foreground"
                 >
                   <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
                   No matching team members found.
@@ -427,15 +405,15 @@ export function TeamTable() {
                   key={member.userId}
                   className="border-b border-slate-800/50 hover:bg-white/5 transition-colors"
                 >
-                  <TableCell className="font-medium pl-6 py-4">
+                  <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
+                      <Avatar className="h-8 w-8">
                         <AvatarFallback className={getAvatarBg(member.role)}>
                           {getInitials(member)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="text-white font-medium text-sm">
+                        <span className="text-foreground font-medium text-sm">
                           {member.firstName
                             ? `${member.firstName} ${member.lastName || ""}`.trim()
                             : member.email}
@@ -499,7 +477,7 @@ export function TeamTable() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right pr-6">
+                  <TableCell className="text-right">
                     <RoleActionMenu
                       member={member}
                       onRefresh={fetchTeam}

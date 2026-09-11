@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { ArrowRightLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { PageLoader } from "@/components/ui/loader";
+import { BrandLoader } from "@/components/ui/loader";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
@@ -38,22 +38,18 @@ export function InventoryLevelList() {
     },
   });
 
-  if (isLoading) return <PageLoader text="Loading stock levels..." />;
-
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Stock Levels</h2>
-        <div className="flex items-center space-x-2">
-          <Link href="/inventory/adjust">
-            <Button>
-              <ArrowRightLeft className="mr-2 h-4 w-4" /> Adjust Stock
-            </Button>
-          </Link>
-        </div>
+    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold md:text-2xl">Stock Levels</h1>
+        <Link href="/inventory/adjust">
+          <Button>
+            <ArrowRightLeft className="mr-2 h-4 w-4" /> Adjust Stock
+          </Button>
+        </Link>
       </div>
       
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -65,7 +61,13 @@ export function InventoryLevelList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {levels.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading stock levels..." size="lg" />
+                </TableCell>
+              </TableRow>
+            ) : levels.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center h-24">
                   No stock data available.
@@ -73,7 +75,7 @@ export function InventoryLevelList() {
               </TableRow>
             ) : (
               levels.map((level: InventoryLevel) => (
-                <TableRow key={level.id}>
+                <TableRow key={level.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{level.productName}</TableCell>
                   <TableCell>{level.productCode || "-"}</TableCell>
                   <TableCell>{level.warehouseName}</TableCell>

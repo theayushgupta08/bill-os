@@ -52,9 +52,9 @@ export function InvoiceList() {
   if (isLoading) return <PageLoader text="Loading sales invoices..." />;
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Sales Invoices</h2>
+    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold md:text-2xl">Sales Invoices</h1>
         <div className="flex items-center space-x-2">
           <Link href="/sales/invoices/new">
             <Button><Plus className="mr-2 h-4 w-4" /> Create Invoice</Button>
@@ -62,7 +62,7 @@ export function InvoiceList() {
         </div>
       </div>
       
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -76,7 +76,7 @@ export function InvoiceList() {
           </TableHeader>
           <TableBody>
             {invoices.map((inv: any) => (
-              <TableRow key={inv.id}>
+              <TableRow key={inv.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                 <TableCell>{inv.invoiceDate}</TableCell>
                 <TableCell>{inv.customerName}</TableCell>

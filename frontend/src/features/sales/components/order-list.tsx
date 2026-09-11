@@ -25,9 +25,9 @@ export function OrderList() {
   if (isLoading) return <PageLoader text="Loading sales orders..." />;
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Sales Orders</h2>
+    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold md:text-2xl">Sales Orders</h1>
         <div className="flex items-center space-x-2">
           <Link href="/sales/orders/new">
             <Button><Plus className="mr-2 h-4 w-4" /> Create Sales Order</Button>
@@ -35,7 +35,7 @@ export function OrderList() {
         </div>
       </div>
       
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -48,7 +48,7 @@ export function OrderList() {
           </TableHeader>
           <TableBody>
             {orders.map((so: any) => (
-              <TableRow key={so.id}>
+              <TableRow key={so.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="font-medium">{so.soNumber}</TableCell>
                 <TableCell>{so.orderDate}</TableCell>
                 <TableCell>{so.customerName}</TableCell>

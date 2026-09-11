@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { PageLoader } from "@/components/ui/loader";
+import { BrandLoader } from "@/components/ui/loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
@@ -54,22 +54,18 @@ export function AccountList() {
     }
   };
 
-  if (isLoading) return <PageLoader text="Loading chart of accounts..." />;
-
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Chart of Accounts</h2>
-        <div className="flex items-center space-x-2">
-          <Link href="/accounts/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Add Account
-            </Button>
-          </Link>
-        </div>
+    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold md:text-2xl">Chart of Accounts</h1>
+        <Link href="/accounts/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Add Account
+          </Button>
+        </Link>
       </div>
       
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -82,7 +78,13 @@ export function AccountList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {accounts.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-64 text-center">
+                  <BrandLoader variant="card" text="Loading chart of accounts..." size="lg" />
+                </TableCell>
+              </TableRow>
+            ) : accounts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24">
                   No accounts found.
@@ -90,7 +92,7 @@ export function AccountList() {
               </TableRow>
             ) : (
               accounts.map((account: Account) => (
-                <TableRow key={account.id}>
+                <TableRow key={account.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{account.accountCode}</TableCell>
                   <TableCell>{account.name}</TableCell>
                   <TableCell>
@@ -109,11 +111,11 @@ export function AccountList() {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Link href={`/accounts/${account.id}`}>
-                        <Button variant="outline" size="icon">
+                        <Button variant="ghost" size="icon">
                           <Edit className="h-4 w-4" />
                         </Button>
                       </Link>
-                      <Button variant="destructive" size="icon" onClick={() => handleDelete(account.id)} disabled={deleteMutation.isPending}>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(account.id)} disabled={deleteMutation.isPending}>
                         <Trash className="h-4 w-4" />
                       </Button>
                     </div>

@@ -89,7 +89,7 @@ export function CustomerList() {
               </TableRow>
             ) : (
               customers.map((customer: Customer) => (
-                <TableRow key={customer.id}>
+                <TableRow key={customer.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{customer.name}</TableCell>
                   <TableCell>{customer.email || "-"}</TableCell>
                   <TableCell>{customer.phone || "-"}</TableCell>

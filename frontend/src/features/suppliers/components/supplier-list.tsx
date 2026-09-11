@@ -83,7 +83,7 @@ export function SupplierList() {
               </TableRow>
             ) : (
               suppliers.map((supplier: Supplier) => (
-                <TableRow key={supplier.id}>
+                <TableRow key={supplier.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell>{supplier.email || "-"}</TableCell>
                   <TableCell>{supplier.phone || "-"}</TableCell>

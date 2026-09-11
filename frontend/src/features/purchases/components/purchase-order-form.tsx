@@ -228,7 +228,7 @@ export function PurchaseOrderForm() {
 
         <Card>
           <CardContent className="pt-6 space-y-4">
-            <div className="rounded-md border">
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -251,7 +251,7 @@ export function PurchaseOrderForm() {
                     const lineTotal = lineSub + lineTax;
 
                     return (
-                      <TableRow key={line.id}>
+                      <TableRow key={line.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                         <TableCell>
                           <Select 
                             value={line.productId} 

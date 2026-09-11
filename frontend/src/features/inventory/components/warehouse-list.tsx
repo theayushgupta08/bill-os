@@ -49,9 +49,9 @@ export function WarehouseList() {
   if (isLoading) return <PageLoader text="Loading warehouses..." />;
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Warehouses</h2>
+    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold md:text-2xl">Warehouses</h1>
         <div className="flex items-center space-x-2">
           <Link href="/warehouses/new">
             <Button>
@@ -61,7 +61,7 @@ export function WarehouseList() {
         </div>
       </div>
       
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-card text-card-foreground shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -81,7 +81,7 @@ export function WarehouseList() {
               </TableRow>
             ) : (
               warehouses.map((warehouse: Warehouse) => (
-                <TableRow key={warehouse.id}>
+                <TableRow key={warehouse.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{warehouse.code}</TableCell>
                   <TableCell>{warehouse.name}</TableCell>
                   <TableCell>{warehouse.city || "-"}, {warehouse.state || "-"}</TableCell>
