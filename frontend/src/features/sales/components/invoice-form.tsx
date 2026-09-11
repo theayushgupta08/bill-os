@@ -51,6 +51,36 @@ interface BankDetails {
   bankAddress?: string;
 }
 
+function parseTerms(raw: string | undefined | null): string[] {
+  if (!raw || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((item) =>
+          String(item)
+            .trim()
+            .replace(/^["']|["']$/g, "")
+            .replace(/^(\d+\.|\*|-|•)\s*/, "")
+            .trim()
+        )
+        .filter(Boolean);
+    }
+  } catch {
+    // Not JSON, continue to line-based parsing
+  }
+  return raw
+    .split("\n")
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^["']|["']$/g, "")
+        .replace(/^(\d+\.|\*|-|•)\s*/, "")
+        .trim()
+    )
+    .filter(Boolean);
+}
+
 export function InvoiceForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -401,14 +431,10 @@ export function InvoiceForm() {
     return { bankName: "", accountNumber: "", ifscCode: "" };
   }, [invoiceSettings]);
 
-  // Parse Terms
+  // Parse Terms into clean points
   const parsedTerms = useMemo(() => {
-    if (!invoiceSettings?.invoiceTerms) return [];
-    return invoiceSettings.invoiceTerms
-      .split("\n")
-      .map((t: string) => t.trim().replace(/^[-*•]\s*/, ""))
-      .filter((t: string) => t.length > 0);
-  }, [invoiceSettings]);
+    return parseTerms(invoiceSettings?.invoiceTerms);
+  }, [invoiceSettings?.invoiceTerms]);
 
   const createMutation = useMutation({
     mutationFn: (payload: unknown) => api.post("/sales-invoices", payload),
