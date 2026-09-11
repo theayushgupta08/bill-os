@@ -247,10 +247,12 @@ export function BulkImportDialog({
                 billingState: billingState || null,
                 billingPincode: billingPincode || null,
                 billingCountry: "India",
+                outstandingBalance: 0,
                 isShared: true,
               },
               errors,
             };
+
 
           },
         };
