@@ -1,6 +1,7 @@
 package com.billos.api.controller;
 
-import com.billos.api.dto.InviteUserRequest;
+import com.billos.api.dto.CreateMemberRequest;
+import com.billos.api.dto.CreateMemberResponse;
 import com.billos.api.dto.TeamMemberDto;
 import com.billos.api.dto.UpdateRoleRequest;
 import com.billos.api.service.TeamService;
@@ -26,32 +27,17 @@ public class TeamController {
         return ResponseEntity.ok(teamService.getTeamMembers());
     }
 
-    @PostMapping("/invite")
+    @PostMapping("/members")
     @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
-    public ResponseEntity<Map<String, String>> inviteUser(@Valid @RequestBody InviteUserRequest request) {
-        String token = teamService.inviteUser(request);
-        return ResponseEntity.ok(Map.of("message", "Invitation sent successfully", "token", token));
+    public ResponseEntity<CreateMemberResponse> createMember(@Valid @RequestBody CreateMemberRequest request) {
+        return ResponseEntity.ok(teamService.createMember(request));
     }
 
-    @PostMapping("/accept-invite")
-    public ResponseEntity<Map<String, String>> acceptInvitation(@RequestParam String token) {
-        teamService.acceptInvitation(token);
-        return ResponseEntity.ok(Map.of("message", "Invitation accepted successfully"));
-    }
-
-    @DeleteMapping("/invite")
+    @PostMapping("/{userId}/reset-password")
     @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
-    public ResponseEntity<Map<String, String>> cancelInvitation(
-            @RequestParam(required = false) UUID invitationId, @RequestParam(required = false) String email) {
-        teamService.cancelInvitation(invitationId, email);
-        return ResponseEntity.ok(Map.of("message", "Invitation cancelled successfully"));
-    }
-
-    @DeleteMapping("/invite/{invitationId}")
-    @PreAuthorize("@tenantSecurity.hasRole('ADMIN')")
-    public ResponseEntity<Map<String, String>> cancelInvitationById(@PathVariable UUID invitationId) {
-        teamService.cancelInvitation(invitationId, null);
-        return ResponseEntity.ok(Map.of("message", "Invitation cancelled successfully"));
+    public ResponseEntity<Map<String, String>> resetMemberPassword(@PathVariable UUID userId) {
+        String newPassword = teamService.resetMemberPassword(userId);
+        return ResponseEntity.ok(Map.of("newPassword", newPassword));
     }
 
     @PutMapping("/{userId}/role")

@@ -2,15 +2,17 @@ package com.billos.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import com.billos.api.dto.InviteUserRequest;
+import com.billos.api.dto.CreateMemberRequest;
+import com.billos.api.dto.CreateMemberResponse;
 import com.billos.api.dto.TeamMemberDto;
 import com.billos.api.entity.Organization;
-import com.billos.api.entity.OrganizationInvitation;
 import com.billos.api.entity.User;
 import com.billos.api.entity.UserOrgRole;
-import com.billos.api.repository.OrganizationInvitationRepository;
 import com.billos.api.repository.OrganizationRepository;
 import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
@@ -28,9 +30,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
@@ -43,13 +47,13 @@ class TeamServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private OrganizationInvitationRepository invitationRepository;
-
-    @Mock
     private OrganizationRepository organizationRepository;
 
     @Mock
-    private EmailService emailService;
+    private SupabaseAdminService supabaseAdminService;
+
+    @Mock
+    private JdbcTemplate jdbcTemplate;
 
     @InjectMocks
     private TeamService teamService;
@@ -62,6 +66,7 @@ class TeamServiceTest {
     void setUp() {
         orgId = UUID.randomUUID();
         TenantContext.setCurrentTenant(orgId.toString());
+        ReflectionTestUtils.setField(teamService, "emailBaseDomain", "billos.app");
 
         mockSecurityContext = mock(SecurityContext.class);
         mockAuthentication = mock(Authentication.class);
@@ -100,6 +105,86 @@ class TeamServiceTest {
         // Assert
         assertThat(members).hasSize(1);
         assertThat(members.get(0).getStatus()).isEqualTo("INACTIVE");
+    }
+
+    @Test
+    @DisplayName("createMember - should auto-generate email, create in Supabase & billOS, and return credentials")
+    void createMember_shouldSucceed() {
+        // Arrange
+        Organization org = new Organization();
+        org.setId(orgId);
+        org.setName("Acme Shop");
+        org.setEmailSuffix("acmeshop");
+
+        CreateMemberRequest request = new CreateMemberRequest();
+        request.setFirstName("Rahul");
+        request.setLastName("Sharma");
+        request.setPhone("+91 9876543210");
+        request.setRole("USER");
+
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+
+        UUID generatedSupabaseId = UUID.randomUUID();
+        when(supabaseAdminService.createUser(anyString(), anyString(), eq("Rahul"), eq("Sharma"), eq("+91 9876543210")))
+                .thenReturn(generatedSupabaseId);
+
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId(UUID.randomUUID());
+            return u;
+        });
+
+        // Act
+        CreateMemberResponse response = teamService.createMember(request);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getEmail()).startsWith("rahul.sharma.");
+        assertThat(response.getEmail()).endsWith("@acmeshop.billos.app");
+        assertThat(response.getGeneratedPassword()).hasSize(12);
+        assertThat(response.getFirstName()).isEqualTo("Rahul");
+        assertThat(response.getLastName()).isEqualTo("Sharma");
+        assertThat(response.getRole()).isEqualTo("USER");
+
+        verify(userRepository).save(any(User.class));
+        verify(userOrgRoleRepository).save(any(UserOrgRole.class));
+    }
+
+    @Test
+    @DisplayName("resetMemberPassword - Owner should successfully reset staff member password")
+    void resetMemberPassword_shouldSucceed() {
+        // Arrange
+        UUID callerId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        UUID supabaseId = UUID.randomUUID();
+
+        UserPrincipal principal =
+                new UserPrincipal(callerId, "owner@example.com", "hash", Collections.emptyList(), true);
+        when(mockSecurityContext.getAuthentication()).thenReturn(mockAuthentication);
+        when(mockAuthentication.getPrincipal()).thenReturn(principal);
+
+        UserOrgRole callerRole = new UserOrgRole();
+        callerRole.setRole("OWNER");
+
+        User targetUser = new User();
+        targetUser.setId(targetId);
+        targetUser.setEmail("staff@example.com");
+        targetUser.setSupabaseId(supabaseId);
+        targetUser.setMustChangePassword(false);
+
+        when(userOrgRoleRepository.findByUserIdAndOrganizationId(callerId, orgId))
+                .thenReturn(Optional.of(callerRole));
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(targetUser));
+
+        // Act
+        String newPassword = teamService.resetMemberPassword(targetId);
+
+        // Assert
+        assertThat(newPassword).hasSize(12);
+        assertThat(targetUser.getMustChangePassword()).isTrue();
+        verify(supabaseAdminService).updatePassword(eq(supabaseId), eq(newPassword));
+        verify(userRepository).save(targetUser);
     }
 
     @Test
@@ -201,78 +286,35 @@ class TeamServiceTest {
     }
 
     @Test
-    @DisplayName("inviteUser - should create pending invitation, send email, and return token")
-    void inviteUser_shouldCreateInvitationAndReturnToken() {
-        // Arrange
-        Organization org = new Organization();
-        org.setId(orgId);
-        org.setName("Acme Corp");
+    @DisplayName("removeUser - should delete role for regular member")
+    void removeUser_shouldDeleteRole() {
+        UUID userId = UUID.randomUUID();
+        UserOrgRole role = new UserOrgRole();
+        role.setRole("USER");
+        role.setOrganizationId(orgId);
 
-        InviteUserRequest request = new InviteUserRequest();
-        request.setEmail("invitee@example.com");
-        request.setRole("ADMIN");
+        when(userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId)).thenReturn(Optional.of(role));
 
-        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
-        when(userRepository.findByEmail("invitee@example.com")).thenReturn(Optional.empty());
-        when(invitationRepository.findByOrganizationIdAndEmailAndStatus(orgId, "invitee@example.com", "PENDING"))
-                .thenReturn(Optional.empty());
+        teamService.removeUser(userId);
 
-        // Act
-        String token = teamService.inviteUser(request);
-
-        // Assert
-        assertThat(token).isNotBlank();
-        verify(invitationRepository).save(any(OrganizationInvitation.class));
-        verify(emailService)
-                .sendOrganizationInvitation(eq("invitee@example.com"), eq("Acme Corp"), eq("ADMIN"), eq(token));
+        verify(userOrgRoleRepository).delete(role);
     }
 
     @Test
-    @DisplayName("cancelInvitation - should find and delete invitation by invitationId")
-    void cancelInvitation_shouldDeleteById() {
-        UUID inviteId = UUID.randomUUID();
-        OrganizationInvitation invite = new OrganizationInvitation();
-        invite.setId(inviteId);
-        invite.setOrganizationId(orgId);
-        invite.setEmail("test@example.com");
+    @DisplayName("removeUser - should throw exception when trying to remove last owner")
+    void removeUser_lastOwner_throwsException() {
+        UUID userId = UUID.randomUUID();
+        UserOrgRole role = new UserOrgRole();
+        role.setRole("OWNER");
+        role.setOrganizationId(orgId);
 
-        when(invitationRepository.findById(inviteId)).thenReturn(Optional.of(invite));
+        when(userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId)).thenReturn(Optional.of(role));
+        when(userOrgRoleRepository.findAll()).thenReturn(List.of(role));
 
-        teamService.cancelInvitation(inviteId, null);
+        assertThatThrownBy(() -> teamService.removeUser(userId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot remove the last owner of the organization");
 
-        verify(invitationRepository).delete(invite);
-    }
-
-    @Test
-    @DisplayName("cancelInvitation - should find and delete invitation by email if id not found")
-    void cancelInvitation_shouldDeleteByEmail() {
-        OrganizationInvitation invite = new OrganizationInvitation();
-        invite.setId(UUID.randomUUID());
-        invite.setOrganizationId(orgId);
-        invite.setEmail("test@example.com");
-
-        when(invitationRepository.findByOrganizationId(orgId)).thenReturn(List.of(invite));
-
-        teamService.cancelInvitation(null, "test@example.com");
-
-        verify(invitationRepository).delete(invite);
-    }
-
-    @Test
-    @DisplayName("removeUser - should delete pending invitation if user not found in UserOrgRole")
-    void removeUser_shouldDeletePendingInvitationIfUserIdMatchesInvite() {
-        UUID inviteId = UUID.randomUUID();
-        when(userOrgRoleRepository.findByUserIdAndOrganizationId(inviteId, orgId))
-                .thenReturn(Optional.empty());
-
-        OrganizationInvitation invite = new OrganizationInvitation();
-        invite.setId(inviteId);
-        invite.setOrganizationId(orgId);
-
-        when(invitationRepository.findById(inviteId)).thenReturn(Optional.of(invite));
-
-        teamService.removeUser(inviteId);
-
-        verify(invitationRepository).delete(invite);
+        verify(userOrgRoleRepository, never()).delete(any());
     }
 }

@@ -74,6 +74,12 @@ public class OrganizationService {
         User currentUser =
                 userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Validate email suffix uniqueness
+        String suffix = request.getEmailSuffix().toLowerCase().trim();
+        if (organizationRepository.existsByEmailSuffix(suffix)) {
+            throw new RuntimeException("Email suffix '" + suffix + "' is already taken. Please choose another.");
+        }
+
         Organization org = new Organization();
         org.setName(request.getName());
         org.setLegalName(request.getLegalName());
@@ -89,6 +95,7 @@ public class OrganizationService {
         org.setWebsite(request.getWebsite());
         org.setLogoUrl(request.getLogoUrl());
         org.setIsPrimary(true);
+        org.setEmailSuffix(suffix);
         org.setFinancialYearStart(
                 java.time.LocalDate.of(java.time.LocalDate.now().getYear(), 4, 1));
 

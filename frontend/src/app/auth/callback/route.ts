@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const returnUrl = requestUrl.searchParams.get("returnUrl");
+  const source = requestUrl.searchParams.get("source");
   const origin = requestUrl.origin;
 
   if (!code) {
@@ -57,6 +58,30 @@ export async function GET(request: NextRequest) {
 
     const sessionUser = data.session.user;
     const accessToken = data.session.access_token;
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "https://bill-os.onrender.com/api/v1";
+
+    // Option C: If signing in via Google from the login page, verify user exists in billOS
+    if (source === "login" && sessionUser?.email) {
+      try {
+        const checkRes = await fetch(
+          `${apiUrl}/public/check-user-exists?email=${encodeURIComponent(sessionUser.email.trim().toLowerCase())}`,
+          { cache: "no-store" }
+        );
+        if (checkRes.ok) {
+          const checkData = await checkRes.json();
+          if (!checkData?.exists) {
+            await supabase.auth.signOut();
+            const errorMsg = encodeURIComponent(
+              "No billOS account found with this Google email. If you are a staff member, please log in with your assigned team email and password."
+            );
+            return NextResponse.redirect(new URL(`/login?error=${errorMsg}`, origin));
+          }
+        }
+      } catch (checkErr) {
+        console.warn("Failed to check user existence in Google login:", checkErr);
+      }
+    }
 
     // Check if user has phone in Supabase user metadata first
     let hasPhone = false;
@@ -70,12 +95,10 @@ export async function GET(request: NextRequest) {
 
     let hasOrganizations = false;
     let primaryOrgId: string | null = null;
+    let mustChangePassword = false;
 
     try {
-      const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL || "https://bill-os.onrender.com/api/v1";
-
-      const [userRes, orgsRes] = await Promise.all([
+      const [userRes, orgsRes, pwdRes] = await Promise.all([
         fetch(`${apiUrl}/users/me`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -84,6 +107,13 @@ export async function GET(request: NextRequest) {
           cache: "no-store",
         }),
         fetch(`${apiUrl}/organizations`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        }),
+        fetch(`${apiUrl}/users/me/must-change-password`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
@@ -110,14 +140,23 @@ export async function GET(request: NextRequest) {
           primaryOrgId = orgs[0].id;
         }
       }
+
+      if (pwdRes.ok) {
+        const pwdData = await pwdRes.json();
+        if (pwdData?.mustChangePassword) {
+          mustChangePassword = true;
+        }
+      }
     } catch (apiErr) {
       console.warn("Failed to check user/organizations in auth callback:", apiErr);
     }
 
     let redirectUrl: URL;
-    if (!hasPhone) {
+    if (mustChangePassword) {
+      // Force user to change password before anything else
+      redirectUrl = new URL("/change-password", origin);
+    } else if (!hasPhone) {
       // First-time or OAuth user without phone -> prompt for phone first.
-      // Preserve returnUrl so the phone page can forward correctly after verification.
       const phoneUrl = returnUrl && returnUrl.startsWith("/")
         ? `/phone?returnUrl=${encodeURIComponent(returnUrl)}`
         : "/phone";

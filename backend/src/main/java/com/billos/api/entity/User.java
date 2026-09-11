@@ -51,4 +51,7 @@ public class User extends BaseEntity {
 
     @Column(name = "is_email_verified")
     private Boolean isEmailVerified = false;
+
+    @Column(name = "must_change_password")
+    private Boolean mustChangePassword = false;
 }

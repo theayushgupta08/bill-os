@@ -80,4 +80,7 @@ public class Organization extends BaseEntity {
 
     @Column(name = "branch_code")
     private String branchCode;
+
+    @Column(name = "email_suffix", unique = true, length = 50)
+    private String emailSuffix;
 }

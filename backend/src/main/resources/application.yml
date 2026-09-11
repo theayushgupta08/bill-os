@@ -55,6 +55,11 @@ app:
     url: ${APP_FRONTEND_URL:http://localhost:3000}
   cors:
     allowed-origins: http://localhost:3000,http://localhost:3001,${APP_FRONTEND_URL:https://bill-os-nine.vercel.app}
+  supabase:
+    url: ${SUPABASE_URL:https://qmqvaljcmcgqsxkoaoxc.supabase.co}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+  email:
+    base-domain: ${EMAIL_BASE_DOMAIN:billos.app}
 
 
 logging:

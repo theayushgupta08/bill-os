@@ -209,9 +209,20 @@ export default function PhoneOnboardingPage() {
       }
 
       // 3. Decide where to go next:
-      //    - If user already has organizations (e.g. from an auto-accepted invitation), go to dashboard.
-      //    - If a returnUrl was passed (e.g. from the invitation flow), honor it.
+      //    - If user must change password, route to /change-password.
+      //    - If user already has organizations, go to dashboard.
+      //    - If a returnUrl was passed, honor it.
       //    - Otherwise, go to the organization setup wizard.
+      try {
+        const mustChange = await api.get<{ mustChangePassword: boolean }>('/users/me/must-change-password');
+        if (mustChange?.mustChangePassword) {
+          router.push('/change-password');
+          return;
+        }
+      } catch {
+        // Non-critical
+      }
+
       try {
         const orgs = await api.get<Array<{ id: string }>>('/organizations');
         if (orgs && orgs.length > 0) {

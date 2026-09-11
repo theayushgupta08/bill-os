@@ -1,14 +1,8 @@
 package com.billos.api.service;
 
-import com.billos.api.entity.OrganizationInvitation;
 import com.billos.api.entity.User;
-import com.billos.api.entity.UserOrgRole;
-import com.billos.api.repository.OrganizationInvitationRepository;
-import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.SupabaseIdentity;
-import java.time.ZonedDateTime;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -35,8 +29,6 @@ public class SupabaseUserProvisioningService {
     private static final Pattern TEN_DIGITS_PATTERN = Pattern.compile("^\\d{10}$");
 
     private final UserRepository userRepository;
-    private final OrganizationInvitationRepository invitationRepository;
-    private final UserOrgRoleRepository userOrgRoleRepository;
 
     /**
      * Resolves the local user for a Supabase identity, provisioning or back-filling as needed.
@@ -50,23 +42,17 @@ public class SupabaseUserProvisioningService {
     public User resolveUser(SupabaseIdentity identity) {
         Optional<User> bySupabaseId = userRepository.findBySupabaseId(identity.supabaseId());
         if (bySupabaseId.isPresent()) {
-            User user = syncProfile(bySupabaseId.get(), identity);
-            autoAcceptPendingInvitations(user);
-            return user;
+            return syncProfile(bySupabaseId.get(), identity);
         }
 
-        // A row may already exist from before Supabase Auth, or from an invitation. Link it.
+        // A row may already exist from before Supabase Auth. Link it.
         Optional<User> byEmail = userRepository.findByEmail(identity.email());
         if (byEmail.isPresent()) {
             log.info("Linking existing user {} to Supabase id {}", byEmail.get().getId(), identity.supabaseId());
-            User user = syncProfile(byEmail.get(), identity);
-            autoAcceptPendingInvitations(user);
-            return user;
+            return syncProfile(byEmail.get(), identity);
         }
 
-        User user = createUser(identity);
-        autoAcceptPendingInvitations(user);
-        return user;
+        return createUser(identity);
     }
 
     private User createUser(SupabaseIdentity identity) {
@@ -88,8 +74,6 @@ public class SupabaseUserProvisioningService {
 
         user.setPhone(sanitizePhone(identity.phone()));
         user.setIsActive(true);
-        // Supabase will not mint an access token until the address is confirmed (when confirmation
-        // is enabled), so a token in hand means the address is good.
         user.setIsEmailVerified(true);
 
         try {
@@ -97,8 +81,6 @@ public class SupabaseUserProvisioningService {
             log.info("Provisioned new user {} for Supabase id {}", saved.getId(), identity.supabaseId());
             return saved;
         } catch (DataIntegrityViolationException ex) {
-            // Two concurrent first requests from the same new user raced us to the insert.
-            // The unique constraint on supabase_id / email means exactly one won; use its row.
             log.debug("Provisioning race for Supabase id {}, re-reading", identity.supabaseId());
             return userRepository
                     .findBySupabaseId(identity.supabaseId())
@@ -107,18 +89,9 @@ public class SupabaseUserProvisioningService {
         }
     }
 
-    /**
-     * Keeps the local row in step with Supabase, which is the source of truth for email and
-     * profile metadata.
-     *
-     * <p>Names are only back-filled when the local value is missing or is the email-prefix
-     * placeholder an earlier provisioning run may have written — a name edited inside billOS is
-     * never clobbered by stale token metadata.
-     */
     private User syncProfile(User user, SupabaseIdentity identity) {
         boolean changed = false;
 
-        // Also covers the link path: a row matched by email has no supabase_id yet.
         if (!Objects.equals(user.getSupabaseId(), identity.supabaseId())) {
             user.setSupabaseId(identity.supabaseId());
             changed = true;
@@ -141,7 +114,6 @@ public class SupabaseUserProvisioningService {
             changed = true;
         }
 
-        // Only populate phone when missing locally and available from Supabase
         if (isBlank(user.getPhone()) && !isBlank(identity.phone())) {
             user.setPhone(sanitizePhone(identity.phone()));
             changed = true;
@@ -179,69 +151,5 @@ public class SupabaseUserProvisioningService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
-    }
-
-    /**
-     * Automatically accepts all valid pending invitations that match the user's email.
-     *
-     * <p>This runs during user provisioning (first auth) so that by the time the frontend's
-     * routing logic checks {@code getMyOrganizations()}, the invited org is already visible —
-     * letting the user skip the organization-setup wizard entirely.
-     */
-    private void autoAcceptPendingInvitations(User user) {
-        if (user.getEmail() == null) {
-            return;
-        }
-
-        List<OrganizationInvitation> pendingInvitations =
-                invitationRepository.findByEmailIgnoreCaseAndStatus(user.getEmail(), "PENDING");
-
-        if (pendingInvitations.isEmpty()) {
-            return;
-        }
-
-        ZonedDateTime now = ZonedDateTime.now();
-
-        for (OrganizationInvitation invitation : pendingInvitations) {
-            if (invitation.getExpiresAt().isBefore(now)) {
-                invitation.setStatus("EXPIRED");
-                invitationRepository.save(invitation);
-                log.info(
-                        "Skipped expired invitation {} for org {}", invitation.getId(), invitation.getOrganizationId());
-                continue;
-            }
-
-            // Check if user already has a role in this org (e.g. from a previous manual accept)
-            Optional<UserOrgRole> existingRole =
-                    userOrgRoleRepository.findByUserIdAndOrganizationId(user.getId(), invitation.getOrganizationId());
-            if (existingRole.isPresent()) {
-                invitation.setStatus("ACCEPTED");
-                invitationRepository.save(invitation);
-                log.info(
-                        "Invitation {} already fulfilled — user {} is already in org {}",
-                        invitation.getId(),
-                        user.getId(),
-                        invitation.getOrganizationId());
-                continue;
-            }
-
-            // Create the org-role link
-            UserOrgRole role = new UserOrgRole();
-            role.setUser(user);
-            role.setOrganizationId(invitation.getOrganizationId());
-            role.setRole(invitation.getRole());
-            userOrgRoleRepository.save(role);
-
-            // Mark invitation as accepted
-            invitation.setStatus("ACCEPTED");
-            invitationRepository.save(invitation);
-
-            log.info(
-                    "Auto-accepted invitation {} — user {} joined org {} with role {}",
-                    invitation.getId(),
-                    user.getId(),
-                    invitation.getOrganizationId(),
-                    invitation.getRole());
-        }
     }
 }

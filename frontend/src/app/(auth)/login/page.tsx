@@ -13,9 +13,10 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl');
+  const urlError = searchParams.get('error');
   const verified = searchParams.get('verified') === 'true';
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(urlError || '');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -40,6 +41,17 @@ export default function LoginPage() {
 
       if (signInError) {
         throw new Error(signInError.message);
+      }
+
+      // Check if user must change password on first login
+      try {
+        const mustChange = await api.get<{ mustChangePassword: boolean }>('/users/me/must-change-password');
+        if (mustChange?.mustChangePassword) {
+          router.push('/change-password');
+          return;
+        }
+      } catch (checkErr) {
+        console.warn('Could not check must-change-password status:', checkErr);
       }
       
       if (returnUrl) {
@@ -86,8 +98,8 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
       const redirectUrl = returnUrl 
-        ? `${window.location.origin}/auth/callback?returnUrl=${encodeURIComponent(returnUrl)}`
-        : `${window.location.origin}/auth/callback`;
+        ? `${window.location.origin}/auth/callback?source=login&returnUrl=${encodeURIComponent(returnUrl)}`
+        : `${window.location.origin}/auth/callback?source=login`;
         
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

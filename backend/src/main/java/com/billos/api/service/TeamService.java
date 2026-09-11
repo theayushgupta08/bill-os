@@ -1,24 +1,23 @@
 package com.billos.api.service;
 
-import com.billos.api.dto.InviteUserRequest;
+import com.billos.api.dto.CreateMemberRequest;
+import com.billos.api.dto.CreateMemberResponse;
 import com.billos.api.dto.TeamMemberDto;
 import com.billos.api.entity.Organization;
-import com.billos.api.entity.OrganizationInvitation;
 import com.billos.api.entity.User;
 import com.billos.api.entity.UserOrgRole;
-import com.billos.api.repository.OrganizationInvitationRepository;
 import com.billos.api.repository.OrganizationRepository;
 import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.UserPrincipal;
 import com.billos.api.tenant.TenantContext;
-import java.time.ZonedDateTime;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -32,18 +31,25 @@ public class TeamService {
 
     private final UserOrgRoleRepository userOrgRoleRepository;
     private final UserRepository userRepository;
-    private final OrganizationInvitationRepository invitationRepository;
     private final OrganizationRepository organizationRepository;
-    private final EmailService emailService;
+    private final SupabaseAdminService supabaseAdminService;
     private final JdbcTemplate jdbcTemplate;
+
+    @Value("${app.email.base-domain:billos.app}")
+    private String emailBaseDomain;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String PASSWORD_CHARS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
+
+    // ─── Team Members ────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public List<TeamMemberDto> getTeamMembers() {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
         List<TeamMemberDto> team = new ArrayList<>();
 
-        // Add active users
-        List<UserOrgRole> roles = userOrgRoleRepository.findAll(); // We should filter by orgId
+        List<UserOrgRole> roles = userOrgRoleRepository.findAll();
         for (UserOrgRole role : roles) {
             if (role.getOrganizationId().equals(orgId)) {
                 User user = userRepository.findById(role.getUser().getId()).orElse(null);
@@ -59,103 +65,107 @@ public class TeamService {
             }
         }
 
-        // Add pending invitations
-        List<OrganizationInvitation> invitations = invitationRepository.findByOrganizationId(orgId);
-        for (OrganizationInvitation inv : invitations) {
-            if ("PENDING".equals(inv.getStatus()) && inv.getExpiresAt().isAfter(ZonedDateTime.now())) {
-                team.add(new TeamMemberDto(
-                        inv.getId(),
-                        inv.getEmail(),
-                        null,
-                        null,
-                        inv.getRole(),
-                        "INVITED",
-                        inv.getToken(),
-                        inv.getId()));
-            }
-        }
-
         return team;
     }
 
+    // ─── Create Member (Owner-Created Account) ──────────────────────
+
     @Transactional
-    public String inviteUser(InviteUserRequest request) {
+    public CreateMemberResponse createMember(CreateMemberRequest request) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
+        // Resolve the email suffix — use primary org's suffix (branches inherit)
         Organization org = organizationRepository
                 .findById(orgId)
                 .orElseThrow(() -> new RuntimeException("Organization not found"));
 
-        // Check if user is already in the org
-        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
-        if (existingUser.isPresent()) {
-            Optional<UserOrgRole> role = userOrgRoleRepository.findByUserIdAndOrganizationId(
-                    existingUser.get().getId(), orgId);
-            if (role.isPresent()) {
-                throw new RuntimeException("User is already a member of this organization");
-            }
+        String suffix = org.getEmailSuffix();
+        if (suffix == null && org.getParentOrganizationId() != null) {
+            Organization parent = organizationRepository
+                    .findById(org.getParentOrganizationId())
+                    .orElseThrow(() -> new RuntimeException("Parent organization not found"));
+            suffix = parent.getEmailSuffix();
+        }
+        if (suffix == null || suffix.isBlank()) {
+            throw new RuntimeException("Organization does not have an email suffix configured. "
+                    + "Please set one in your organization settings.");
         }
 
-        // Check if there's already a pending invitation
-        Optional<OrganizationInvitation> existingInvite =
-                invitationRepository.findByOrganizationIdAndEmailAndStatus(orgId, request.getEmail(), "PENDING");
+        // Generate email: firstname.lastname.XX@suffix.billos.app
+        String email = generateUniqueEmail(request.getFirstName(), request.getLastName(), suffix);
 
-        if (existingInvite.isPresent() && existingInvite.get().getExpiresAt().isAfter(ZonedDateTime.now())) {
-            throw new RuntimeException("A pending invitation already exists for this email");
-        }
+        // Generate secure password
+        String password = generatePassword(12);
 
-        // Create new invitation
-        OrganizationInvitation invitation = new OrganizationInvitation();
-        invitation.setOrganizationId(orgId);
-        invitation.setEmail(request.getEmail());
-        invitation.setRole(request.getRole());
-        invitation.setToken(UUID.randomUUID().toString());
-        invitation.setExpiresAt(ZonedDateTime.now().plusDays(7));
-        invitation.setStatus("PENDING");
+        // Create user in Supabase Auth
+        UUID supabaseId = supabaseAdminService.createUser(
+                email, password, request.getFirstName(), request.getLastName(), request.getPhone());
 
-        invitationRepository.save(invitation);
+        // Create user in billOS database
+        User user = new User();
+        user.setEmail(email);
+        user.setFirstName(request.getFirstName().trim());
+        user.setLastName(request.getLastName().trim());
+        user.setPhone(request.getPhone());
+        user.setSupabaseId(supabaseId);
+        user.setIsActive(true);
+        user.setIsEmailVerified(true);
+        user.setMustChangePassword(true);
+        user = userRepository.save(user);
 
-        // Send Email
-        emailService.sendOrganizationInvitation(
-                request.getEmail(), org.getName(), request.getRole(), invitation.getToken());
-
-        return invitation.getToken();
-    }
-
-    @Transactional
-    public void acceptInvitation(String token) {
-        OrganizationInvitation invitation = invitationRepository
-                .findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid invitation token"));
-
-        if (!"PENDING".equals(invitation.getStatus())
-                || invitation.getExpiresAt().isBefore(ZonedDateTime.now())) {
-            invitation.setStatus("EXPIRED");
-            invitationRepository.save(invitation);
-            throw new RuntimeException("Invitation has expired or is invalid");
-        }
-
-        // Check if current user email matches invitation email
-        UserPrincipal principal = (UserPrincipal)
-                SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (!principal.getEmail().equalsIgnoreCase(invitation.getEmail())) {
-            throw new RuntimeException("This invitation was sent to a different email address");
-        }
-
-        User user =
-                userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Assign role
+        // Assign org role
         UserOrgRole role = new UserOrgRole();
         role.setUser(user);
-        role.setOrganizationId(invitation.getOrganizationId());
-        role.setRole(invitation.getRole());
+        role.setOrganizationId(orgId);
+        role.setRole(request.getRole());
         userOrgRoleRepository.save(role);
 
-        // Mark as accepted
-        invitation.setStatus("ACCEPTED");
-        invitationRepository.save(invitation);
+        log.info("Created member {} ({}) in org {} with role {}", user.getId(), email, orgId, request.getRole());
+
+        return CreateMemberResponse.builder()
+                .userId(user.getId().toString())
+                .email(email)
+                .generatedPassword(password)
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(request.getRole())
+                .build();
     }
+
+    // ─── Reset Member Password ──────────────────────────────────────
+
+    @Transactional
+    public String resetMemberPassword(UUID targetUserId) {
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+
+        UserPrincipal principal = (UserPrincipal)
+                SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        UserOrgRole callerRole = userOrgRoleRepository
+                .findByUserIdAndOrganizationId(principal.getId(), orgId)
+                .orElseThrow(() -> new RuntimeException("Caller is not a member of this organization"));
+        if (!"OWNER".equals(callerRole.getRole()) && !"ADMIN".equals(callerRole.getRole())) {
+            throw new RuntimeException("Only OWNER or ADMIN can reset passwords");
+        }
+
+        if (principal.getId().equals(targetUserId)) {
+            throw new RuntimeException("Use the change-password flow to change your own password");
+        }
+
+        User target = userRepository.findById(targetUserId).orElseThrow(() -> new RuntimeException("User not found"));
+        if (target.getSupabaseId() == null) {
+            throw new RuntimeException("User does not have a Supabase auth account");
+        }
+
+        String newPassword = generatePassword(12);
+        supabaseAdminService.updatePassword(target.getSupabaseId(), newPassword);
+        target.setMustChangePassword(true);
+        userRepository.save(target);
+
+        log.info("Reset password for user {} ({}) by admin {}", targetUserId, target.getEmail(), principal.getId());
+        return newPassword;
+    }
+
+    // ─── Role Management ────────────────────────────────────────────
 
     @Transactional
     public void updateUserRole(UUID userId, String newRole) {
@@ -165,7 +175,6 @@ public class TeamService {
                 .findByUserIdAndOrganizationId(userId, orgId)
                 .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
 
-        // Prevent changing the role of the last OWNER
         if ("OWNER".equals(role.getRole()) && !"OWNER".equals(newRole)) {
             long ownerCount = userOrgRoleRepository.findAll().stream()
                     .filter(r -> r.getOrganizationId().equals(orgId) && "OWNER".equals(r.getRole()))
@@ -179,75 +188,33 @@ public class TeamService {
         userOrgRoleRepository.save(role);
     }
 
+    // ─── Remove User ────────────────────────────────────────────────
+
     @Transactional
     public void removeUser(UUID userId) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
-        Optional<UserOrgRole> roleOpt = userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId);
+        UserOrgRole role = userOrgRoleRepository
+                .findByUserIdAndOrganizationId(userId, orgId)
+                .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
 
-        if (roleOpt.isPresent()) {
-            UserOrgRole role = roleOpt.get();
-            // Prevent removing the last OWNER
-            if ("OWNER".equals(role.getRole())) {
-                long ownerCount = userOrgRoleRepository.findAll().stream()
-                        .filter(r -> r.getOrganizationId().equals(orgId) && "OWNER".equals(r.getRole()))
-                        .count();
-                if (ownerCount <= 1) {
-                    throw new RuntimeException("Cannot remove the last owner of the organization");
-                }
+        if ("OWNER".equals(role.getRole())) {
+            long ownerCount = userOrgRoleRepository.findAll().stream()
+                    .filter(r -> r.getOrganizationId().equals(orgId) && "OWNER".equals(r.getRole()))
+                    .count();
+            if (ownerCount <= 1) {
+                throw new RuntimeException("Cannot remove the last owner of the organization");
             }
-            userOrgRoleRepository.delete(role);
-            return;
         }
-
-        // Check if userId is a pending invitation ID
-        Optional<OrganizationInvitation> inviteOpt = invitationRepository
-                .findById(userId)
-                .filter(inv -> inv.getOrganizationId().equals(orgId));
-        if (inviteOpt.isPresent()) {
-            invitationRepository.delete(inviteOpt.get());
-            log.info("Cancelled pending invitation {} for organization {}", userId, orgId);
-            return;
-        }
-
-        throw new RuntimeException("User or invitation not found");
+        userOrgRoleRepository.delete(role);
     }
 
-    @Transactional
-    public void cancelInvitation(UUID invitationId, String email) {
-        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
-        Optional<OrganizationInvitation> inviteOpt = Optional.empty();
-
-        if (invitationId != null) {
-            inviteOpt = invitationRepository.findById(invitationId).filter(inv -> inv.getOrganizationId()
-                    .equals(orgId));
-        }
-
-        if (inviteOpt.isEmpty() && email != null && !email.isBlank()) {
-            String cleanEmail = email.trim().toLowerCase();
-            inviteOpt = invitationRepository.findByOrganizationId(orgId).stream()
-                    .filter(inv -> inv.getEmail() != null && inv.getEmail().equalsIgnoreCase(cleanEmail))
-                    .findFirst();
-        }
-
-        if (inviteOpt.isPresent()) {
-            OrganizationInvitation invitation = inviteOpt.get();
-            invitationRepository.delete(invitation);
-            log.info(
-                    "Cancelled invitation {} for email {} in organization {}",
-                    invitation.getId(),
-                    invitation.getEmail(),
-                    orgId);
-        } else {
-            throw new RuntimeException("Invitation not found");
-        }
-    }
+    // ─── Toggle User Status ─────────────────────────────────────────
 
     @Transactional
     public void toggleUserStatus(UUID targetUserId, boolean active) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
-        // Get caller info
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         UUID callerId = principal.getId();
@@ -262,10 +229,10 @@ public class TeamService {
 
         List<String> hierarchy = List.of("OWNER", "ADMIN", "MANAGER", "USER", "VIEWER");
 
-        String callerRole = callerOrgRole.getRole();
+        String callerRoleStr = callerOrgRole.getRole();
         String targetRole = targetOrgRole.getRole();
 
-        int callerLevel = hierarchy.indexOf(callerRole);
+        int callerLevel = hierarchy.indexOf(callerRoleStr);
         int targetLevel = hierarchy.indexOf(targetRole);
 
         if (callerLevel == -1 || targetLevel == -1) {
@@ -276,12 +243,10 @@ public class TeamService {
             throw new RuntimeException("You cannot change the status of your own account");
         }
 
-        // Only OWNER and ADMIN can perform toggles
-        if (!"OWNER".equals(callerRole) && !"ADMIN".equals(callerRole)) {
+        if (!"OWNER".equals(callerRoleStr) && !"ADMIN".equals(callerRoleStr)) {
             throw new RuntimeException("Only Owner and Admin have permission to toggle user status");
         }
 
-        // Can only toggle strictly lower roles
         if (callerLevel >= targetLevel) {
             throw new RuntimeException("You do not have permission to change status of user with equal or higher role");
         }
@@ -291,7 +256,6 @@ public class TeamService {
 
         targetUser.setIsActive(active);
 
-        // Terminate sessions and manage Supabase login access
         UUID supabaseId = targetUser.getSupabaseId();
         if (supabaseId == null && targetUser.getEmail() != null) {
             try {
@@ -311,11 +275,8 @@ public class TeamService {
         if (supabaseId != null) {
             if (!active) {
                 try {
-                    // Immediately delete all active sessions across all devices
                     jdbcTemplate.update("DELETE FROM auth.sessions WHERE user_id = ?", supabaseId);
-                    // Delete all refresh tokens
                     jdbcTemplate.update("DELETE FROM auth.refresh_tokens WHERE user_id = ?", supabaseId);
-                    // Ban in Supabase GoTrue Auth to forbid future logins
                     jdbcTemplate.update(
                             "UPDATE auth.users SET banned_until = '2999-12-31 23:59:59+00' WHERE id = ?", supabaseId);
                     log.info(
@@ -327,7 +288,6 @@ public class TeamService {
                 }
             } else {
                 try {
-                    // Unban user in Supabase GoTrue Auth so user can log in again
                     jdbcTemplate.update("UPDATE auth.users SET banned_until = NULL WHERE id = ?", supabaseId);
                     log.info("Lifted Supabase ban for user {} ({})", supabaseId, targetUser.getEmail());
                 } catch (Exception e) {
@@ -337,5 +297,38 @@ public class TeamService {
         }
 
         userRepository.save(targetUser);
+    }
+
+    // ─── Private Helpers ────────────────────────────────────────────
+
+    private String generateUniqueEmail(String firstName, String lastName, String suffix) {
+        String normalizedFirst = normalize(firstName);
+        String normalizedLast = normalize(lastName);
+        String domain = suffix + "." + emailBaseDomain;
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            int randomDigits = 10 + RANDOM.nextInt(90);
+            String email = normalizedFirst + "." + normalizedLast + "." + randomDigits + "@" + domain;
+
+            if (!userRepository.existsByEmail(email)) {
+                return email;
+            }
+            log.debug("Email collision for {}, retrying...", email);
+        }
+        String fallback = normalizedFirst + "." + normalizedLast + "."
+                + UUID.randomUUID().toString().substring(0, 6) + "@" + domain;
+        return fallback;
+    }
+
+    private String normalize(String name) {
+        return name.trim().toLowerCase().replaceAll("[^a-z0-9\\s]", "").replaceAll("\\s+", ".");
+    }
+
+    private String generatePassword(int length) {
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(PASSWORD_CHARS.charAt(RANDOM.nextInt(PASSWORD_CHARS.length())));
+        }
+        return sb.toString();
     }
 }

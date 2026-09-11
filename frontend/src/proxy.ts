@@ -18,7 +18,6 @@ const PUBLIC_ROUTES = [
   '/register',
   '/forgot-password',
   '/reset-password',
-  '/accept-invite',
   '/auth', // Supabase email-confirmation and OAuth callbacks
   '/about',
   '/contact',

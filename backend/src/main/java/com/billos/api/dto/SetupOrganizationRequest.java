@@ -12,6 +12,12 @@ public class SetupOrganizationRequest {
     @NotBlank(message = "Business name is required")
     private String name;
 
+    @NotBlank(message = "Email suffix is required for staff account emails")
+    @Pattern(
+            regexp = "^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])?$",
+            message = "Suffix must be 3-30 chars: lowercase letters, numbers, and hyphens only")
+    private String emailSuffix;
+
     private String legalName;
 
     @NotBlank(message = "GSTIN is required")

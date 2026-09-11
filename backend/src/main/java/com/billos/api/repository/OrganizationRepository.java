@@ -11,4 +11,8 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
     List<Organization> findByParentOrganizationId(UUID parentOrganizationId);
 
     List<Organization> findByParentOrganizationIdIn(List<UUID> parentOrganizationIds);
+
+    boolean existsByEmailSuffix(String emailSuffix);
+
+    java.util.Optional<Organization> findByEmailSuffix(String emailSuffix);
 }

@@ -92,6 +92,56 @@ export default function SetupOrganizationPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
+  // Email Suffix for Team Accounts
+  const [emailSuffix, setEmailSuffix] = useState("");
+  const [suffixChecking, setSuffixChecking] = useState(false);
+  const [suffixAvailable, setSuffixAvailable] = useState<boolean | null>(null);
+  const [suffixError, setSuffixError] = useState<string | null>(null);
+
+  // Real-time email suffix uniqueness check with debouncing
+  useEffect(() => {
+    const cleaned = emailSuffix.trim().toLowerCase();
+    if (!cleaned) {
+      setSuffixAvailable(null);
+      setSuffixError(null);
+      setSuffixChecking(false);
+      return;
+    }
+
+    const regex = /^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])?$/;
+    if (cleaned.length < 3 || cleaned.length > 30 || !regex.test(cleaned)) {
+      setSuffixAvailable(false);
+      setSuffixError("Suffix must be 3-30 chars: lowercase letters, numbers, and hyphens only");
+      setSuffixChecking(false);
+      return;
+    }
+
+    setSuffixChecking(true);
+    setSuffixError(null);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get<{ available: boolean; reason?: string }>(
+          `/public/check-suffix?suffix=${encodeURIComponent(cleaned)}`
+        );
+        if (res.available) {
+          setSuffixAvailable(true);
+          setSuffixError(null);
+        } else {
+          setSuffixAvailable(false);
+          setSuffixError(res.reason || "This suffix is already in use");
+        }
+      } catch {
+        setSuffixAvailable(false);
+        setSuffixError("Unable to verify suffix availability");
+      } finally {
+        setSuffixChecking(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [emailSuffix]);
+
   // -------------------------------------------------------------
   // STEP 2: Organisation Settings & Bank Details
   // -------------------------------------------------------------
@@ -403,6 +453,14 @@ export default function SetupOrganizationPage() {
         setError("Primary business phone is mandatory.");
         return false;
       }
+      if (!emailSuffix.trim()) {
+        setError("Team email suffix is mandatory.");
+        return false;
+      }
+      if (suffixAvailable !== true) {
+        setError(suffixError || "Please choose a valid and available email suffix.");
+        return false;
+      }
     }
     return true;
   };
@@ -455,6 +513,7 @@ export default function SetupOrganizationPage() {
     const payload = {
       name: name.trim(),
       legalName: legalName.trim() || name.trim(),
+      emailSuffix: emailSuffix.trim().toLowerCase(),
       gstin: gstin.trim().toUpperCase(),
       addressLine1: addressLine1.trim(),
       addressLine2: addressLine2.trim() || null,
@@ -687,6 +746,51 @@ export default function SetupOrganizationPage() {
                     maxLength={15}
                     className="bg-zinc-950/70 border-zinc-800 text-white font-mono uppercase rounded-xl h-11"
                   />
+                </div>
+
+                {/* Email Suffix for Team Accounts */}
+                <div className="space-y-2 md:col-span-2 p-4 rounded-2xl bg-zinc-950/70 border border-zinc-800">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="biz-suffix" className="text-zinc-200 text-xs font-semibold uppercase tracking-wider">
+                      Team Email Suffix <span className="text-blue-400">*</span>
+                    </Label>
+                    <span className="text-[11px] text-zinc-500">Cannot be changed later</span>
+                  </div>
+                  <div className="flex items-center rounded-xl border border-zinc-800 bg-zinc-900/60 focus-within:border-blue-500 overflow-hidden">
+                    <Input
+                      id="biz-suffix"
+                      value={emailSuffix}
+                      onChange={(e) => setEmailSuffix(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                      placeholder="e.g. myshop"
+                      maxLength={30}
+                      className="border-0 bg-transparent text-white font-mono text-sm focus-visible:ring-0 focus-visible:ring-offset-0 h-11"
+                    />
+                    <span className="px-3 text-zinc-400 font-mono text-xs bg-zinc-800/80 h-11 flex items-center border-l border-zinc-800 select-none">
+                      .billos.app
+                    </span>
+                  </div>
+                  {suffixChecking && (
+                    <p className="text-[11px] text-zinc-400 flex items-center gap-1.5 animate-pulse">
+                      Checking availability...
+                    </p>
+                  )}
+                  {!suffixChecking && suffixAvailable === true && (
+                    <div className="space-y-1">
+                      <p className="text-[11px] text-emerald-400 flex items-center gap-1.5 font-medium">
+                        <Check className="w-3.5 h-3.5" />
+                        Available! Staff login emails will be:
+                      </p>
+                      <p className="text-[11px] font-mono text-zinc-300 bg-zinc-900 px-2.5 py-1 rounded-md border border-zinc-800 inline-block">
+                        firstname.lastname.XX@{emailSuffix.trim().toLowerCase()}.billos.app
+                      </p>
+                    </div>
+                  )}
+                  {!suffixChecking && suffixAvailable === false && (
+                    <p className="text-[11px] text-rose-400 flex items-center gap-1.5 font-medium">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {suffixError || "This suffix is not available. Please choose another."}
+                    </p>
+                  )}
                 </div>
 
                 {/* Address Line 1 */}
@@ -1430,6 +1534,10 @@ export default function SetupOrganizationPage() {
                   <div>
                     <span className="text-zinc-500 block">Primary Phone:</span>
                     <span className="text-zinc-300 font-mono">{phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block">Team Email Domain:</span>
+                    <span className="text-teal-400 font-mono text-xs">@{emailSuffix}.billos.app</span>
                   </div>
                   <div className="sm:col-span-2">
                     <span className="text-zinc-500 block">Registered Address:</span>
