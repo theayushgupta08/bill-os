@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.PaymentAllocationDto;
 import com.billos.api.dto.PaymentDto;
 import com.billos.api.entity.*;
@@ -36,11 +37,13 @@ public class PaymentService {
     }
 
     @Transactional
+    @Audited(entity = "Payment", action = "RECORD_RECEIPT")
     public PaymentDto recordReceipt(PaymentDto dto) {
         return processPayment(dto, PaymentType.RECEIPT);
     }
 
     @Transactional
+    @Audited(entity = "Payment", action = "RECORD_PAYMENT")
     public PaymentDto recordPayment(PaymentDto dto) {
         return processPayment(dto, PaymentType.PAYMENT);
     }

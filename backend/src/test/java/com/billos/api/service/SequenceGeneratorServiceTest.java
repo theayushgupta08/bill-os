@@ -43,7 +43,8 @@ class SequenceGeneratorServiceTest {
         seq.setNextNumber(15L);
         seq.setPaddingLength(4);
 
-        when(numberingSequenceRepository.findByOrganizationIdAndDocumentType(any(UUID.class), eq(DocumentType.INVOICE)))
+        // Issuing a number must use the row-locking lookup, never the plain one
+        when(numberingSequenceRepository.findForUpdate(any(UUID.class), eq(DocumentType.INVOICE)))
                 .thenReturn(Optional.of(seq));
         when(numberingSequenceRepository.save(any(NumberingSequence.class))).thenReturn(seq);
 
@@ -51,6 +52,7 @@ class SequenceGeneratorServiceTest {
 
         assertEquals("INV-0015", result);
         assertEquals(16L, seq.getNextNumber());
+        verify(numberingSequenceRepository, never()).findByOrganizationIdAndDocumentType(any(), any());
     }
 
     @Test

@@ -53,7 +53,7 @@ but no graphs are built yet.
 | Migrations     | Flyway                              | `backend/src/main/resources/db/migration/` (V001–V024) |
 | Mapping        | MapStruct 1.5.5.Final               | `componentModel = "spring"`, unmapped targets IGNOREd  |
 | PDF            | openhtmltopdf 1.0.10 + Thymeleaf    | HTML templates → PDF                                   |
-| Email          | Resend (`resend-java` 3.1.0)        | `EmailService`                                         |
+| AOP            | spring-boot-starter-aop             | `@Audited` → `AuditAspect` (§4.8)                      |
 | Rate limiting  | Bucket4j 8.10.1 + Redis             | `RateLimitInterceptor` (per-IP / per-user / per-tenant)|
 | Java format    | Spotless + palantir-java-format     | Auto-applies on `process-sources` — **do not hand-format** |
 | API docs       | SpringDoc OpenAPI 2.5.0             | `/swagger-ui/index.html`                               |
@@ -199,8 +199,9 @@ There is no local password login, `PasswordEncoder` or `AuthenticationManager`; 
   | Delete master data; create/edit warehouses; post journal entries | `MANAGER` |
   | Chart of accounts, tax rates, organization settings/details, audit logs | `ADMIN` |
 
-  Deliberate exceptions (allow-listed in the test): collection-agent writes (`recordPayment`, `recordExpense`,
-  `recordDeposit`, `verifyPayment` — the service checks further) and `markAsRead` on notifications.
+  Collections writes (record payment/expense/deposit, verify payment) need `USER`, so VIEWER stays strictly
+  read-only; `CollectionService.verifyPayment` narrows verification further to the QR code's owner, OWNER or
+  ADMIN. The only allow-listed member-level write is `markAsRead` on notifications.
   Self-service controllers (`Health`, `Public`, `User`) and org-self-service methods are exempt.
 - `TenantSecurity` memoizes the resolved role per request, so the membership interceptor plus several
   `@PreAuthorize` checks cost one role lookup.
@@ -257,6 +258,18 @@ for the IRP e-invoice payload shape.
 - `sales_invoices.amount_paid` / `purchase_bills.amount_paid` (V024) accumulate allocations. `PaymentService`
   accepts payments only against ISSUED/PARTIAL invoices and UNPAID/PARTIAL bills, rejects allocations above
   the remaining balance or the payment amount, and sets PARTIAL/PAID from the running total.
+- A purchase order can be billed once: BILLED/CANCELLED POs are refused, and the bill's supplier must match.
+- **Stock movements carry their direction in the type**: `IN` adds and `OUT` removes the absolute quantity;
+  `ADJUSTMENT`/`TRANSFER` are signed (see `InventoryService.signedDelta`). Negative stock is allowed.
+- **`products.base_price` is the selling price and is only changed by users.** Weighted average purchase cost
+  lives in `products.cost_price` (V025), updated from valuation movements (purchase bills, opening stock) and
+  averaged over stock in all of the org's warehouses. Clients can't set it (`ProductMapper` ignores it).
+- GST returns (GSTR-1/3B, HSN summary), the sales register and P&L count only issued invoices — never DRAFT or
+  VOID (`ReportService.isReportableInvoice`). P&L is on taxable value (subtotal), excluding GST.
+- Document numbers come from `SequenceGeneratorService.getNextDocumentNumber`, which row-locks the sequence
+  (`NumberingSequenceRepository.findForUpdate`) so concurrent documents never share a number.
+- Tax rates in use on any document can be renamed or deactivated but not re-priced or deleted
+  (`TaxRateRepository.isUsedOnDocuments`); accounts with journal lines or sub-accounts can't be deleted.
 
 ### 4.7 Rate limiting
 
@@ -273,9 +286,12 @@ to its ranges, or every client will share the CDN's IP bucket.
 
 ### 4.8 Auditing
 
-`AuditLogService.logAction(entityType, entityId, action, details)` writes an org-scoped `AuditLog`.
-Call it from services on state-changing operations. (`userId` is currently not populated — a TODO in
-that class; if you wire it, pull the id off `UserPrincipal`.)
+Annotate state-changing methods with **`@Audited(entity = "SalesInvoice", action = "ISSUE")`** — don't call
+`AuditLogService` by hand. `AuditAspect` records org, acting user, entity id (the result's `getId()`, else the
+first `UUID` argument) and a label from an allow-list of getters (document number, name, email) **after the
+transaction commits**, in its own transaction, and never fails the business operation. Keep secrets out of
+results or off that allow-list. Put it on the entry point only (e.g. `InventoryController.adjustStock`, not
+`InventoryService.adjustStock`, which also runs per invoice line). All ~50 mutating service methods carry it.
 
 ---
 
@@ -320,7 +336,7 @@ docker-compose up -d       # redis:6379, prometheus:9090, grafana:3001
 
 - Backend reads `.env` at `backend/.env` via `spring-dotenv` (`spring.config.import: optional:file:.env`).
   Keys in use: `SPRING_DATASOURCE_URL/USERNAME/PASSWORD`, `SUPABASE_URL`, `SUPABASE_JWKS_URL`,
-  `SUPABASE_SERVICE_ROLE_KEY`, `APP_FRONTEND_URL`, `SPRING_REDIS_HOST/PORT/PASSWORD`, Resend API key.
+  `SUPABASE_SERVICE_ROLE_KEY`, `APP_FRONTEND_URL`, `SPRING_REDIS_HOST/PORT/PASSWORD`.
   Log levels default to INFO; raise with `LOG_LEVEL_SECURITY`, `LOG_LEVEL_CORS`, `LOG_LEVEL_APP` locally.
 - Frontend needs `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - **Never commit real secrets.** `application.yml` holds only dev-safe defaults; keep it that way.
@@ -375,6 +391,12 @@ Lombok `@Data` classes in `com.billos.api.dto`, named `<Entity>Dto`. Collections
 classes because MapStruct + partial updates are simpler that way. **Match the surrounding code** —
 `@Data` for entity DTOs, records for small request bodies.
 
+**Never declare a primitive `boolean isX` in a `@Data` DTO without pinning its JSON name.** Lombok generates
+`isX()`/`setX()`, which Jackson exposes as `"x"` — so the frontend's `"isX"` is silently ignored (this made tax
+rates, warehouses and accounts save as inactive; fixed in V026). Either use `Boolean isX` (→ `getIsX()`, JSON
+`"isX"`) or annotate the field `@Getter(onMethod_ = @JsonProperty("isX")) @Setter(onMethod_ = @JsonProperty("isX"))`
+as `TaxRateDto` does.
+
 ### 6.5 Mappers
 
 ```java
@@ -394,7 +416,7 @@ Never hand-write entity↔DTO mapping. Relations and totals are resolved in the 
 
 ### 6.6 Flyway migrations
 
-- `V{nnn}__{snake_case_description}.sql`, zero-padded to three digits. Next free number: **V025**.
+- `V{nnn}__{snake_case_description}.sql`, zero-padded to three digits. Next free number: **V027**.
 - **Immutable once committed.** Fix forward with a new migration; never edit an applied one.
 - Every org-scoped table needs `organization_id UUID NOT NULL` plus an index, and the
   `created_at / updated_at / deleted_at` columns `BaseEntity` expects.
@@ -490,7 +512,7 @@ export function useCreateCustomer() {
 
 | Suite | Status |
 |---|---|
-| Backend (JUnit 5 + Mockito + AssertJ) | **25 test classes / 110 tests**, services + tenant + security + exception handling + an authorization architecture test. This is the enforced suite. |
+| Backend (JUnit 5 + Mockito + AssertJ) | **30 test classes / 131 tests**, services + tenant + security + exception handling + auditing + an authorization architecture test. This is the enforced suite. |
 | AI service (pytest) | `tests/test_main.py` only — health endpoint. |
 | Frontend | **No test runner installed.** `pnpm test` does not exist. |
 
@@ -552,7 +574,7 @@ class SalesInvoiceServiceTest {
 5. **Mapper** — `@Mapper(componentModel = "spring", unmappedTargetPolicy = IGNORE)`.
 6. **Service** — `@RequiredArgsConstructor`, `@Transactional` boundaries, resolve relations by id,
    compute totals server-side, `SequenceGeneratorService` for document numbers,
-   `AuditLogService.logAction` on writes.
+   `@Audited` on every write.
 7. **Controller** — `/api/v1/widgets`, `@Valid` on bodies, `@PreAuthorize` on every method.
 8. **Test** — `WidgetServiceTest` with `TenantContext` seeded in `@BeforeEach`.
 9. **Frontend** — `src/features/widgets/hooks/use-widgets.ts` (typed hooks) +
@@ -586,6 +608,9 @@ class SalesInvoiceServiceTest {
     see §4.1.
 13. **Stale incremental builds** — if Mockito reports "class redefinition failed … NestHost", run
     `mvnw clean test`; an old `.class` from a previous/IDE compile is mismatched.
+14. **`boolean isX` in `@Data` DTOs** — serialises as `"x"`; see §6.4.
+15. **Soft-deleting something other rows reference** (accounts, tax rates, …) leaves those rows pointing at a
+    hidden record that then fails to load. Guard deletes with a usage check and offer "deactivate" instead.
 
 ---
 
@@ -603,13 +628,17 @@ change and update this list.
   the parent's and branches' receivables; dashboard/receivables report count only customers the current org owns.
 - **No JaCoCo** — the "≥80% coverage" target in the PRDs is aspirational, not enforced.
 - **No frontend test infrastructure.**
-- **Legacy routes**: `settings/tax` only redirects to `settings/taxes`. `reports/gst` (+ `GstReportController`,
-  `GstReportingService`) is an unlinked **mock** returning placeholder data — the real e-invoice payload is
-  `GET /sales-invoices/{id}/e-invoice`. Delete or implement it.
+- **Legacy route**: `settings/tax` only redirects to `settings/taxes`. (`reports/gst` is the HSN summary.)
+- **Accounting is not posted from documents** — invoices, bills and payments don't create journal entries;
+  the chart of accounts/journal is manual and P&L is computed from invoices/bills, not the ledger.
+- **Selling prices may have been overwritten before V025** — purchase bills used to write average cost into
+  `base_price`; V025 separated `cost_price` but can't restore lost selling prices. Worth a data review.
+- **e-invoice payload (`generateEInvoiceJson`) is partial** — e.g. state names instead of GST state codes.
+- **`organization_invitations` table is unused** (the invitation code was removed; the table was kept to
+  avoid dropping data).
 - **The app is dark-only** (`<html class="dark">`, ~700 hard-coded `slate-*` classes); the no-op theme selector
   was removed. The stored `language` setting only selects the number format — there are no UI translations.
 - **No UI to void invoices or view a single invoice/order/bill/quotation** (list pages only).
-- **`AuditLog.userId` never populated.**
 - **`code-review.md` baseline**: `ui-dropdown` is flagged as a god-component with heavy coupling, and
   ~234 symbols read as dead code (mostly unused DTOs/enums).
 

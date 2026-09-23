@@ -11,7 +11,5 @@ import org.springframework.stereotype.Repository;
 public interface InventoryLevelRepository extends JpaRepository<InventoryLevel, UUID> {
     Optional<InventoryLevel> findByWarehouseIdAndProductId(UUID warehouseId, UUID productId);
 
-    List<InventoryLevel> findByWarehouseId(UUID warehouseId);
-
     List<InventoryLevel> findByProductId(UUID productId);
 }

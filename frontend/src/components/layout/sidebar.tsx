@@ -110,6 +110,7 @@ const navGroups: NavGroup[] = [
       { label: "Profit & Loss", href: "/reports/pnl", icon: TrendingUp },
       { label: "GSTR-1", href: "/reports/gstr1", icon: IndianRupee },
       { label: "GSTR-3B", href: "/reports/gstr3b", icon: IndianRupee },
+      { label: "HSN Summary", href: "/reports/gst", icon: IndianRupee },
       { label: "Receivables", href: "/reports/outstanding/receivables", icon: LineChart },
       { label: "Payables", href: "/reports/outstanding/payables", icon: LineChart },
       { label: "Audit Logs", href: "/reports/audit-logs", icon: FileText },

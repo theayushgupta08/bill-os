@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.WarehouseDto;
 import com.billos.api.entity.Warehouse;
 import com.billos.api.exception.ResourceNotFoundException;
@@ -37,6 +38,7 @@ public class WarehouseService {
     }
 
     @Transactional
+    @Audited(entity = "Warehouse", action = "CREATE")
     public WarehouseDto createWarehouse(WarehouseDto dto) {
         Warehouse warehouse = warehouseMapper.toEntity(dto);
         warehouse.setOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()));
@@ -45,6 +47,7 @@ public class WarehouseService {
     }
 
     @Transactional
+    @Audited(entity = "Warehouse", action = "UPDATE")
     public WarehouseDto updateWarehouse(UUID id, WarehouseDto dto) {
         Warehouse existing = warehouseRepository
                 .findById(id)
@@ -64,6 +67,7 @@ public class WarehouseService {
     }
 
     @Transactional
+    @Audited(entity = "Warehouse", action = "DELETE")
     public void deleteWarehouse(UUID id) {
         warehouseRepository.deleteById(id);
     }

@@ -9,7 +9,9 @@ import com.billos.api.dto.PurchaseBillDto;
 import com.billos.api.dto.SalesInvoiceDto;
 import com.billos.api.dto.SupplierDto;
 import com.billos.api.entity.PurchaseBill;
+import com.billos.api.entity.PurchaseBillStatus;
 import com.billos.api.entity.SalesInvoice;
+import com.billos.api.entity.SalesInvoiceStatus;
 import com.billos.api.mapper.CustomerMapper;
 import com.billos.api.mapper.PurchaseBillMapper;
 import com.billos.api.mapper.SalesInvoiceMapper;
@@ -45,7 +47,9 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public List<SalesInvoiceDto> getSalesRegister(LocalDate startDate, LocalDate endDate) {
+        // A register lists issued documents; drafts aren't invoices yet
         return salesInvoiceRepository.findAll().stream()
+                .filter(inv -> inv.getStatus() != SalesInvoiceStatus.DRAFT)
                 .filter(inv -> startDate == null || !inv.getInvoiceDate().isBefore(startDate))
                 .filter(inv -> endDate == null || !inv.getInvoiceDate().isAfter(endDate))
                 .map(salesInvoiceMapper::toDto)
@@ -70,14 +74,16 @@ public class ReportService {
     public PnlDto getProfitAndLoss(LocalDate startDate, LocalDate endDate) {
         PnlDto pnl = new PnlDto();
 
+        // Taxable values (subtotal), not totals: GST collected isn't revenue and input GST isn't a cost —
+        // both are pass-through liabilities/credits settled with the government.
         BigDecimal revenue = getSalesRegister(startDate, endDate).stream()
-                .filter(inv -> !inv.getStatus().name().equals("VOID"))
-                .map(SalesInvoiceDto::getTotalAmount)
+                .filter(inv -> inv.getStatus() != SalesInvoiceStatus.VOID)
+                .map(SalesInvoiceDto::getSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal purchases = getPurchaseRegister(startDate, endDate).stream()
-                .filter(bill -> !bill.getStatus().name().equals("VOID"))
-                .map(PurchaseBillDto::getTotalAmount)
+                .filter(bill -> bill.getStatus() != PurchaseBillStatus.VOID)
+                .map(PurchaseBillDto::getSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         pnl.setTotalRevenue(revenue);
@@ -113,7 +119,7 @@ public class ReportService {
         return salesInvoiceRepository.findAll().stream()
                 .filter(inv -> startDate == null || !inv.getInvoiceDate().isBefore(startDate))
                 .filter(inv -> endDate == null || !inv.getInvoiceDate().isAfter(endDate))
-                .filter(inv -> !inv.getStatus().name().equals("VOID"))
+                .filter(ReportService::isReportableInvoice)
                 .map(inv -> {
                     Gstr1Dto dto = new Gstr1Dto();
                     dto.setCustomerGstin(inv.getCustomer().getGstin());
@@ -149,7 +155,7 @@ public class ReportService {
         List<SalesInvoice> sales = salesInvoiceRepository.findAll().stream()
                 .filter(inv -> startDate == null || !inv.getInvoiceDate().isBefore(startDate))
                 .filter(inv -> endDate == null || !inv.getInvoiceDate().isAfter(endDate))
-                .filter(inv -> !inv.getStatus().name().equals("VOID"))
+                .filter(ReportService::isReportableInvoice)
                 .collect(Collectors.toList());
 
         for (SalesInvoice inv : sales) {
@@ -185,5 +191,10 @@ public class ReportService {
         }
 
         return dto;
+    }
+
+    /** Invoices that count for GST returns: issued (fully, partly or not yet paid), never drafts or voids. */
+    static boolean isReportableInvoice(SalesInvoice inv) {
+        return inv.getStatus() != SalesInvoiceStatus.DRAFT && inv.getStatus() != SalesInvoiceStatus.VOID;
     }
 }

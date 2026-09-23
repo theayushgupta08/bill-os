@@ -100,6 +100,14 @@ const reportCategories = [
         color: "text-violet-400 border-violet-500/20 bg-violet-500/5",
         hoverBg: "hover:bg-violet-500/10",
       },
+      {
+        title: "HSN Summary",
+        description: "HSN/SAC-wise summary of outward supplies (GSTR-1 Table 12), exportable as CSV.",
+        href: "/reports/gst",
+        icon: Percent,
+        color: "text-sky-400 border-sky-500/20 bg-sky-500/5",
+        hoverBg: "hover:bg-sky-500/10",
+      },
     ],
   },
   {

@@ -1,10 +1,12 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.JournalEntryDto;
 import com.billos.api.dto.JournalEntryLineDto;
 import com.billos.api.entity.Account;
 import com.billos.api.entity.JournalEntry;
 import com.billos.api.entity.JournalEntryLine;
+import com.billos.api.exception.BadRequestException;
 import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.JournalEntryMapper;
 import com.billos.api.repository.AccountRepository;
@@ -43,6 +45,7 @@ public class JournalEntryService {
     }
 
     @Transactional
+    @Audited(entity = "JournalEntry", action = "CREATE")
     public JournalEntryDto createJournalEntry(JournalEntryDto dto) {
         // Validate Debits == Credits
         BigDecimal totalDebits = BigDecimal.ZERO;
@@ -54,7 +57,7 @@ public class JournalEntryService {
         }
 
         if (totalDebits.compareTo(totalCredits) != 0) {
-            throw new IllegalArgumentException(
+            throw new BadRequestException(
                     "Journal Entry must balance. Total Debits: " + totalDebits + ", Total Credits: " + totalCredits);
         }
 

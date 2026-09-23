@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.OrganizationSettingsDto;
 import com.billos.api.entity.Organization;
 import com.billos.api.entity.OrganizationSettings;
@@ -133,6 +134,7 @@ public class OrganizationService {
         return savedOrg;
     }
 
+    @Audited(entity = "Organization", action = "CREATE_BRANCH")
     public Organization createBranch(
             @NonNull UUID parentOrgId, @NonNull com.billos.api.dto.CreateBranchRequest request) {
         UserPrincipal principal = (UserPrincipal)
@@ -283,6 +285,7 @@ public class OrganizationService {
     }
 
     @Transactional
+    @Audited(entity = "Organization", action = "UPDATE")
     public Organization updateOrganization(java.util.UUID id, Organization updatedDetails) {
         Organization org = organizationRepository
                 .findById(id)
@@ -330,6 +333,7 @@ public class OrganizationService {
     }
 
     @Transactional
+    @Audited(entity = "Organization", action = "UPDATE_SETTINGS")
     public OrganizationSettingsDto updateOrganizationSettings(UUID orgId, OrganizationSettingsDto dto) {
         OrganizationSettings settings = organizationSettingsRepository
                 .findByOrganizationId(orgId)

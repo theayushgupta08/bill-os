@@ -9,6 +9,4 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface StockMovementRepository extends JpaRepository<StockMovement, UUID> {
     List<StockMovement> findByProductIdOrderByCreatedAtDesc(UUID productId);
-
-    List<StockMovement> findByWarehouseIdAndProductIdOrderByCreatedAtDesc(UUID warehouseId, UUID productId);
 }

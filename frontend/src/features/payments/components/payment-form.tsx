@@ -1,5 +1,7 @@
 "use client";
 
+import { useFormat } from "@/lib/use-format";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
@@ -23,6 +25,7 @@ import { Invoice, PurchaseBill, balanceDue } from "@/types";
 import { PageLoader } from "@/components/ui/loader";
 
 export function PaymentForm() {
+  const { formatMoney } = useFormat();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -167,12 +170,12 @@ export function PaymentForm() {
                   {formData.paymentType === "RECEIPT" 
                     ? invoices.map((i) => (
                         <SelectItem key={i.id} value={i.id}>
-                          {i.invoiceNumber} - {i.customerName} (₹{balanceDue(i)} due)
+                          {i.invoiceNumber} - {i.customerName} ({formatMoney(balanceDue(i))} due)
                         </SelectItem>
                       ))
                     : bills.map((b) => (
                         <SelectItem key={b.id} value={b.id}>
-                          {b.billNumber} - {b.supplierName} (₹{balanceDue(b)} due)
+                          {b.billNumber} - {b.supplierName} ({formatMoney(balanceDue(b))} due)
                         </SelectItem>
                       ))
                   }

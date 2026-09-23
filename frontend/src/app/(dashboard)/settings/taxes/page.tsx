@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api } from "@/lib/api-client";
+import { api, errorMessage } from "@/lib/api-client";
 import { useOrganization } from "@/lib/use-organization";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +70,25 @@ export default function TaxSettingsAndRatesPage() {
   };
   const defaultRate = effectiveDefaultRate(taxes, taxSettings?.defaultGstRate);
 
+  // Deactivating keeps historical documents intact; delete is refused by the API once a rate is used on documents
+  const toggleActiveMutation = useMutation({
+    mutationFn: (t: TaxRate) => api.put(`/tax-rates/${t.id}`, { name: t.name, rate: t.rate, isActive: !t.isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tax-rates"] });
+      toast.success("Tax rate updated.");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to update tax rate."),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (t: TaxRate) => api.delete(`/tax-rates/${t.id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tax-rates"] });
+      toast.success("Tax rate deleted.");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete tax rate."),
+  });
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     if (!orgId || !taxSettings) return;
@@ -93,8 +112,7 @@ export default function TaxSettingsAndRatesPage() {
         updateSettingsMutation.mutate({ ...taxSettings, defaultGstRate: nextDefault });
       }
     } catch (error: unknown) {
-      console.error("Failed to add tax rate", error);
-      toast.error("Failed to add tax rate.");
+      toast.error(errorMessage(error, "Failed to add tax rate."));
     } finally {
       setIsAddingTax(false);
     }
@@ -270,19 +288,20 @@ export default function TaxSettingsAndRatesPage() {
                   <TableHead className="text-slate-400 font-semibold pl-6 text-xs">Tax Code Name</TableHead>
                   <TableHead className="text-slate-400 font-semibold text-xs">Percentage Rate</TableHead>
                   <TableHead className="text-slate-400 font-semibold text-xs">Status</TableHead>
-                  <TableHead className="text-slate-400 font-semibold text-xs pr-6 text-right">Default</TableHead>
+                  <TableHead className="text-slate-400 font-semibold text-xs text-right">Default</TableHead>
+                  <TableHead className="text-slate-400 font-semibold text-xs pr-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {taxes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-12 text-slate-500 text-xs">
+                    <TableCell colSpan={5} className="text-center py-12 text-slate-500 text-xs">
                       No tax rates configured yet.
                     </TableCell>
                   </TableRow>
                 ) : (
                   taxes.map((t) => {
-                    const isDefault = taxSettings?.defaultGstRate === t.rate;
+                    const isDefault = t.isActive && defaultRate !== undefined && Number(t.rate) === defaultRate;
                     return (
                       <TableRow key={t.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                         <TableCell className="font-semibold text-white pl-6 py-3.5 text-xs">{t.name}</TableCell>
@@ -298,7 +317,7 @@ export default function TaxSettingsAndRatesPage() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="pr-6 text-right">
+                        <TableCell className="text-right">
                           {isDefault ? (
                             <Badge className="bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 font-bold text-[10px] uppercase tracking-wider animate-pulse">
                               Default
@@ -306,6 +325,30 @@ export default function TaxSettingsAndRatesPage() {
                           ) : (
                             <span className="text-slate-600 text-xs">—</span>
                           )}
+                        </TableCell>
+                        <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[11px]"
+                            disabled={toggleActiveMutation.isPending}
+                            onClick={() => toggleActiveMutation.mutate(t)}
+                          >
+                            {t.isActive ? "Deactivate" : "Activate"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-[11px] text-rose-400 hover:text-rose-300"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => {
+                              if (window.confirm(`Delete tax rate "${t.name}"?`)) deleteMutation.mutate(t);
+                            }}
+                          >
+                            Delete
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );

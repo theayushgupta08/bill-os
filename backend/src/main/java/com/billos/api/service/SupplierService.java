@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.SupplierDto;
 import com.billos.api.entity.Supplier;
 import com.billos.api.exception.ResourceNotFoundException;
@@ -35,6 +36,7 @@ public class SupplierService {
     }
 
     @Transactional
+    @Audited(entity = "Supplier", action = "CREATE")
     public SupplierDto createSupplier(SupplierDto supplierDto) {
         Supplier supplier = supplierMapper.toEntity(supplierDto);
         supplier.setOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()));
@@ -43,6 +45,7 @@ public class SupplierService {
     }
 
     @Transactional
+    @Audited(entity = "Supplier", action = "UPDATE")
     public SupplierDto updateSupplier(UUID id, SupplierDto supplierDto) {
         Supplier existingSupplier =
                 supplierRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
@@ -53,6 +56,7 @@ public class SupplierService {
     }
 
     @Transactional
+    @Audited(entity = "Supplier", action = "DELETE")
     public void deleteSupplier(UUID id) {
         Supplier supplier =
                 supplierRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));

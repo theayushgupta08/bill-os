@@ -47,7 +47,7 @@ export function PnlReport() {
             Profit & Loss Statement
             <PageHelpTooltip
               title="Profit & Loss Statement"
-              description="Summarized snapshot of organization revenues, purchases, operating expenses, and net profit margins."
+              description="Revenue from issued invoices minus purchases, both on taxable value (GST is excluded — it is collected and paid on behalf of the government)."
             />
           </h2>
           <p className="text-sm text-slate-400">Summarized snapshot of organization revenues, purchases, and net margins.</p>
@@ -82,7 +82,7 @@ export function PnlReport() {
         <div className="grid gap-6 md:grid-cols-3 mt-6">
           <Card className="border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-5">
-              <CardTitle className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Revenue</CardTitle>
+              <CardTitle className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Revenue (excl. GST)</CardTitle>
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                 <TrendingUp className="h-4 w-4 text-emerald-400" />
               </div>
@@ -97,7 +97,7 @@ export function PnlReport() {
           
           <Card className="border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-5">
-              <CardTitle className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Purchases</CardTitle>
+              <CardTitle className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Purchases (excl. GST)</CardTitle>
               <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
                 <TrendingDown className="h-4 w-4 text-rose-400" />
               </div>

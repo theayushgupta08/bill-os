@@ -3,6 +3,7 @@ package com.billos.api.service;
 import com.billos.api.dto.InventoryLevelDto;
 import com.billos.api.dto.StockMovementDto;
 import com.billos.api.entity.*;
+import com.billos.api.exception.BadRequestException;
 import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.InventoryMapper;
 import com.billos.api.repository.InventoryLevelRepository;
@@ -66,27 +67,29 @@ public class InventoryService {
                     return newLevel;
                 });
 
-        // 2. Update Quantity (Request quantity is the relative change)
-        BigDecimal newQuantity = level.getQuantity().add(request.getQuantity());
+        // 2. Apply the movement in the direction its type says. IN adds and OUT removes the (absolute) quantity;
+        //    ADJUSTMENT/TRANSFER carry their own sign (e.g. -2 from the manual adjust form).
+        BigDecimal delta = signedDelta(request.getMovementType(), request.getQuantity());
+        BigDecimal newQuantity = level.getQuantity().add(delta);
 
-        // 3. WAC (Weighted Average Cost) Calculation Logic
-        // Recalculate WAC only for valuation-related transactions: Purchase Bills, Opening Stock, Purchase Returns
+        // 3. Weighted average cost, only for valuation transactions (purchases, opening stock, purchase returns).
+        //    Cost is per product, so it is averaged over stock in every warehouse — and it goes into costPrice,
+        //    never basePrice (the selling price).
         boolean isValuationTransaction = "PURCHASE_BILL".equals(request.getReferenceType())
                 || "OPENING_STOCK".equals(request.getReferenceType())
                 || "PURCHASE_RETURN".equals(request.getReferenceType());
 
         if (request.getMovementType() == MovementType.IN && request.getUnitCost() != null && isValuationTransaction) {
-            BigDecimal currentTotalValue = level.getQuantity()
-                    .multiply(product.getBasePrice() != null ? product.getBasePrice() : BigDecimal.ZERO);
-            BigDecimal newIncomingValue = request.getQuantity().multiply(request.getUnitCost());
+            BigDecimal stockOnHand = inventoryLevelRepository.findByProductId(product.getId()).stream()
+                    .map(InventoryLevel::getQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .max(BigDecimal.ZERO); // negative stock carries no value
+            BigDecimal currentCost = product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO;
+            BigDecimal totalValue = stockOnHand.multiply(currentCost).add(delta.multiply(request.getUnitCost()));
+            BigDecimal totalQuantity = stockOnHand.add(delta);
 
-            BigDecimal totalValue = currentTotalValue.add(newIncomingValue);
-
-            if (newQuantity.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal newWac = totalValue.divide(newQuantity, 2, RoundingMode.HALF_UP);
-                // In a full system, you might store WAC on the InventoryLevel or Product
-                // For now, we update the product base price as the WAC for simplicity
-                product.setBasePrice(newWac);
+            if (totalQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                product.setCostPrice(totalValue.divide(totalQuantity, 2, RoundingMode.HALF_UP));
                 productRepository.save(product);
             }
         }
@@ -100,7 +103,10 @@ public class InventoryService {
         movement.setWarehouse(warehouse);
         movement.setProduct(product);
         movement.setMovementType(request.getMovementType());
-        movement.setQuantity(request.getQuantity());
+        movement.setQuantity(
+                request.getMovementType() == MovementType.IN || request.getMovementType() == MovementType.OUT
+                        ? request.getQuantity().abs()
+                        : request.getQuantity());
         movement.setUnitCost(request.getUnitCost());
         movement.setReason(request.getReason());
         movement.setReferenceType(request.getReferenceType());
@@ -109,5 +115,20 @@ public class InventoryService {
         StockMovement savedMovement = stockMovementRepository.save(movement);
 
         return inventoryMapper.toMovementDto(savedMovement);
+    }
+
+    /** The change a movement makes to stock on hand. */
+    static BigDecimal signedDelta(MovementType type, BigDecimal quantity) {
+        if (quantity == null) {
+            throw new BadRequestException("Quantity is required");
+        }
+        if (type == null) {
+            throw new BadRequestException("Movement type is required");
+        }
+        return switch (type) {
+            case IN -> quantity.abs();
+            case OUT -> quantity.abs().negate();
+            case ADJUSTMENT, TRANSFER -> quantity;
+        };
     }
 }

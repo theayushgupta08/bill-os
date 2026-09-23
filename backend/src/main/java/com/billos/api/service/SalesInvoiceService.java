@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.*;
 import com.billos.api.entity.*;
 import com.billos.api.exception.BadRequestException;
@@ -51,6 +52,7 @@ public class SalesInvoiceService {
     }
 
     @Transactional
+    @Audited(entity = "SalesInvoice", action = "CREATE")
     public SalesInvoiceDto createSalesInvoice(SalesInvoiceDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
@@ -159,6 +161,7 @@ public class SalesInvoiceService {
     }
 
     @Transactional
+    @Audited(entity = "SalesInvoice", action = "ISSUE")
     public SalesInvoiceDto issueInvoice(UUID id) {
         SalesInvoice invoice = salesInvoiceRepository
                 .findById(id)

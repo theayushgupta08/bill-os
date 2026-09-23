@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.*;
 import com.billos.api.entity.*;
 import com.billos.api.exception.BadRequestException;
@@ -52,6 +53,7 @@ public class CollectionService {
     }
 
     @Transactional
+    @Audited(entity = "Collection", action = "CREATE_QR")
     public CollectionQrCodeDto createQrCode(CollectionQrCodeDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
         UUID targetUserId = dto.getUserId();
@@ -66,7 +68,7 @@ public class CollectionService {
         }
 
         if (targetUserId == null) {
-            throw new IllegalArgumentException("User assignment is required. Each QR code must belong to a user.");
+            throw new BadRequestException("User assignment is required. Each QR code must belong to a user.");
         }
 
         UUID finalTargetUserId = targetUserId;
@@ -89,6 +91,7 @@ public class CollectionService {
     }
 
     @Transactional
+    @Audited(entity = "Collection", action = "UPDATE_QR")
     public CollectionQrCodeDto updateQrCode(UUID id, CollectionQrCodeDto dto) {
         CollectionQrCode qr = sharedEntityResolver.accessibleQrCode(id);
         if (!sharedEntityResolver.isOwnedByCurrentOrg(qr.getOrganizationId())) {
@@ -126,6 +129,7 @@ public class CollectionService {
     }
 
     @Transactional
+    @Audited(entity = "Collection", action = "RECORD_PAYMENT")
     public CollectionPaymentDto recordPayment(CollectionPaymentDto dto) {
         UUID currentOrgId = UUID.fromString(TenantContext.getCurrentTenant());
         UUID primaryOrgId = organizationService.resolvePrimaryOrgId(currentOrgId);
@@ -176,6 +180,7 @@ public class CollectionService {
     }
 
     @Transactional
+    @Audited(entity = "Collection", action = "VERIFY_PAYMENT")
     public void verifyPayment(UUID id, boolean verify, String remarks) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
         UserPrincipal principal = (UserPrincipal)
@@ -265,6 +270,7 @@ public class CollectionService {
     }
 
     @Transactional
+    @Audited(entity = "Collection", action = "RECORD_EXPENSE")
     public CollectionExpenseDto recordExpense(CollectionExpenseDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
         UserPrincipal principal = (UserPrincipal)
@@ -328,6 +334,7 @@ public class CollectionService {
     }
 
     @Transactional
+    @Audited(entity = "Collection", action = "APPROVE_EXPENSE")
     public void approveExpense(UUID id, boolean approve) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
         UserPrincipal principal = (UserPrincipal)
@@ -399,6 +406,7 @@ public class CollectionService {
     }
 
     @Transactional
+    @Audited(entity = "Collection", action = "RECORD_DEPOSIT")
     public SettlementDepositDto recordDeposit(SettlementDepositDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
         UserPrincipal principal = (UserPrincipal)
@@ -436,6 +444,7 @@ public class CollectionService {
     }
 
     @Transactional
+    @Audited(entity = "Collection", action = "APPROVE_DEPOSIT")
     public void approveDeposit(UUID id, boolean approve) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
         UserPrincipal principal = (UserPrincipal)

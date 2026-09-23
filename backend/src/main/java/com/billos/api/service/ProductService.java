@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.BulkImportResultDto;
 import com.billos.api.dto.ProductDto;
 import com.billos.api.entity.Product;
@@ -59,6 +60,7 @@ public class ProductService {
     }
 
     @Transactional
+    @Audited(entity = "Product", action = "CREATE")
     public ProductDto createProduct(ProductDto dto) {
         Product product = productMapper.toEntity(dto);
         product.setOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()));
@@ -80,6 +82,7 @@ public class ProductService {
     }
 
     @Transactional
+    @Audited(entity = "Product", action = "BULK_IMPORT")
     public BulkImportResultDto bulkCreateProducts(List<ProductDto> dtos) {
         String currentTenant = TenantContext.getCurrentTenant();
         UUID currentOrgId = UUID.fromString(currentTenant);
@@ -150,6 +153,7 @@ public class ProductService {
     }
 
     @Transactional
+    @Audited(entity = "Product", action = "UPDATE")
     public ProductDto updateProduct(UUID id, ProductDto dto) {
         String currentTenant = TenantContext.getCurrentTenant();
         UUID currentOrgId = UUID.fromString(currentTenant);
@@ -178,6 +182,7 @@ public class ProductService {
     }
 
     @Transactional
+    @Audited(entity = "Product", action = "DELETE")
     public void deleteProduct(UUID id) {
         String currentTenant = TenantContext.getCurrentTenant();
         UUID currentOrgId = UUID.fromString(currentTenant);

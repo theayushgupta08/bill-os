@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -12,6 +13,7 @@ import com.billos.api.repository.StockMovementRepository;
 import com.billos.api.repository.WarehouseRepository;
 import com.billos.api.tenant.TenantContext;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,7 +73,7 @@ class InventoryServiceTest {
 
         Product product = new Product();
         product.setId(productId);
-        product.setBasePrice(BigDecimal.ZERO);
+        product.setBasePrice(new BigDecimal("80.00")); // selling price
 
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
         when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(product);
@@ -84,8 +86,10 @@ class InventoryServiceTest {
 
         inventoryService.adjustStock(request);
 
-        // Verify that product base price (our simple WAC implementation) is updated
-        verify(productRepository).save(argThat(p -> p.getBasePrice().compareTo(new BigDecimal("50.00")) == 0));
+        // Average cost goes to costPrice; the selling price must be untouched
+        verify(productRepository)
+                .save(argThat(p -> p.getCostPrice().compareTo(new BigDecimal("50.00")) == 0
+                        && p.getBasePrice().compareTo(new BigDecimal("80.00")) == 0));
 
         // Verify inventory level quantity is set to 10
         verify(inventoryLevelRepository).save(argThat(l -> l.getQuantity().compareTo(new BigDecimal("10")) == 0));
@@ -106,7 +110,8 @@ class InventoryServiceTest {
 
         Product product = new Product();
         product.setId(productId);
-        product.setBasePrice(new BigDecimal("100.00")); // Existing WAC is 100
+        product.setCostPrice(new BigDecimal("100.00")); // Existing WAC is 100
+        product.setBasePrice(new BigDecimal("200.00")); // selling price
 
         InventoryLevel existingLevel = new InventoryLevel();
         existingLevel.setQuantity(new BigDecimal("10")); // 10 existing items
@@ -115,6 +120,7 @@ class InventoryServiceTest {
         when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(product);
         when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId))
                 .thenReturn(Optional.of(existingLevel));
+        when(inventoryLevelRepository.findByProductId(productId)).thenReturn(List.of(existingLevel));
 
         when(inventoryLevelRepository.save(any(InventoryLevel.class))).thenAnswer(i -> i.getArguments()[0]);
         when(stockMovementRepository.save(any(StockMovement.class))).thenAnswer(i -> i.getArguments()[0]);
@@ -123,9 +129,65 @@ class InventoryServiceTest {
         inventoryService.adjustStock(request);
 
         // Calculation: (10 * 100) + (10 * 150) = 1000 + 1500 = 2500 / 20 = 125
-        verify(productRepository).save(argThat(p -> p.getBasePrice().compareTo(new BigDecimal("125.00")) == 0));
+        verify(productRepository)
+                .save(argThat(p -> p.getCostPrice().compareTo(new BigDecimal("125.00")) == 0
+                        && p.getBasePrice().compareTo(new BigDecimal("200.00")) == 0));
 
         // Verify inventory level quantity is set to 20
         verify(inventoryLevelRepository).save(argThat(l -> l.getQuantity().compareTo(new BigDecimal("20")) == 0));
+    }
+
+    private InventoryLevel stubLevel(String quantity) {
+        Warehouse warehouse = new Warehouse();
+        warehouse.setId(warehouseId);
+        Product product = new Product();
+        product.setId(productId);
+        InventoryLevel level = new InventoryLevel();
+        level.setQuantity(new BigDecimal(quantity));
+        when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
+        when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(product);
+        when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId))
+                .thenReturn(Optional.of(level));
+        when(inventoryLevelRepository.save(any(InventoryLevel.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(stockMovementRepository.save(any(StockMovement.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(inventoryMapper.toMovementDto(any(StockMovement.class))).thenReturn(new StockMovementDto());
+        return level;
+    }
+
+    private StockMovementDto movement(MovementType type, String quantity) {
+        StockMovementDto request = new StockMovementDto();
+        request.setWarehouseId(warehouseId);
+        request.setProductId(productId);
+        request.setMovementType(type);
+        request.setQuantity(new BigDecimal(quantity));
+        request.setReferenceType("SALES_INVOICE");
+        return request;
+    }
+
+    @Test
+    void adjustStock_outMovementReducesStock() {
+        InventoryLevel level = stubLevel("10");
+
+        inventoryService.adjustStock(movement(MovementType.OUT, "3")); // a sale of 3 units
+
+        assertThat(level.getQuantity()).isEqualByComparingTo("7");
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    void adjustStock_adjustmentKeepsItsSign() {
+        InventoryLevel level = stubLevel("10");
+
+        inventoryService.adjustStock(movement(MovementType.ADJUSTMENT, "-2"));
+
+        assertThat(level.getQuantity()).isEqualByComparingTo("8");
+    }
+
+    @Test
+    void signedDelta_normalisesInAndOutRegardlessOfSign() {
+        assertThat(InventoryService.signedDelta(MovementType.IN, new BigDecimal("-4")))
+                .isEqualByComparingTo("4");
+        assertThat(InventoryService.signedDelta(MovementType.OUT, new BigDecimal("4")))
+                .isEqualByComparingTo("-4");
     }
 }

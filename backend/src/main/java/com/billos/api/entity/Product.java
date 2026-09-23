@@ -48,8 +48,13 @@ public class Product extends BaseEntity {
     @Column(name = "hsn_sac")
     private String hsnSac;
 
+    /** Selling price, pre-filled on sales documents. Only ever changed by the user. */
     @Column(name = "base_price", nullable = false)
     private BigDecimal basePrice = BigDecimal.ZERO;
+
+    /** Weighted average purchase cost, maintained by InventoryService from purchase bills. Never client-set. */
+    @Column(name = "cost_price", nullable = false)
+    private BigDecimal costPrice = BigDecimal.ZERO;
 
     @Column(name = "tax_rate", nullable = false)
     private BigDecimal taxRate = BigDecimal.ZERO;

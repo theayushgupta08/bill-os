@@ -23,7 +23,5 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     Optional<Product> findAccessibleById(
             @Param("id") UUID id, @Param("currentOrgId") UUID currentOrgId, @Param("parentOrgId") UUID parentOrgId);
 
-    Optional<Product> findByOrganizationIdAndSku(UUID organizationId, String sku);
-
     boolean existsByOrganizationIdAndSku(UUID organizationId, String sku);
 }

@@ -106,4 +106,29 @@ class PurchaseBillServiceTest {
                         && movement.getQuantity().compareTo(new BigDecimal("10")) == 0
                         && movement.getMovementType() == MovementType.IN));
     }
+
+    @Test
+    void createPurchaseBill_rejectsAlreadyBilledPurchaseOrder() {
+        UUID supplierId = UUID.randomUUID();
+        UUID poId = UUID.randomUUID();
+        Supplier supplier = new Supplier();
+        supplier.setId(supplierId);
+        PurchaseOrder po = new PurchaseOrder();
+        po.setStatus(PurchaseOrderStatus.BILLED);
+        po.setSupplier(supplier);
+
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(supplier));
+        when(organizationRepository.findById(any())).thenReturn(Optional.of(new Organization()));
+        when(purchaseOrderRepository.findById(poId)).thenReturn(Optional.of(po));
+
+        PurchaseBillDto dto = new PurchaseBillDto();
+        dto.setSupplierId(supplierId);
+        dto.setPoId(poId);
+        dto.setLines(new java.util.ArrayList<>());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> purchaseBillService.createPurchaseBill(dto))
+                .isInstanceOf(com.billos.api.exception.ConflictException.class)
+                .hasMessageContaining("BILLED");
+        verify(purchaseBillRepository, never()).save(any());
+    }
 }

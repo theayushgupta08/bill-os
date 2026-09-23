@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.CreateMemberRequest;
 import com.billos.api.dto.CreateMemberResponse;
 import com.billos.api.dto.TeamMemberDto;
@@ -112,6 +113,7 @@ public class TeamService {
     // ─── Create Member (Owner-Created Account) ──────────────────────
 
     @Transactional
+    @Audited(entity = "TeamMember", action = "CREATE")
     public CreateMemberResponse createMember(CreateMemberRequest request) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
@@ -191,6 +193,7 @@ public class TeamService {
     // ─── Reset Member Password ──────────────────────────────────────
 
     @Transactional
+    @Audited(entity = "TeamMember", action = "RESET_PASSWORD")
     public String resetMemberPassword(UUID targetUserId) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
@@ -226,6 +229,7 @@ public class TeamService {
     // ─── Role Management ────────────────────────────────────────────
 
     @Transactional
+    @Audited(entity = "TeamMember", action = "CHANGE_ROLE")
     public void updateUserRole(UUID userId, String newRole) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
@@ -256,6 +260,7 @@ public class TeamService {
     // ─── Remove User ────────────────────────────────────────────────
 
     @Transactional
+    @Audited(entity = "TeamMember", action = "REMOVE")
     public void removeUser(UUID userId) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
@@ -283,6 +288,7 @@ public class TeamService {
     // ─── Toggle User Status ─────────────────────────────────────────
 
     @Transactional
+    @Audited(entity = "TeamMember", action = "CHANGE_STATUS")
     public void toggleUserStatus(UUID targetUserId, boolean active) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 

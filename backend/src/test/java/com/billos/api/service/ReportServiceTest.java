@@ -46,35 +46,61 @@ class ReportServiceTest {
     private ReportService reportService;
 
     @Test
-    void testGetProfitAndLoss() {
-        SalesInvoice i1 = new SalesInvoice();
-        i1.setTotalAmount(new BigDecimal("1000.00"));
-        i1.setStatus(SalesInvoiceStatus.ISSUED);
-        i1.setInvoiceDate(LocalDate.now());
+    void profitAndLoss_usesTaxableValues_andIgnoresDraftInvoices() {
+        SalesInvoice issued = invoice(SalesInvoiceStatus.ISSUED, "1000.00", "1180.00");
+        SalesInvoice draft = invoice(SalesInvoiceStatus.DRAFT, "5000.00", "5900.00");
 
         PurchaseBill pb1 = new PurchaseBill();
-        pb1.setTotalAmount(new BigDecimal("400.00"));
         pb1.setStatus(PurchaseBillStatus.UNPAID);
         pb1.setBillDate(LocalDate.now());
-
-        SalesInvoiceDto i1Dto = new SalesInvoiceDto();
-        i1Dto.setTotalAmount(new BigDecimal("1000.00"));
-        i1Dto.setStatus(SalesInvoiceStatus.ISSUED);
-
         PurchaseBillDto pb1Dto = new PurchaseBillDto();
-        pb1Dto.setTotalAmount(new BigDecimal("400.00"));
+        pb1Dto.setSubtotal(new BigDecimal("400.00"));
+        pb1Dto.setTotalAmount(new BigDecimal("472.00")); // incl. 18% input GST
         pb1Dto.setStatus(PurchaseBillStatus.UNPAID);
 
-        when(salesInvoiceRepository.findAll()).thenReturn(List.of(i1));
+        SalesInvoiceDto issuedDto = new SalesInvoiceDto();
+        issuedDto.setSubtotal(new BigDecimal("1000.00"));
+        issuedDto.setTotalAmount(new BigDecimal("1180.00")); // incl. 18% output GST
+        issuedDto.setStatus(SalesInvoiceStatus.ISSUED);
+
+        when(salesInvoiceRepository.findAll()).thenReturn(List.of(issued, draft));
         when(purchaseBillRepository.findAll()).thenReturn(List.of(pb1));
-        when(salesInvoiceMapper.toDto(i1)).thenReturn(i1Dto);
+        when(salesInvoiceMapper.toDto(issued)).thenReturn(issuedDto);
         when(purchaseBillMapper.toDto(pb1)).thenReturn(pb1Dto);
 
         PnlDto result = reportService.getProfitAndLoss(null, null);
 
         assertNotNull(result);
-        assertEquals(new BigDecimal("1000.00"), result.getTotalRevenue());
-        assertEquals(new BigDecimal("400.00"), result.getTotalPurchases());
-        assertEquals(new BigDecimal("600.00"), result.getNetProfit());
+        assertEquals(0, new BigDecimal("1000.00").compareTo(result.getTotalRevenue()));
+        assertEquals(0, new BigDecimal("400.00").compareTo(result.getTotalPurchases()));
+        assertEquals(0, new BigDecimal("600.00").compareTo(result.getNetProfit()));
+    }
+
+    @Test
+    void gstReturns_excludeDraftAndVoidInvoices() {
+        SalesInvoice issued = invoice(SalesInvoiceStatus.ISSUED, "1000.00", "1180.00");
+        SalesInvoice paid = invoice(SalesInvoiceStatus.PAID, "500.00", "590.00");
+        SalesInvoice draft = invoice(SalesInvoiceStatus.DRAFT, "9000.00", "10620.00");
+        SalesInvoice voided = invoice(SalesInvoiceStatus.VOID, "7000.00", "8260.00");
+        when(salesInvoiceRepository.findAll()).thenReturn(List.of(issued, paid, draft, voided));
+        when(purchaseBillRepository.findAll()).thenReturn(List.of());
+
+        assertEquals(2, reportService.getGstr1(null, null).size());
+        assertEquals(
+                0,
+                new BigDecimal("1500.00")
+                        .compareTo(reportService.getGstr3b(null, null).getOutwardTaxableValue()));
+    }
+
+    private SalesInvoice invoice(SalesInvoiceStatus status, String subtotal, String total) {
+        SalesInvoice inv = new SalesInvoice();
+        inv.setStatus(status);
+        inv.setInvoiceDate(LocalDate.now());
+        inv.setInvoiceNumber("INV-" + status);
+        inv.setSubtotal(new BigDecimal(subtotal));
+        inv.setTaxTotal(new BigDecimal(total).subtract(new BigDecimal(subtotal)));
+        inv.setTotalAmount(new BigDecimal(total));
+        inv.setCustomer(new com.billos.api.entity.Customer());
+        return inv;
     }
 }

@@ -99,9 +99,10 @@ class JournalEntryServiceTest {
         dto.getLines().add(debit);
         dto.getLines().add(credit);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            journalEntryService.createJournalEntry(dto);
-        });
+        com.billos.api.exception.BadRequestException exception =
+                assertThrows(com.billos.api.exception.BadRequestException.class, () -> {
+                    journalEntryService.createJournalEntry(dto);
+                });
 
         assertNotNull(exception);
         verify(journalEntryRepository, never()).save(any());

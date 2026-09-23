@@ -8,6 +8,9 @@ import lombok.Data;
 public class AuditLogDto {
     private UUID id;
     private UUID userId;
+    /** Display name of userId, resolved by AuditLogService. */
+    private String userName;
+
     private String entityType;
     private UUID entityId;
     private String action;

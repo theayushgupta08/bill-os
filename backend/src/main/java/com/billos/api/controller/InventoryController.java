@@ -1,5 +1,6 @@
 package com.billos.api.controller;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.InventoryLevelDto;
 import com.billos.api.dto.StockMovementDto;
 import com.billos.api.service.InventoryService;
@@ -32,6 +33,8 @@ public class InventoryController {
 
     @PostMapping("/adjust")
     @PreAuthorize("@tenantSecurity.hasRole('USER')")
+    // Audited here, not in InventoryService: the service also runs once per line of every invoice/bill
+    @Audited(entity = "StockMovement", action = "MANUAL_ADJUST")
     public ResponseEntity<StockMovementDto> adjustStock(@RequestBody StockMovementDto request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(inventoryService.adjustStock(request));
     }

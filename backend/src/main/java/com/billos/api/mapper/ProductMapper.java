@@ -13,8 +13,10 @@ public interface ProductMapper {
     ProductDto toDto(Product product);
 
     @Mapping(target = "category", ignore = true)
+    @Mapping(target = "costPrice", ignore = true) // maintained from purchases, never set by clients
     Product toEntity(ProductDto dto);
 
     @Mapping(target = "category", ignore = true)
+    @Mapping(target = "costPrice", ignore = true)
     void updateEntityFromDto(ProductDto dto, @MappingTarget Product entity);
 }

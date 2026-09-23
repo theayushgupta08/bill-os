@@ -39,10 +39,9 @@ class ControllerAuthorizationTest {
                     "getOrganizationById",
                     "createBranch"));
 
-    /** Writes intentionally open to any member (existing product decisions, documented in CLAUDE.md). */
-    private static final Map<String, Set<String>> MEMBER_WRITES = Map.of(
-            "NotificationController", Set.of("markAsRead"),
-            "CollectionController", Set.of("recordPayment", "verifyPayment", "recordExpense", "recordDeposit"));
+    /** Writes intentionally open to any member: marking your own notification read changes nothing shared. */
+    private static final Map<String, Set<String>> MEMBER_WRITES =
+            Map.of("NotificationController", Set.of("markAsRead"));
 
     @Test
     void everyTenantScopedEndpointDeclaresARole() throws Exception {

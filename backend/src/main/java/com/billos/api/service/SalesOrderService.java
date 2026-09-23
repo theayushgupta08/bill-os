@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.SalesOrderDto;
 import com.billos.api.dto.SalesOrderLineDto;
 import com.billos.api.entity.*;
@@ -43,6 +44,7 @@ public class SalesOrderService {
     }
 
     @Transactional
+    @Audited(entity = "SalesOrder", action = "CREATE")
     public SalesOrderDto createSalesOrder(SalesOrderDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 

@@ -4,7 +4,7 @@
 import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
-import { api, downloadPdf } from "@/lib/api-client";
+import { api, downloadPdf, errorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Filter } from "lucide-react";
@@ -87,6 +87,22 @@ export function InvoiceList() {
       toast.error(error.message || "Failed to issue invoice");
     }
   });
+
+  // IRP e-invoice payload (FORM INV-01) for an issued invoice, saved as JSON for upload to the e-invoice portal
+  const downloadEInvoice = async (inv: Invoice) => {
+    try {
+      const payload = await api.get<Record<string, unknown>>(`/sales-invoices/${inv.id}/e-invoice`);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `e-invoice-${inv.invoiceNumber}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to generate e-invoice JSON"));
+    }
+  };
 
   const {
     searchTerm,
@@ -193,6 +209,11 @@ export function InvoiceList() {
                     <Button variant="outline" size="sm" onClick={() => downloadPdf(`/sales-invoices/${inv.id}/pdf`, `Invoice-${inv.invoiceNumber}.pdf`)}>
                       PDF
                     </Button>
+                    {inv.status !== "DRAFT" && inv.status !== "VOID" && (
+                      <Button variant="outline" size="sm" onClick={() => downloadEInvoice(inv)}>
+                        e-Invoice
+                      </Button>
+                    )}
                     {inv.status === "DRAFT" && (
                       <Button variant="outline" size="sm" onClick={() => issueMutation.mutate(inv)} disabled={issueMutation.isPending}>
                         Issue

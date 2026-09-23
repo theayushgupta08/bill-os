@@ -1,7 +1,10 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.*;
 import com.billos.api.entity.*;
+import com.billos.api.exception.BadRequestException;
+import com.billos.api.exception.ConflictException;
 import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.PurchaseBillMapper;
 import com.billos.api.repository.*;
@@ -47,6 +50,7 @@ public class PurchaseBillService {
     }
 
     @Transactional
+    @Audited(entity = "PurchaseBill", action = "CREATE")
     public PurchaseBillDto createPurchaseBill(PurchaseBillDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
@@ -70,6 +74,13 @@ public class PurchaseBillService {
             PurchaseOrder po = purchaseOrderRepository
                     .findById(dto.getPoId())
                     .orElseThrow(() -> new ResourceNotFoundException("PO not found"));
+            // Billing a PO twice (or a cancelled one) would double-count stock and the supplier's payable
+            if (po.getStatus() == PurchaseOrderStatus.BILLED || po.getStatus() == PurchaseOrderStatus.CANCELLED) {
+                throw new ConflictException("Purchase order " + po.getPoNumber() + " is already " + po.getStatus());
+            }
+            if (po.getSupplier() != null && !po.getSupplier().getId().equals(supplier.getId())) {
+                throw new BadRequestException("The bill's supplier doesn't match purchase order " + po.getPoNumber());
+            }
             bill.setPurchaseOrder(po);
             po.setStatus(PurchaseOrderStatus.BILLED);
             purchaseOrderRepository.save(po);

@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.BulkImportResultDto;
 import com.billos.api.dto.ConsolidatedCustomerLedgerDto;
 import com.billos.api.dto.ConsolidatedLedgerEntryDto;
@@ -125,6 +126,7 @@ public class CustomerService {
     }
 
     @Transactional
+    @Audited(entity = "Customer", action = "CREATE")
     public CustomerDto createCustomer(CustomerDto customerDto) {
         Customer customer = customerMapper.toEntity(customerDto);
         UUID currentOrgId = UUID.fromString(TenantContext.getCurrentTenant());
@@ -147,6 +149,7 @@ public class CustomerService {
     }
 
     @Transactional
+    @Audited(entity = "Customer", action = "BULK_IMPORT")
     public BulkImportResultDto bulkCreateCustomers(List<CustomerDto> dtos) {
         String currentTenant = TenantContext.getCurrentTenant();
         UUID currentOrgId = UUID.fromString(currentTenant);
@@ -210,6 +213,7 @@ public class CustomerService {
     }
 
     @Transactional
+    @Audited(entity = "Customer", action = "UPDATE")
     public CustomerDto updateCustomer(UUID id, CustomerDto customerDto) {
         Customer existingCustomer = ownedCustomer(id, "modify");
 
@@ -219,6 +223,7 @@ public class CustomerService {
     }
 
     @Transactional
+    @Audited(entity = "Customer", action = "DELETE")
     public void deleteCustomer(UUID id) {
         Customer customer = ownedCustomer(id, "delete");
         customerRepository.delete(customer);

@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.QuotationDto;
 import com.billos.api.dto.QuotationLineDto;
 import com.billos.api.entity.*;
@@ -43,6 +44,7 @@ public class QuotationService {
     }
 
     @Transactional
+    @Audited(entity = "Quotation", action = "CREATE")
     public QuotationDto createQuotation(QuotationDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useFormat } from "@/lib/use-format";
+
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, Edit, Trash2, Upload } from "lucide-react";
@@ -23,6 +25,7 @@ import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { BulkImportDialog } from "@/components/common/bulk-import-dialog";
 
 export function ProductList() {
+  const { formatMoney } = useFormat();
   const queryClient = useQueryClient();
   const [isImportOpen, setIsImportOpen] = useState(false);
 
@@ -111,7 +114,8 @@ export function ProductList() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>SKU</TableHead>
-              <TableHead>Price</TableHead>
+              <TableHead>Selling Price</TableHead>
+              <TableHead title="Weighted average purchase cost, updated from purchase bills">Avg. Cost</TableHead>
               <TableHead>Tax Rate (%)</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -119,13 +123,13 @@ export function ProductList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-64 text-center">
+                <TableCell colSpan={6} className="h-64 text-center">
                   <BrandLoader variant="card" text="Loading products..." size="lg" />
                 </TableCell>
               </TableRow>
             ) : totalCount === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">
+                <TableCell colSpan={6} className="text-center h-24">
                   {searchTerm ? "No products matching your search." : "No products found."}
                 </TableCell>
               </TableRow>
@@ -134,7 +138,10 @@ export function ProductList() {
                 <TableRow key={product.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.sku || "-"}</TableCell>
-                  <TableCell>₹{product.basePrice}</TableCell>
+                  <TableCell>{formatMoney(product.basePrice)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {product.costPrice ? formatMoney(product.costPrice) : "—"}
+                  </TableCell>
                   <TableCell>{product.taxRate}%</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

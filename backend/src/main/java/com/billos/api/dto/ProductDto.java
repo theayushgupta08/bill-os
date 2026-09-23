@@ -16,6 +16,9 @@ public class ProductDto {
     private String sku;
     private String hsnSac;
     private BigDecimal basePrice;
+    /** Read-only: weighted average purchase cost. */
+    private BigDecimal costPrice;
+
     private BigDecimal taxRate;
     private String unitOfMeasure;
     private UUID organizationId;

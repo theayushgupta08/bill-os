@@ -130,6 +130,8 @@ export interface Product extends BaseEntity {
   sku: string;
   price?: number;
   basePrice?: number;
+  /** Weighted average purchase cost (read-only, maintained from purchase bills). */
+  costPrice?: number;
   taxRate?: number | string;
   taxRateId?: string;
   type?: string;

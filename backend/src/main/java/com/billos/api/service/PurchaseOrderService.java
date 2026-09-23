@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.PurchaseOrderDto;
 import com.billos.api.dto.PurchaseOrderLineDto;
 import com.billos.api.entity.*;
@@ -44,6 +45,7 @@ public class PurchaseOrderService {
     }
 
     @Transactional
+    @Audited(entity = "PurchaseOrder", action = "CREATE")
     public PurchaseOrderDto createPurchaseOrder(PurchaseOrderDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
@@ -105,6 +107,7 @@ public class PurchaseOrderService {
     }
 
     @Transactional
+    @Audited(entity = "PurchaseOrder", action = "ISSUE")
     public PurchaseOrderDto issueOrder(UUID id) {
         PurchaseOrder po = purchaseOrderRepository
                 .findById(id)

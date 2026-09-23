@@ -49,13 +49,14 @@ public class CollectionController {
     }
 
     @PostMapping("/payments")
-    @PreAuthorize("@tenantSecurity.isMember()")
+    @PreAuthorize("@tenantSecurity.hasRole('USER')")
     public ResponseEntity<CollectionPaymentDto> recordPayment(@RequestBody CollectionPaymentDto dto) {
         return ResponseEntity.ok(collectionService.recordPayment(dto));
     }
 
     @PostMapping("/payments/{id}/verify")
-    @PreAuthorize("@tenantSecurity.isMember()")
+    // Service narrows further: only the QR code's owner, OWNER or ADMIN may verify
+    @PreAuthorize("@tenantSecurity.hasRole('USER')")
     public ResponseEntity<Map<String, String>> verifyPayment(
             @PathVariable UUID id, @RequestBody Map<String, Object> payload) {
         Boolean verify = (Boolean) payload.get("verify");
@@ -86,7 +87,7 @@ public class CollectionController {
     }
 
     @PostMapping("/expenses")
-    @PreAuthorize("@tenantSecurity.isMember()")
+    @PreAuthorize("@tenantSecurity.hasRole('USER')")
     public ResponseEntity<CollectionExpenseDto> recordExpense(@RequestBody CollectionExpenseDto dto) {
         return ResponseEntity.ok(collectionService.recordExpense(dto));
     }
@@ -112,7 +113,7 @@ public class CollectionController {
     }
 
     @PostMapping("/deposits")
-    @PreAuthorize("@tenantSecurity.isMember()")
+    @PreAuthorize("@tenantSecurity.hasRole('USER')")
     public ResponseEntity<SettlementDepositDto> recordDeposit(@RequestBody SettlementDepositDto dto) {
         return ResponseEntity.ok(collectionService.recordDeposit(dto));
     }

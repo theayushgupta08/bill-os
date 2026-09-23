@@ -6,12 +6,14 @@ import com.billos.api.entity.User;
 import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.repository.NotificationRepository;
 import com.billos.api.repository.UserRepository;
+import com.billos.api.security.UserPrincipal;
 import com.billos.api.tenant.TenantContext;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,6 +59,12 @@ public class NotificationService {
         Notification notification = notificationRepository
                 .findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
+        // Notifications are per user; someone else's is reported as not found rather than revealed
+        UserPrincipal principal = (UserPrincipal)
+                SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!notification.getUser().getId().equals(principal.getId())) {
+            throw new ResourceNotFoundException("Notification not found");
+        }
         notification.setReadAt(OffsetDateTime.now());
         notificationRepository.save(notification);
     }

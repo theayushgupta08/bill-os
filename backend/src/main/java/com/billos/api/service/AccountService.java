@@ -1,11 +1,14 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.AccountDto;
 import com.billos.api.entity.Account;
 import com.billos.api.entity.AccountType;
+import com.billos.api.exception.ConflictException;
 import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.AccountMapper;
 import com.billos.api.repository.AccountRepository;
+import com.billos.api.repository.JournalEntryLineRepository;
 import com.billos.api.tenant.TenantContext;
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +24,7 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
+    private final JournalEntryLineRepository journalEntryLineRepository;
 
     @Transactional(readOnly = true)
     public List<AccountDto> getAllAccounts() {
@@ -36,6 +40,7 @@ public class AccountService {
     }
 
     @Transactional
+    @Audited(entity = "Account", action = "CREATE")
     public AccountDto createAccount(AccountDto dto) {
         Account account = accountMapper.toEntity(dto);
         account.setOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()));
@@ -52,6 +57,7 @@ public class AccountService {
     }
 
     @Transactional
+    @Audited(entity = "Account", action = "UPDATE")
     public AccountDto updateAccount(UUID id, AccountDto dto) {
         Account existingAccount =
                 accountRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Account not found"));
@@ -72,9 +78,18 @@ public class AccountService {
     }
 
     @Transactional
+    @Audited(entity = "Account", action = "DELETE")
     public void deleteAccount(UUID id) {
         Account account =
                 accountRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+        // Deletion is soft: journal lines and child accounts would keep pointing at a hidden account and fail to load
+        if (journalEntryLineRepository.existsByAccount_Id(id)) {
+            throw new ConflictException("Account " + account.getName() + " has journal entries and can't be deleted");
+        }
+        if (accountRepository.existsByParent_Id(id)) {
+            throw new ConflictException(
+                    "Account " + account.getName() + " has sub-accounts; delete or move them first");
+        }
         accountRepository.delete(account);
     }
 

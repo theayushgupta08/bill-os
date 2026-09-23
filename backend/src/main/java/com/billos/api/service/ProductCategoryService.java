@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import com.billos.api.audit.Audited;
 import com.billos.api.dto.BulkImportResultDto;
 import com.billos.api.dto.ProductCategoryDto;
 import com.billos.api.entity.ProductCategory;
@@ -38,6 +39,7 @@ public class ProductCategoryService {
     }
 
     @Transactional
+    @Audited(entity = "ProductCategory", action = "CREATE")
     public ProductCategoryDto createCategory(ProductCategoryDto dto) {
         ProductCategory category = productCategoryMapper.toEntity(dto);
         category.setOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()));
@@ -54,6 +56,7 @@ public class ProductCategoryService {
     }
 
     @Transactional
+    @Audited(entity = "ProductCategory", action = "BULK_IMPORT")
     public BulkImportResultDto bulkCreateCategories(List<ProductCategoryDto> dtos) {
         String currentTenant = TenantContext.getCurrentTenant();
         UUID currentOrgId = UUID.fromString(currentTenant);
@@ -107,6 +110,7 @@ public class ProductCategoryService {
     }
 
     @Transactional
+    @Audited(entity = "ProductCategory", action = "UPDATE")
     public ProductCategoryDto updateCategory(UUID id, ProductCategoryDto dto) {
         ProductCategory existingCategory = productCategoryRepository
                 .findById(id)
@@ -128,6 +132,7 @@ public class ProductCategoryService {
     }
 
     @Transactional
+    @Audited(entity = "ProductCategory", action = "DELETE")
     public void deleteCategory(UUID id) {
         ProductCategory category = productCategoryRepository
                 .findById(id)

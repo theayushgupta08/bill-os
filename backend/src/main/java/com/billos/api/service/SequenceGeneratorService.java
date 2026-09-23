@@ -22,8 +22,9 @@ public class SequenceGeneratorService {
     public String getNextDocumentNumber(DocumentType documentType) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
+        // Row lock: concurrent callers wait here instead of reading the same next number
         NumberingSequence sequence = numberingSequenceRepository
-                .findByOrganizationIdAndDocumentType(orgId, documentType)
+                .findForUpdate(orgId, documentType)
                 .orElseGet(() -> createDefaultSequence(orgId, documentType));
 
         syncInvoicePrefix(orgId, documentType, sequence);
