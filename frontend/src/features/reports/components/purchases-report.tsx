@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { api } from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +17,7 @@ import { PurchaseBill } from "@/types";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function PurchasesReport() {
+  const { formatMoney, formatDate } = useFormat();
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
 
@@ -75,7 +78,7 @@ export function PurchasesReport() {
               type="date" 
               value={startDate} 
               onChange={(e) => setStartDate(e.target.value)} 
-              className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+              className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
             />
           </div>
           <div className="space-y-1.5 flex-1">
@@ -84,7 +87,7 @@ export function PurchasesReport() {
               type="date" 
               value={endDate} 
               onChange={(e) => setEndDate(e.target.value)} 
-              className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+              className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
             />
           </div>
         </div>
@@ -95,7 +98,7 @@ export function PurchasesReport() {
           </div>
           <div>
             <p className="text-xs text-slate-400 font-medium">Total Registered Purchases</p>
-            <p className="text-lg font-bold text-white">₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+            <p className="text-lg font-bold text-white">{formatMoney(totalAmount)}</p>
           </div>
         </div>
       </div>
@@ -119,16 +122,16 @@ export function PurchasesReport() {
                   <BrandLoader variant="card" text="Loading purchase entries..." size="lg" />
                 </TableCell>
               </TableRow>
-            ) : bills.map((bill: any) => (
+            ) : bills.map((bill) => (
               <TableRow key={bill.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
-                <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">{bill.billDate}</TableCell>
+                <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">{formatDate(bill.billDate)}</TableCell>
                 <TableCell className="font-semibold text-white">{bill.billNumber}</TableCell>
                 <TableCell className="text-slate-300 text-sm">{bill.supplierName}</TableCell>
                 <TableCell>
                   {getStatusBadge(bill.status)}
                 </TableCell>
                 <TableCell className="text-right pr-6 font-mono text-sm font-semibold text-white">
-                  ₹{bill.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  {formatMoney(bill.totalAmount)}
                 </TableCell>
               </TableRow>
             ))}

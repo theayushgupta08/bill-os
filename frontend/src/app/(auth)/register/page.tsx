@@ -100,7 +100,7 @@ export default function RegisterPage() {
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-bold tracking-tight">Check your email</h1>
           <p className="text-sm text-muted-foreground">
-            We've sent a verification link to <strong>{formData.email}</strong>.
+            We&apos;ve sent a verification link to <strong>{formData.email}</strong>.
             Please verify your email address to activate your account.
           </p>
         </div>

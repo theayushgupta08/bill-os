@@ -68,10 +68,8 @@ export function CreateCustomerDialog({
       resetForm();
       onOpenChange(false);
     },
-    onError: (error: any) => {
-      toast.error(
-        error.response?.data?.message || "Failed to create customer. Please check the details."
-      );
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create customer. Please check the details.");
     },
   });
 

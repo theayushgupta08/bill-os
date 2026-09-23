@@ -3,6 +3,7 @@ package com.billos.api.service;
 import com.billos.api.dto.AccountDto;
 import com.billos.api.entity.Account;
 import com.billos.api.entity.AccountType;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.AccountMapper;
 import com.billos.api.repository.AccountRepository;
 import com.billos.api.tenant.TenantContext;
@@ -31,7 +32,7 @@ public class AccountService {
         return accountRepository
                 .findById(id)
                 .map(accountMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
     }
 
     @Transactional
@@ -42,7 +43,7 @@ public class AccountService {
         if (dto.getParentId() != null) {
             Account parent = accountRepository
                     .findById(dto.getParentId())
-                    .orElseThrow(() -> new RuntimeException("Parent account not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent account not found"));
             account.setParent(parent);
         }
 
@@ -53,14 +54,14 @@ public class AccountService {
     @Transactional
     public AccountDto updateAccount(UUID id, AccountDto dto) {
         Account existingAccount =
-                accountRepository.findById(id).orElseThrow(() -> new RuntimeException("Account not found"));
+                accountRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         accountMapper.updateEntityFromDto(dto, existingAccount);
 
         if (dto.getParentId() != null) {
             Account parent = accountRepository
                     .findById(dto.getParentId())
-                    .orElseThrow(() -> new RuntimeException("Parent account not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent account not found"));
             existingAccount.setParent(parent);
         } else {
             existingAccount.setParent(null);
@@ -72,7 +73,8 @@ public class AccountService {
 
     @Transactional
     public void deleteAccount(UUID id) {
-        Account account = accountRepository.findById(id).orElseThrow(() -> new RuntimeException("Account not found"));
+        Account account =
+                accountRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Account not found"));
         accountRepository.delete(account);
     }
 

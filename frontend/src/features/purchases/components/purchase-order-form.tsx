@@ -1,5 +1,9 @@
 "use client";
 
+
+
+import { Product, Supplier, TaxRate } from "@/types";
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
@@ -38,6 +42,7 @@ interface LineItem {
 }
 
 export function PurchaseOrderForm() {
+  const { formatMoney } = useFormat();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -56,7 +61,7 @@ export function PurchaseOrderForm() {
   const { data: suppliers = [], isLoading: loadingSuppliers } = useQuery({
     queryKey: ["suppliers"],
     queryFn: async () => {
-      const res = await api.get<any[]>("/suppliers");
+      const res = await api.get<Supplier[]>("/suppliers");
       return res;
     }
   });
@@ -64,7 +69,7 @@ export function PurchaseOrderForm() {
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.get<any[]>("/products");
+      const res = await api.get<Product[]>("/products");
       return res;
     }
   });
@@ -72,7 +77,7 @@ export function PurchaseOrderForm() {
   const { data: taxes = [], isLoading: loadingTaxes } = useQuery({
     queryKey: ["tax-rates"],
     queryFn: async () => {
-      const res = await api.get<any[]>("/tax-rates");
+      const res = await api.get<TaxRate[]>("/tax-rates");
       return res;
     }
   });
@@ -94,11 +99,11 @@ export function PurchaseOrderForm() {
       if (line.id === id) {
         const updatedLine = { ...line, [field]: value };
         if (field === "productId") {
-          const product = products.find((p: any) => p.id === value);
+          const product = products.find((p) => p.id === value);
           if (product) {
             updatedLine.unitPrice = product.basePrice || 0;
             if (product.taxRate) {
-              const matchedTax = taxes.find((t: any) => Number(t.rate) === Number(product.taxRate));
+              const matchedTax = taxes.find((t) => Number(t.rate) === Number(product.taxRate));
               if (matchedTax) {
                 updatedLine.taxRateId = matchedTax.id;
               }
@@ -119,7 +124,7 @@ export function PurchaseOrderForm() {
       const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
       subtotal += lineSub;
       if (line.taxRateId) {
-        const tax = taxes.find((t: any) => t.id === line.taxRateId);
+        const tax = taxes.find((t) => t.id === line.taxRateId);
         if (tax) {
           taxTotal += (lineSub * (tax.rate || 0)) / 100;
         }
@@ -139,9 +144,8 @@ export function PurchaseOrderForm() {
       router.push("/purchases/orders");
       router.refresh();
     },
-    onError: (error: any) => {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Failed to create PO");
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create PO");
     }
   });
 
@@ -192,7 +196,7 @@ export function PurchaseOrderForm() {
                   <SelectValue placeholder="Select supplier" />
                 </SelectTrigger>
                 <SelectContent>
-                  {suppliers.map((s: any) => (
+                  {suppliers.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -245,7 +249,7 @@ export function PurchaseOrderForm() {
                     const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
                     let lineTax = 0;
                     if (line.taxRateId) {
-                      const tax = taxes.find((t: any) => t.id === line.taxRateId);
+                      const tax = taxes.find((t) => t.id === line.taxRateId);
                       if (tax) lineTax = (lineSub * (tax.rate || 0)) / 100;
                     }
                     const lineTotal = lineSub + lineTax;
@@ -262,7 +266,7 @@ export function PurchaseOrderForm() {
                               <SelectValue placeholder="Select product" />
                             </SelectTrigger>
                             <SelectContent>
-                              {products.map((p: any) => (
+                              {products.map((p) => (
                                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                               ))}
                             </SelectContent>
@@ -298,14 +302,14 @@ export function PurchaseOrderForm() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">No Tax</SelectItem>
-                              {taxes.map((t: any) => (
+                              {taxes.map((t) => (
                                 <SelectItem key={t.id} value={t.id}>{t.name} ({t.rate}%)</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          ₹{lineTotal.toFixed(2)}
+                          {formatMoney(lineTotal)}
                         </TableCell>
                         <TableCell>
                           <Button 
@@ -345,15 +349,15 @@ export function PurchaseOrderForm() {
             <CardContent className="pt-6 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>₹{totals.subtotal.toFixed(2)}</span>
+                <span>{formatMoney(totals.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Total Tax</span>
-                <span>₹{totals.taxTotal.toFixed(2)}</span>
+                <span>{formatMoney(totals.taxTotal)}</span>
               </div>
               <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
                 <span>Grand Total</span>
-                <span>₹{totals.total.toFixed(2)}</span>
+                <span>{formatMoney(totals.total)}</span>
               </div>
             </CardContent>
           </Card>

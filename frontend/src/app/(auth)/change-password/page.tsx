@@ -15,7 +15,6 @@ import {
   EyeOff,
   CheckCircle2,
   AlertCircle,
-  Lock,
 } from "lucide-react";
 
 export default function ChangePasswordPage() {

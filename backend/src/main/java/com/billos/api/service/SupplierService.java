@@ -2,6 +2,7 @@ package com.billos.api.service;
 
 import com.billos.api.dto.SupplierDto;
 import com.billos.api.entity.Supplier;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.SupplierMapper;
 import com.billos.api.repository.SupplierRepository;
 import com.billos.api.tenant.TenantContext;
@@ -30,7 +31,7 @@ public class SupplierService {
         return supplierRepository
                 .findById(id)
                 .map(supplierMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
     }
 
     @Transactional
@@ -44,7 +45,7 @@ public class SupplierService {
     @Transactional
     public SupplierDto updateSupplier(UUID id, SupplierDto supplierDto) {
         Supplier existingSupplier =
-                supplierRepository.findById(id).orElseThrow(() -> new RuntimeException("Supplier not found"));
+                supplierRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
 
         supplierMapper.updateEntityFromDto(supplierDto, existingSupplier);
         Supplier updatedSupplier = supplierRepository.save(existingSupplier);
@@ -54,7 +55,7 @@ public class SupplierService {
     @Transactional
     public void deleteSupplier(UUID id) {
         Supplier supplier =
-                supplierRepository.findById(id).orElseThrow(() -> new RuntimeException("Supplier not found"));
+                supplierRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
         supplierRepository.delete(supplier);
     }
 }

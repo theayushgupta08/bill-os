@@ -7,9 +7,6 @@ import {
   Check,
   Plus,
   Settings,
-  Building2,
-  GitBranch,
-  Crown,
   ExternalLink,
 } from "lucide-react";
 import {
@@ -19,7 +16,6 @@ import {
   getOrgInitials,
   getOrgGradient,
   switchActiveOrganization,
-  Organization,
 } from "@/lib/use-organization";
 import { CreateBranchDialog } from "./create-branch-dialog";
 

@@ -188,10 +188,22 @@ There is no local password login, `PasswordEncoder` or `AuthenticationManager`; 
 - Hierarchy (most → least privileged): `OWNER > ADMIN > MANAGER > USER > VIEWER`.
   `hasRole(X)` returns true when the user's level is **at least** X.
 - A role in a parent organization is inherited by its branches (`TenantSecurity.resolveEffectiveRole`).
-- `@EnableMethodSecurity` is on. Membership is already enforced for every tenant-scoped route (§4.1), but
-  **role levels** are only enforced where `@PreAuthorize` is present — today `CollectionController`,
-  `TeamController`, `NotificationController` and `OrganizationController`. Any endpoint that should be
-  limited to ADMIN/MANAGER (deletes, settings, approvals) needs its own `@PreAuthorize`.
+- `@EnableMethodSecurity` is on. **Every endpoint of a tenant-scoped controller declares its minimum role**
+  with `@PreAuthorize`; `ControllerAuthorizationTest` fails the build if one is missing, if a write is open to
+  bare membership, or if a DELETE is allowed below MANAGER. The policy:
+
+  | Action | Minimum role |
+  |---|---|
+  | Reads (lists, details, PDFs, reports, dashboard) | `isMember()` (VIEWER) |
+  | Create/update day-to-day records (customers, products, categories, suppliers, quotes, orders, invoices, POs, bills, payments, stock adjustments, bulk imports, issue actions) | `USER` |
+  | Delete master data; create/edit warehouses; post journal entries | `MANAGER` |
+  | Chart of accounts, tax rates, organization settings/details, audit logs | `ADMIN` |
+
+  Deliberate exceptions (allow-listed in the test): collection-agent writes (`recordPayment`, `recordExpense`,
+  `recordDeposit`, `verifyPayment` — the service checks further) and `markAsRead` on notifications.
+  Self-service controllers (`Health`, `Public`, `User`) and org-self-service methods are exempt.
+- `TenantSecurity` memoizes the resolved role per request, so the membership interceptor plus several
+  `@PreAuthorize` checks cost one role lookup.
 
 ### 4.4 Entity design
 
@@ -252,6 +264,12 @@ for the IRP e-invoice payload shape.
 Bucket4j bandwidth keyed by IP, user ID, or tenant. Swagger and actuator are exempt. Exceeding a
 bucket returns `429` with `X-Rate-Limit-Retry-After-Seconds`. Adding a new expensive endpoint (report,
 export, AI call) means adding a bucket in `determineLimit`.
+
+The client IP is `request.getRemoteAddr()` — **never read `X-Forwarded-For` yourself** (its left-most entry is
+client-controlled). `server.forward-headers-strategy: native` makes Tomcat's RemoteIpValve resolve the real
+client by walking the header right-to-left through trusted proxies (private/loopback ranges by default, which
+covers Render's load balancer). If a public CDN is put in front, set `SERVER_TOMCAT_REMOTEIP_TRUSTED_PROXIES`
+to its ranges, or every client will share the CDN's IP bucket.
 
 ### 4.8 Auditing
 
@@ -342,6 +360,12 @@ Return `ResponseEntity<T>`. Use `@Valid @RequestBody` on write endpoints. Constr
 - `@Transactional(readOnly = true)` on reads, `@Transactional` on writes — put it on the service
   method, never the controller.
 - Import `org.springframework.transaction.annotation.Transactional` (not the jakarta one).
+- **Throw typed exceptions** from `com.billos.api.exception` — `ResourceNotFoundException` (404),
+  `BadRequestException` (400), `ConflictException` (409, e.g. already processed / last owner),
+  `ForbiddenException` (403, e.g. branch editing parent data). `GlobalExceptionHandler` returns
+  `{status, error, message, path, timestamp, fieldErrors?}` and the frontend shows `message`, so write it for
+  users. Anything else (a bare `RuntimeException`) becomes a generic 500 and is logged with its stack trace —
+  reserve that for genuine internal failures (PDF rendering, Supabase admin calls).
 
 ### 6.4 DTOs
 
@@ -428,7 +452,17 @@ export function useCreateCustomer() {
 - Query defaults live in `query-provider.tsx` (`staleTime` 60s, no refetch-on-focus, retry 1).
 - URL-persisted state uses `nuqs` `useQueryState`, not `useState` + manual router pushes.
 - PDFs: `downloadPdf(endpoint, filename)` from `@/lib/api-client`.
-- Avoid `any`. Several existing list components use `any[]` — do not copy that; type new code.
+- No `any` — the codebase is warning-free and CI runs ESLint with `--max-warnings 0`. Type API responses with
+  `@/types` (`api.get<Product[]>(...)`) and let callbacks infer; use `errorMessage(err, fallback)` from
+  `@/lib/api-client` for `catch (err: unknown)`.
+- Don't copy fetched data into form state with `useEffect`; use the render-time sync pattern
+  (`if (data && data !== synced) { setSynced(data); setForm(...) }`) — see `CustomerForm`, or derive the value.
+- **Display formatting goes through `useFormat()`** (`@/lib/use-format`): `formatMoney`, `formatMoneyCompact`,
+  `formatNumber`, `formatDate`, `formatDateTime`, `formatLongDate`. They follow Settings → Preferences (number
+  format en-IN/en-US, time zone, date format; `FormatPreferencesProvider` in the dashboard layout). Never
+  hard-code `toFixed(2)`, `toLocaleString("en-IN")` or render raw ISO dates. Calendar dates (`invoiceDate`) are
+  never time-zone shifted; timestamps are. PDFs apply the date format via `DocumentGenerationService`.
+- The signed-in user's display details come from `useCurrentUser()` (`@/lib/use-current-user`).
 
 ### 6.9 Frontend styling
 
@@ -456,11 +490,11 @@ export function useCreateCustomer() {
 
 | Suite | Status |
 |---|---|
-| Backend (JUnit 5 + Mockito + AssertJ) | **22 test classes / 100 tests**, services + tenant + security. This is the enforced suite. |
+| Backend (JUnit 5 + Mockito + AssertJ) | **25 test classes / 110 tests**, services + tenant + security + exception handling + an authorization architecture test. This is the enforced suite. |
 | AI service (pytest) | `tests/test_main.py` only — health endpoint. |
 | Frontend | **No test runner installed.** `pnpm test` does not exist. |
 
-CI (`.github/workflows/ci.yml`) runs: frontend `pnpm lint` → `tsc --noEmit` → `next build`, backend
+CI (`.github/workflows/ci.yml`) runs: frontend `pnpm lint --max-warnings 0` → `tsc --noEmit` → `next build`, backend
 `mvnw compile` + `mvnw test`, ai-service `pytest`, then `code-review-graph` and a Trivy filesystem
 scan (non-blocking).
 
@@ -560,13 +594,11 @@ class SalesInvoiceServiceTest {
 Documented so you don't mistake them for patterns to copy. Fixing one is welcome; do it as a scoped
 change and update this list.
 
-- **No global exception handling.** There is no `@ControllerAdvice`; services throw bare
-  `new RuntimeException("… not found")`, which surfaces as HTTP 500. New code should ideally throw a
-  typed exception; a `GlobalExceptionHandler` mapping to 404/400/409 is the highest-value backend fix.
 - **Validation is nearly absent** — only `TeamController` uses `@Valid`, and DTOs carry no
   `jakarta.validation` constraints.
-- **Role-level authorization coverage** — membership is enforced globally, but only 4 of 26 controllers
-  restrict by role (`@PreAuthorize`); e.g. any VIEWER can delete customers or post journal entries.
+- **The frontend does not hide actions by role** — a VIEWER still sees Create/Delete buttons and gets a 403
+  toast ("Your role in this organization does not allow this action.") when using them.
+- **Phone verification is a demo stub** — `/phone` accepts any 6-digit OTP; no SMS provider is wired.
 - **Customer/supplier `outstandingBalance` is a single column**, so for a parent's shared customer it mixes
   the parent's and branches' receivables; dashboard/receivables report count only customers the current org owns.
 - **No JaCoCo** — the "≥80% coverage" target in the PRDs is aspirational, not enforced.
@@ -574,10 +606,9 @@ change and update this list.
 - **Legacy routes**: `settings/tax` only redirects to `settings/taxes`. `reports/gst` (+ `GstReportController`,
   `GstReportingService`) is an unlinked **mock** returning placeholder data — the real e-invoice payload is
   `GET /sales-invoices/{id}/e-invoice`. Delete or implement it.
-- **Preferences (language, date format, timezone, currency) are saved but never applied** in the UI. The app
-  is dark-only (`<html class="dark">`, ~700 hard-coded `slate-*` classes); the no-op theme selector was removed.
+- **The app is dark-only** (`<html class="dark">`, ~700 hard-coded `slate-*` classes); the no-op theme selector
+  was removed. The stored `language` setting only selects the number format — there are no UI translations.
 - **No UI to void invoices or view a single invoice/order/bill/quotation** (list pages only).
-- **`any` types** in several list components (`customer-list.tsx`, `product-list.tsx`, …).
 - **`AuditLog.userId` never populated.**
 - **`code-review.md` baseline**: `ui-dropdown` is flagged as a god-component with heavy coupling, and
   ~234 symbols read as dead code (mostly unused DTOs/enums).

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
@@ -23,6 +25,7 @@ import { SalesOrder } from "@/types";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function OrderList() {
+  const { formatMoney, formatDate } = useFormat();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const { data: orders = [], isLoading } = useQuery({
@@ -123,10 +126,10 @@ export function OrderList() {
               paginatedData.map((so: SalesOrder) => (
                 <TableRow key={so.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{so.soNumber}</TableCell>
-                  <TableCell>{so.orderDate}</TableCell>
+                  <TableCell>{formatDate(so.orderDate)}</TableCell>
                   <TableCell>{so.customerName}</TableCell>
                   <TableCell><Badge variant="outline">{so.status}</Badge></TableCell>
-                  <TableCell className="text-right font-medium">₹{so.totalAmount?.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatMoney(so.totalAmount)}</TableCell>
                 </TableRow>
               ))
             )}

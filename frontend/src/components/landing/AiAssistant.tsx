@@ -40,7 +40,7 @@ export function AiAssistant() {
                 transition={{ delay: 0.5 }}
                 className="self-end bg-zinc-800 text-zinc-100 rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] text-sm"
               >
-                What's my top-selling item this week?
+                What&apos;s my top-selling item this week?
               </motion.div>
               
               <motion.div 

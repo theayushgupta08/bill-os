@@ -1,7 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 const integrations = [
   "Razorpay", "WhatsApp", "Shopify", "WooCommerce", 
   "Excel", "Google Sheets", "Tally", "Gmail", 

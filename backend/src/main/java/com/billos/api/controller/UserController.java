@@ -4,6 +4,7 @@ import com.billos.api.dto.UpdatePhoneRequest;
 import com.billos.api.dto.UpdateProfileRequest;
 import com.billos.api.dto.UserProfileDto;
 import com.billos.api.entity.User;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.UserPrincipal;
 import com.billos.api.service.SupabaseAdminService;
@@ -48,8 +49,9 @@ public class UserController {
     public ResponseEntity<Map<String, Boolean>> mustChangePassword() {
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        User user =
-                userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository
+                .findById(principal.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return ResponseEntity.ok(Map.of("mustChangePassword", Boolean.TRUE.equals(user.getMustChangePassword())));
     }
 
@@ -62,8 +64,9 @@ public class UserController {
 
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        User user =
-                userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository
+                .findById(principal.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.getSupabaseId() == null) {
             return ResponseEntity.badRequest()

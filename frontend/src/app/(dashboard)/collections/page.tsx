@@ -1,5 +1,7 @@
 "use client";
 
+import { useFormat } from "@/lib/use-format";
+
 import {
   Card,
   CardContent,
@@ -30,13 +32,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-function formatCurrency(amount: number) {
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${amount.toFixed(2)}`;
-}
-
 function OwnerDashboard() {
+  const { formatMoney, formatMoneyCompact } = useFormat();
   const { data, isLoading } = useOwnerDashboard();
 
   if (isLoading) {
@@ -50,7 +47,7 @@ function OwnerDashboard() {
   const metrics = [
     {
       label: "Total Outstanding",
-      value: formatCurrency(data.totalOutstandingCollections ?? 0),
+      value: formatMoneyCompact(data.totalOutstandingCollections ?? 0),
       icon: HandCoins,
       color: "text-amber-400",
       bg: "bg-amber-500/10",
@@ -58,7 +55,7 @@ function OwnerDashboard() {
     },
     {
       label: "Pending Verification",
-      value: `${data.pendingVerificationCount} (${formatCurrency(data.pendingVerificationSum ?? 0)})`,
+      value: `${data.pendingVerificationCount} (${formatMoneyCompact(data.pendingVerificationSum ?? 0)})`,
       icon: Clock,
       color: "text-blue-400",
       bg: "bg-blue-500/10",
@@ -66,7 +63,7 @@ function OwnerDashboard() {
     },
     {
       label: "Collections Today",
-      value: formatCurrency(data.collectionsToday ?? 0),
+      value: formatMoneyCompact(data.collectionsToday ?? 0),
       icon: TrendingUp,
       color: "text-emerald-400",
       bg: "bg-emerald-500/10",
@@ -74,7 +71,7 @@ function OwnerDashboard() {
     },
     {
       label: "Deposits Today",
-      value: formatCurrency(data.depositsToday ?? 0),
+      value: formatMoneyCompact(data.depositsToday ?? 0),
       icon: Landmark,
       color: "text-violet-400",
       bg: "bg-violet-500/10",
@@ -82,7 +79,7 @@ function OwnerDashboard() {
     },
     {
       label: "Expenses Today",
-      value: formatCurrency(data.expensesToday ?? 0),
+      value: formatMoneyCompact(data.expensesToday ?? 0),
       icon: Receipt,
       color: "text-rose-400",
       bg: "bg-rose-500/10",
@@ -133,7 +130,7 @@ function OwnerDashboard() {
                   <TableRow key={i} className="border-slate-800/40">
                     <TableCell className="text-slate-200 text-sm">{c.name}</TableCell>
                     <TableCell className="text-right text-emerald-400 font-medium text-sm">
-                      {formatCurrency(c.amount)}
+                      {formatMoney(c.amount)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -169,7 +166,7 @@ function OwnerDashboard() {
                   <TableRow key={i} className="border-slate-800/40">
                     <TableCell className="text-slate-200 text-sm">{u.name}</TableCell>
                     <TableCell className="text-right text-amber-400 font-medium text-sm">
-                      {formatCurrency(u.amount)}
+                      {formatMoney(u.amount)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -190,6 +187,7 @@ function OwnerDashboard() {
 }
 
 function UserDashboardSection() {
+  const { formatMoneyCompact } = useFormat();
   const { data, isLoading } = useUserDashboard();
 
   if (isLoading) {
@@ -203,7 +201,7 @@ function UserDashboardSection() {
   const metrics = [
     {
       label: "My Collection Balance",
-      value: formatCurrency(data.currentCollectionBalance ?? 0),
+      value: formatMoneyCompact(data.currentCollectionBalance ?? 0),
       icon: HandCoins,
       color: "text-amber-400",
       bg: "bg-amber-500/10",
@@ -219,7 +217,7 @@ function UserDashboardSection() {
     },
     {
       label: "Today's Collections",
-      value: formatCurrency(data.todayCollections ?? 0),
+      value: formatMoneyCompact(data.todayCollections ?? 0),
       icon: TrendingUp,
       color: "text-emerald-400",
       bg: "bg-emerald-500/10",
@@ -227,7 +225,7 @@ function UserDashboardSection() {
     },
     {
       label: "Today's Expenses",
-      value: formatCurrency(data.todayExpenses ?? 0),
+      value: formatMoneyCompact(data.todayExpenses ?? 0),
       icon: Receipt,
       color: "text-rose-400",
       bg: "bg-rose-500/10",
@@ -235,7 +233,7 @@ function UserDashboardSection() {
     },
     {
       label: "Today's Deposits",
-      value: formatCurrency(data.todayDeposits ?? 0),
+      value: formatMoneyCompact(data.todayDeposits ?? 0),
       icon: Landmark,
       color: "text-violet-400",
       bg: "bg-violet-500/10",

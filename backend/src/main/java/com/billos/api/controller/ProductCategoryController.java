@@ -8,6 +8,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,32 +19,38 @@ public class ProductCategoryController {
     private final ProductCategoryService productCategoryService;
 
     @GetMapping
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<List<ProductCategoryDto>> getAllCategories() {
         return ResponseEntity.ok(productCategoryService.getAllCategories());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<ProductCategoryDto> getCategoryById(@PathVariable UUID id) {
         return ResponseEntity.ok(productCategoryService.getCategoryById(id));
     }
 
     @PostMapping
+    @PreAuthorize("@tenantSecurity.hasRole('USER')")
     public ResponseEntity<ProductCategoryDto> createCategory(@RequestBody ProductCategoryDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productCategoryService.createCategory(dto));
     }
 
     @PostMapping("/bulk")
+    @PreAuthorize("@tenantSecurity.hasRole('USER')")
     public ResponseEntity<BulkImportResultDto> bulkCreateCategories(@RequestBody List<ProductCategoryDto> dtos) {
         return ResponseEntity.ok(productCategoryService.bulkCreateCategories(dtos));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@tenantSecurity.hasRole('USER')")
     public ResponseEntity<ProductCategoryDto> updateCategory(
             @PathVariable UUID id, @RequestBody ProductCategoryDto dto) {
         return ResponseEntity.ok(productCategoryService.updateCategory(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@tenantSecurity.hasRole('MANAGER')")
     public ResponseEntity<Void> deleteCategory(@PathVariable UUID id) {
         productCategoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();

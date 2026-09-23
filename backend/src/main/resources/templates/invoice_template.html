@@ -121,8 +121,8 @@
                 <div class="title">INVOICE</div>
                 <div style="text-align: right; margin-top: 10px;">
                     <strong>Invoice #:</strong> <span th:text="${invoice.invoiceNumber}">INV-0001</span><br/>
-                    <strong>Date:</strong> <span th:text="${invoice.invoiceDate}">2023-01-01</span><br/>
-                    <strong>Due Date:</strong> <span th:text="${invoice.dueDate}">2023-01-31</span>
+                    <strong>Date:</strong> <span th:text="${invoice.invoiceDate != null ? dates.format(invoice.invoiceDate) : ''}">2023-01-01</span><br/>
+                    <strong>Due Date:</strong> <span th:text="${invoice.dueDate != null ? dates.format(invoice.dueDate) : ''}">2023-01-31</span>
                 </div>
             </td>
         </tr>

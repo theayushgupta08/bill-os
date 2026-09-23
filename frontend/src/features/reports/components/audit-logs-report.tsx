@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { api } from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +22,7 @@ interface AuditLogRecord {
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function AuditLogsReport() {
+  const { formatDateTime } = useFormat();
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["audit-logs"],
     queryFn: async () => {
@@ -80,7 +83,7 @@ export function AuditLogsReport() {
             ) : logs.map((log: AuditLogRecord) => (
               <TableRow key={log.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">
-                  {new Date(log.createdAt).toLocaleString()}
+                  {formatDateTime(log.createdAt)}
                 </TableCell>
                 <TableCell>
                   {getActionBadge(log.action)}

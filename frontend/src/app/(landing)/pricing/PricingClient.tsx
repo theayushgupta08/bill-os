@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, HelpCircle } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function PricingClient() {
@@ -140,7 +140,7 @@ export function PricingClient() {
             </Button>
 
             <div className="flex-1 space-y-4">
-              <p className="text-sm font-semibold text-foreground">What's included:</p>
+              <p className="text-sm font-semibold text-foreground">What&apos;s included:</p>
               <ul className="space-y-3">
                 {tier.features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">

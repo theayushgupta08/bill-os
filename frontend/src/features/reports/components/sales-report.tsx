@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { api } from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +16,7 @@ import { Invoice } from "@/types";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function SalesReport() {
+  const { formatMoney, formatDate } = useFormat();
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
 
@@ -74,7 +77,7 @@ export function SalesReport() {
               type="date" 
               value={startDate} 
               onChange={(e) => setStartDate(e.target.value)} 
-              className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+              className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
             />
           </div>
           <div className="space-y-1.5 flex-1">
@@ -83,7 +86,7 @@ export function SalesReport() {
               type="date" 
               value={endDate} 
               onChange={(e) => setEndDate(e.target.value)} 
-              className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+              className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
             />
           </div>
         </div>
@@ -94,7 +97,7 @@ export function SalesReport() {
           </div>
           <div>
             <p className="text-xs text-slate-400 font-medium">Total Registered Sales</p>
-            <p className="text-lg font-bold text-white">₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+            <p className="text-lg font-bold text-white">{formatMoney(totalAmount)}</p>
           </div>
         </div>
       </div>
@@ -118,16 +121,16 @@ export function SalesReport() {
                   <BrandLoader variant="card" text="Loading invoice entries..." size="lg" />
                 </TableCell>
               </TableRow>
-            ) : invoices.map((inv: any) => (
+            ) : invoices.map((inv) => (
               <TableRow key={inv.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
-                <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">{inv.invoiceDate}</TableCell>
+                <TableCell className="text-slate-300 font-mono text-xs pl-6 py-4">{formatDate(inv.invoiceDate)}</TableCell>
                 <TableCell className="font-semibold text-white">{inv.invoiceNumber}</TableCell>
                 <TableCell className="text-slate-300 text-sm">{inv.customerName}</TableCell>
                 <TableCell>
                   {getStatusBadge(inv.status)}
                 </TableCell>
                 <TableCell className="text-right pr-6 font-mono text-sm font-semibold text-white">
-                  ₹{inv.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  {formatMoney(inv.totalAmount)}
                 </TableCell>
               </TableRow>
             ))}

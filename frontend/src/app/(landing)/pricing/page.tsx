@@ -90,7 +90,7 @@ export default function PricingPage() {
       <section className="px-4 sm:px-6 lg:px-8 py-24 max-w-5xl mx-auto w-full">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold text-foreground mb-4">Compare plans in detail</h2>
-          <p className="text-muted-foreground">See exactly what's included in every tier.</p>
+          <p className="text-muted-foreground">See exactly what&apos;s included in every tier.</p>
         </div>
 
         <div className="bg-background rounded-3xl border border-border/50 shadow-xl overflow-hidden overflow-x-auto">

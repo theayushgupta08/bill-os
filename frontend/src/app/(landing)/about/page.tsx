@@ -44,7 +44,7 @@ export default function AboutPage() {
                   {siteConfig.name} was born out of a shared frustration with legacy accounting systems. For decades, business software has forced operators to perform manual, repetitive data entry just to keep their financial records compliant. 
                 </p>
                 <p>
-                  We realized that modern businesses don't need another complex database with a steep learning curve. They need an intelligent system that understands context, extracts data autonomously, and eliminates the friction between operations and accounting. We built {siteConfig.name} to bridge that gap.
+                  We realized that modern businesses don&apos;t need another complex database with a steep learning curve. They need an intelligent system that understands context, extracts data autonomously, and eliminates the friction between operations and accounting. We built {siteConfig.name} to bridge that gap.
                 </p>
               </div>
             </section>
@@ -105,7 +105,7 @@ export default function AboutPage() {
               <BrainCircuit className="w-8 h-8 text-primary mb-4" />
               <h3 className="text-xl font-bold mb-3 text-foreground">AI-first Philosophy</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                In {siteConfig.name}, AI isn't an afterthought bolted onto an existing codebase. It is the core engine. From extracting line items on vendor bills to categorizing expenses in real-time, our machine learning models reduce manual labor so your team can focus on strategy.
+                In {siteConfig.name}, AI isn&apos;t an afterthought bolted onto an existing codebase. It is the core engine. From extracting line items on vendor bills to categorizing expenses in real-time, our machine learning models reduce manual labor so your team can focus on strategy.
               </p>
             </div>
 
@@ -113,7 +113,7 @@ export default function AboutPage() {
               <ShieldCheck className="w-8 h-8 text-primary mb-4" />
               <h3 className="text-xl font-bold mb-3 text-foreground">Security Commitment</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                We handle your business's most sensitive data. Our infrastructure enforces strict tenant isolation, at-rest encryption (AES-256), and continuous audit logging. We treat security as a fundamental engineering requirement, not a feature.
+                We handle your business&apos;s most sensitive data. Our infrastructure enforces strict tenant isolation, at-rest encryption (AES-256), and continuous audit logging. We treat security as a fundamental engineering requirement, not a feature.
               </p>
             </div>
 

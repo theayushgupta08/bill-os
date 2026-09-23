@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { api } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +19,7 @@ interface PnLData {
 }
 
 export function PnlReport() {
+  const { formatMoney } = useFormat();
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
 
@@ -59,7 +62,7 @@ export function PnlReport() {
             type="date" 
             value={startDate} 
             onChange={(e) => setStartDate(e.target.value)} 
-            className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+            className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
           />
         </div>
         <div className="space-y-1.5 flex-1">
@@ -68,7 +71,7 @@ export function PnlReport() {
             type="date" 
             value={endDate} 
             onChange={(e) => setEndDate(e.target.value)} 
-            className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+            className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
           />
         </div>
       </div>
@@ -86,7 +89,7 @@ export function PnlReport() {
             </CardHeader>
             <CardContent className="px-5 pb-4">
               <div className="text-2xl font-bold text-emerald-400 tracking-tight">
-                ₹{pnl.totalRevenue?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                {formatMoney(pnl.totalRevenue)}
               </div>
               <p className="text-xs text-slate-500 mt-1">From sales invoices & receipts</p>
             </CardContent>
@@ -101,7 +104,7 @@ export function PnlReport() {
             </CardHeader>
             <CardContent className="px-5 pb-4">
               <div className="text-2xl font-bold text-rose-400 tracking-tight">
-                ₹{pnl.totalPurchases?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                {formatMoney(pnl.totalPurchases)}
               </div>
               <p className="text-xs text-slate-500 mt-1">From supplier purchase bills</p>
             </CardContent>
@@ -116,7 +119,7 @@ export function PnlReport() {
             </CardHeader>
             <CardContent className="px-5 pb-4">
               <div className={`text-2xl font-bold tracking-tight ${pnl.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                ₹{pnl.netProfit?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                {formatMoney(pnl.netProfit)}
               </div>
               <p className="text-xs text-slate-500 mt-1">Total revenue minus purchases</p>
             </CardContent>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "@/lib/api-client";
 import { useOrganization } from "@/lib/use-organization";
+import { ORGANIZATION_SETTINGS_KEY } from "@/lib/use-format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
-import { PreferencesSettings, Organization } from "@/types";
+import { PreferencesSettings } from "@/types";
 
 export function PreferencesSettingsForm() {
   const queryClient = useQueryClient();
@@ -33,22 +34,23 @@ export function PreferencesSettingsForm() {
     enabled: !!orgId
   });
 
-  useEffect(() => {
-    if (prefSettings) {
-      // eslint-disable-next-line
-      setSettings(prefSettings);
-    }
-  }, [prefSettings]);
+  // Copy freshly fetched data into the editable form state (render-time sync instead of an effect)
+  const [syncedPrefSettings, setSyncedPrefSettings] = useState<typeof prefSettings>(undefined);
+  if (prefSettings && prefSettings !== syncedPrefSettings) {
+    setSyncedPrefSettings(prefSettings);
+    setSettings(prefSettings);
+  }
 
   const updateMutation = useMutation({
     mutationFn: (payload: Partial<PreferencesSettings>) => api.put<PreferencesSettings>(`/organizations/${orgId}/settings`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prefSettings", orgId] });
+      // Re-bind the app-wide formatters (useFormat) to the new preferences immediately
+      queryClient.invalidateQueries({ queryKey: [ORGANIZATION_SETTINGS_KEY, orgId] });
       toast.success("Preferences updated successfully!");
     },
-    onError: (error) => {
-      console.error("Failed to update preferences", error);
-      toast.error("Failed to update preferences.");
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update preferences.");
     }
   });
 
@@ -86,7 +88,7 @@ export function PreferencesSettingsForm() {
             Preferences
             <PageHelpTooltip
               title="System & UI Preferences"
-              description="Customize currency formats, decimal precision, and date formats across your store."
+              description="Choose how amounts, dates and times are displayed throughout billOS for this organization."
             />
           </h2>
           <p className="text-sm text-slate-400">Customize how BillOS looks and formats data for your organization.</p>
@@ -104,20 +106,19 @@ export function PreferencesSettingsForm() {
 
             <div className="space-y-2">
               <div className="flex items-center">
-                <Label htmlFor="language">Language</Label>
-                <HelpTooltip text="Select the primary language used for the interface text, tooltips, and default templates." />
+                <Label htmlFor="language">Number Format</Label>
+                <HelpTooltip text="How amounts and quantities are grouped on screen. Interface text is in English." />
               </div>
               <Select 
-                value={settings.language || "en"} 
+                value={settings.language === "en-US" ? "en-US" : "en-IN"} 
                 onValueChange={(val: string | null) => val && handleSelectChange("language", val)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a language" />
+                  <SelectValue placeholder="Select a number format" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="en">English (US)</SelectItem>
-                  <SelectItem value="en-IN">English (India)</SelectItem>
-                  <SelectItem value="hi">Hindi</SelectItem>
+                  <SelectItem value="en-IN">Indian — ₹1,00,000.00</SelectItem>
+                  <SelectItem value="en-US">International — ₹100,000.00</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -125,7 +126,7 @@ export function PreferencesSettingsForm() {
             <div className="space-y-2">
               <div className="flex items-center">
                 <Label htmlFor="timezone">Timezone</Label>
-                <HelpTooltip text="The default timezone for timestamps on created records, audit logs, and invoice dates." />
+                <HelpTooltip text="Time zone used to show times on activity, audit logs and notifications. Document dates (invoice, bill, order dates) are calendar dates and are never shifted." />
               </div>
               <Select 
                 value={settings.timezone || "Asia/Kolkata"} 

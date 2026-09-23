@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
@@ -40,6 +42,7 @@ interface JournalEntry {
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function JournalEntryList() {
+  const { formatDate } = useFormat();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const { data: entries = [] as JournalEntry[], isLoading } = useQuery({
@@ -137,7 +140,7 @@ export function JournalEntryList() {
             ) : (
               paginatedData.map((entry: JournalEntry) => (
                 <TableRow key={entry.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
-                  <TableCell className="font-medium">{entry.entryDate}</TableCell>
+                  <TableCell className="font-medium">{formatDate(entry.entryDate)}</TableCell>
                   <TableCell>{entry.referenceNumber || "-"}</TableCell>
                   <TableCell>{entry.description}</TableCell>
                   <TableCell>

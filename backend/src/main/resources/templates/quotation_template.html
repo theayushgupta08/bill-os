@@ -38,8 +38,8 @@
                 <div class="title">QUOTATION</div>
                 <div style="text-align: right; margin-top: 10px;">
                     <strong>Quote #:</strong> <span th:text="${quote.quoteNumber}">QT-0001</span><br/>
-                    <strong>Date:</strong> <span th:text="${quote.quoteDate}">2023-01-01</span><br/>
-                    <strong>Valid Until:</strong> <span th:text="${quote.expiryDate}">2023-01-31</span>
+                    <strong>Date:</strong> <span th:text="${quote.quoteDate != null ? dates.format(quote.quoteDate) : ''}">2023-01-01</span><br/>
+                    <strong>Valid Until:</strong> <span th:text="${quote.expiryDate != null ? dates.format(quote.expiryDate) : ''}">2023-01-31</span>
                 </div>
             </td>
         </tr>

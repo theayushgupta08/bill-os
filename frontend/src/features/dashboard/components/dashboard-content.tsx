@@ -1,5 +1,8 @@
 "use client";
 
+import type { Invoice, PurchaseBill } from "@/types";
+
+import { useFormat } from "@/lib/use-format";
 import {
   Card,
   CardContent,
@@ -34,7 +37,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { useOrganization } from "@/lib/use-organization";
+
 import { useRouter } from "next/navigation";
 
 interface DashboardSummary {
@@ -42,14 +45,8 @@ interface DashboardSummary {
   totalExpensesMtd?: number;
   outstandingReceivables?: number;
   outstandingPayables?: number;
-  recentInvoices?: any[];
-  recentBills?: any[];
-}
-
-function formatCurrency(amount: number) {
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${amount.toFixed(2)}`;
+  recentInvoices?: Invoice[];
+  recentBills?: PurchaseBill[];
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -109,6 +106,7 @@ const quickActions = [
 ];
 
 export function DashboardContent() {
+  const { formatMoney, formatMoneyCompact, formatLongDate } = useFormat();
   const router = useRouter();
 
   const {
@@ -151,7 +149,7 @@ export function DashboardContent() {
   const metrics = [
     {
       title: "Revenue (MTD)",
-      value: formatCurrency(summary.totalRevenueMtd || 0),
+      value: formatMoneyCompact(summary.totalRevenueMtd || 0),
       raw: summary.totalRevenueMtd || 0,
       icon: TrendingUp,
       iconColor: "text-emerald-400",
@@ -160,7 +158,7 @@ export function DashboardContent() {
     },
     {
       title: "Expenses (MTD)",
-      value: formatCurrency(summary.totalExpensesMtd || 0),
+      value: formatMoneyCompact(summary.totalExpensesMtd || 0),
       raw: summary.totalExpensesMtd || 0,
       icon: TrendingDown,
       iconColor: "text-red-400",
@@ -169,7 +167,7 @@ export function DashboardContent() {
     },
     {
       title: "Receivables",
-      value: formatCurrency(summary.outstandingReceivables || 0),
+      value: formatMoneyCompact(summary.outstandingReceivables || 0),
       subtitle: "To be collected",
       icon: ArrowUpRight,
       iconColor: "text-indigo-400",
@@ -178,7 +176,7 @@ export function DashboardContent() {
     },
     {
       title: "Payables",
-      value: formatCurrency(summary.outstandingPayables || 0),
+      value: formatMoneyCompact(summary.outstandingPayables || 0),
       subtitle: "To be paid",
       icon: ArrowDownRight,
       iconColor: "text-amber-400",
@@ -200,12 +198,7 @@ export function DashboardContent() {
             />
           </h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {new Date().toLocaleDateString("en-IN", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            {formatLongDate(new Date())}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -320,7 +313,7 @@ export function DashboardContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summary.recentInvoices?.map((inv: any) => (
+                {summary.recentInvoices?.map((inv) => (
                   <TableRow
                     key={inv.id}
                     className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border/30"
@@ -335,7 +328,7 @@ export function DashboardContent() {
                       <StatusBadge status={inv.status} />
                     </TableCell>
                     <TableCell className="text-right pr-6 font-semibold text-sm">
-                      ₹{inv.totalAmount?.toFixed(2)}
+                      {formatMoney(inv.totalAmount)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -384,7 +377,7 @@ export function DashboardContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summary.recentBills?.map((bill: any) => (
+                {summary.recentBills?.map((bill) => (
                   <TableRow
                     key={bill.id}
                     className="hover:bg-muted/30 transition-colors cursor-pointer border-b border-border/30"
@@ -399,7 +392,7 @@ export function DashboardContent() {
                       <StatusBadge status={bill.status} />
                     </TableCell>
                     <TableCell className="text-right pr-6 font-semibold text-sm">
-                      ₹{bill.totalAmount?.toFixed(2)}
+                      {formatMoney(bill.totalAmount)}
                     </TableCell>
                   </TableRow>
                 ))}

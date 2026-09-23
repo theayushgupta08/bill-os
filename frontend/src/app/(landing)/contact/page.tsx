@@ -234,7 +234,7 @@ export default function ContactPage() {
               <HelpCircle className="w-6 h-6 text-primary" />
             </div>
             <h2 className="text-3xl font-bold text-foreground mb-4">Frequently Asked Questions</h2>
-            <p className="text-muted-foreground">Can't find the answer you're looking for? Reach out to our customer support team.</p>
+            <p className="text-muted-foreground">Can&apos;t find the answer you&apos;re looking for? Reach out to our customer support team.</p>
           </div>
 
           <Accordion className="w-full">

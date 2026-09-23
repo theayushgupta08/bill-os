@@ -3,6 +3,7 @@ package com.billos.api.service;
 import com.billos.api.dto.QuotationDto;
 import com.billos.api.dto.QuotationLineDto;
 import com.billos.api.entity.*;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.QuotationMapper;
 import com.billos.api.repository.QuotationRepository;
 import com.billos.api.repository.TaxRateRepository;
@@ -38,7 +39,7 @@ public class QuotationService {
         return quotationRepository
                 .findById(id)
                 .map(quotationMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Quotation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Quotation not found"));
     }
 
     @Transactional
@@ -68,7 +69,7 @@ public class QuotationService {
             if (lineDto.getTaxRateId() != null) {
                 taxRate = taxRateRepository
                         .findById(lineDto.getTaxRateId())
-                        .orElseThrow(() -> new RuntimeException("Tax Rate not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Tax Rate not found"));
             }
 
             QuotationLine line = new QuotationLine();

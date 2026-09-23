@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,22 +40,23 @@ export default function SupplierForm({ supplierId }: SupplierFormProps) {
     enabled: !!supplierId,
   });
 
-  useEffect(() => {
-    if (supplier) {
-      setFormData({
-        name: supplier.name || "",
-        email: supplier.email || "",
-        phone: supplier.phone || "",
-        gstin: supplier.gstin || "",
-        addressLine1: supplier.addressLine1 || "",
-        addressLine2: supplier.addressLine2 || "",
-        city: supplier.city || "",
-        state: supplier.state || "",
-        pincode: supplier.pincode || "",
-        country: supplier.country || "",
-      });
-    }
-  }, [supplier]);
+  // Copy freshly fetched data into the editable form state (render-time sync instead of an effect)
+  const [syncedSupplier, setSyncedSupplier] = useState<typeof supplier>(undefined);
+  if (supplier && supplier !== syncedSupplier) {
+    setSyncedSupplier(supplier);
+    setFormData({
+      name: supplier.name || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      gstin: supplier.gstin || "",
+      addressLine1: supplier.addressLine1 || "",
+      addressLine2: supplier.addressLine2 || "",
+      city: supplier.city || "",
+      state: supplier.state || "",
+      pincode: supplier.pincode || "",
+      country: supplier.country || "",
+    });
+  }
 
   const saveMutation = useMutation({
     mutationFn: (data: typeof formData) => {

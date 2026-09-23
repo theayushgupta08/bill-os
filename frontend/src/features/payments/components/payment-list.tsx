@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
@@ -35,6 +37,7 @@ interface PaymentRecord {
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function PaymentList() {
+  const { formatMoney, formatDate } = useFormat();
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
 
   const { data: payments = [] as PaymentRecord[], isLoading } = useQuery({
@@ -131,14 +134,14 @@ export function PaymentList() {
               paginatedData.map((p: PaymentRecord) => (
                 <TableRow key={p.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{p.paymentNumber}</TableCell>
-                  <TableCell>{p.paymentDate}</TableCell>
+                  <TableCell>{formatDate(p.paymentDate)}</TableCell>
                   <TableCell>
                     <Badge variant="default" className={(p.paymentType || p.type) === 'RECEIPT' ? "bg-green-500" : "bg-red-500"}>
                       {p.paymentType || p.type}
                     </Badge>
                   </TableCell>
                   <TableCell>{p.referenceNumber || "-"}</TableCell>
-                  <TableCell className="text-right font-bold">₹{p.amount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-bold">{formatMoney(p.amount)}</TableCell>
                 </TableRow>
               ))
             )}

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import {
   Dialog,
@@ -48,6 +50,7 @@ const PLACES = [
 const QUICK_AMOUNTS = [100, 250, 500, 1000, 2000, 5000];
 
 export function CollectPaymentModal() {
+  const { formatMoney } = useFormat();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"select" | "qr" | "success">("select");
   const [selectedQr, setSelectedQr] = useState<CollectionQrCode | null>(null);
@@ -248,7 +251,7 @@ export function CollectPaymentModal() {
                   <span>Enter Amount Received (₹) <span className="text-rose-400">*</span></span>
                   {amount && Number(amount) > 0 && (
                     <span className="text-emerald-400 font-semibold font-mono">
-                      ₹{parseFloat(amount).toLocaleString("en-IN")}
+                      {formatMoney(parseFloat(amount))}
                     </span>
                   )}
                 </Label>
@@ -361,7 +364,7 @@ export function CollectPaymentModal() {
               <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                 <span className="text-slate-400">Amount Collected</span>
                 <span className="text-base font-bold text-emerald-400 font-mono">
-                  ₹{parseFloat(amount || "0").toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  {formatMoney(parseFloat(amount || "0"))}
                 </span>
               </div>
               <div className="flex justify-between items-center">

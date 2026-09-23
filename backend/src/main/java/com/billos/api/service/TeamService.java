@@ -6,6 +6,10 @@ import com.billos.api.dto.TeamMemberDto;
 import com.billos.api.entity.Organization;
 import com.billos.api.entity.User;
 import com.billos.api.entity.UserOrgRole;
+import com.billos.api.exception.BadRequestException;
+import com.billos.api.exception.ConflictException;
+import com.billos.api.exception.ForbiddenException;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.repository.OrganizationRepository;
 import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
@@ -114,13 +118,13 @@ public class TeamService {
         // Resolve the email suffix — use primary org's suffix (branches inherit)
         Organization org = organizationRepository
                 .findById(orgId)
-                .orElseThrow(() -> new RuntimeException("Organization not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
         String suffix = org.getEmailSuffix();
         if (suffix == null && org.getParentOrganizationId() != null) {
             Organization parent = organizationRepository
                     .findById(org.getParentOrganizationId())
-                    .orElseThrow(() -> new RuntimeException("Parent organization not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent organization not found"));
             suffix = parent.getEmailSuffix();
         }
         if (suffix == null || suffix.isBlank()) {
@@ -194,18 +198,20 @@ public class TeamService {
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         UserOrgRole callerRole = userOrgRoleRepository
                 .findByUserIdAndOrganizationId(principal.getId(), orgId)
-                .orElseThrow(() -> new RuntimeException("Caller is not a member of this organization"));
+                .orElseThrow(() -> new ForbiddenException("Caller is not a member of this organization"));
         if (!"OWNER".equals(callerRole.getRole()) && !"ADMIN".equals(callerRole.getRole())) {
-            throw new RuntimeException("Only OWNER or ADMIN can reset passwords");
+            throw new ForbiddenException("Only OWNER or ADMIN can reset passwords");
         }
 
         if (principal.getId().equals(targetUserId)) {
-            throw new RuntimeException("Use the change-password flow to change your own password");
+            throw new BadRequestException("Use the change-password flow to change your own password");
         }
 
-        User target = userRepository.findById(targetUserId).orElseThrow(() -> new RuntimeException("User not found"));
+        User target = userRepository
+                .findById(targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         if (target.getSupabaseId() == null) {
-            throw new RuntimeException("User does not have a Supabase auth account");
+            throw new BadRequestException("User does not have a Supabase auth account");
         }
 
         String newPassword = generatePassword(12);
@@ -226,20 +232,20 @@ public class TeamService {
         Organization org = organizationRepository.findById(orgId).orElse(null);
         UUID creatorId = resolveOrganizationCreator(org);
         if (creatorId != null && creatorId.equals(userId)) {
-            throw new RuntimeException(
+            throw new ConflictException(
                     "Cannot change role of the organization creator. The creator must remain OWNER.");
         }
 
         UserOrgRole role = userOrgRoleRepository
                 .findByUserIdAndOrganizationId(userId, orgId)
-                .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
+                .orElseThrow(() -> new BadRequestException("User is not a member of this organization"));
 
         if ("OWNER".equals(role.getRole()) && !"OWNER".equals(newRole)) {
             long ownerCount = userOrgRoleRepository.findByOrganizationId(orgId).stream()
                     .filter(r -> "OWNER".equals(r.getRole()))
                     .count();
             if (ownerCount <= 1) {
-                throw new RuntimeException("Cannot change role of the last owner");
+                throw new ConflictException("Cannot change role of the last owner");
             }
         }
 
@@ -256,19 +262,19 @@ public class TeamService {
         Organization org = organizationRepository.findById(orgId).orElse(null);
         UUID creatorId = resolveOrganizationCreator(org);
         if (creatorId != null && creatorId.equals(userId)) {
-            throw new RuntimeException("Cannot remove the organization creator from the organization.");
+            throw new ConflictException("Cannot remove the organization creator from the organization.");
         }
 
         UserOrgRole role = userOrgRoleRepository
                 .findByUserIdAndOrganizationId(userId, orgId)
-                .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
+                .orElseThrow(() -> new BadRequestException("User is not a member of this organization"));
 
         if ("OWNER".equals(role.getRole())) {
             long ownerCount = userOrgRoleRepository.findByOrganizationId(orgId).stream()
                     .filter(r -> "OWNER".equals(r.getRole()))
                     .count();
             if (ownerCount <= 1) {
-                throw new RuntimeException("Cannot remove the last owner of the organization");
+                throw new ConflictException("Cannot remove the last owner of the organization");
             }
         }
         userOrgRoleRepository.delete(role);
@@ -283,7 +289,7 @@ public class TeamService {
         Organization org = organizationRepository.findById(orgId).orElse(null);
         UUID creatorId = resolveOrganizationCreator(org);
         if (creatorId != null && creatorId.equals(targetUserId)) {
-            throw new RuntimeException(
+            throw new ConflictException(
                     "Cannot change status of the organization creator. The creator cannot be made inactive.");
         }
 
@@ -293,11 +299,11 @@ public class TeamService {
 
         UserOrgRole callerOrgRole = userOrgRoleRepository
                 .findByUserIdAndOrganizationId(callerId, orgId)
-                .orElseThrow(() -> new RuntimeException("Caller is not a member of this organization"));
+                .orElseThrow(() -> new ForbiddenException("Caller is not a member of this organization"));
 
         UserOrgRole targetOrgRole = userOrgRoleRepository
                 .findByUserIdAndOrganizationId(targetUserId, orgId)
-                .orElseThrow(() -> new RuntimeException("Target user is not a member of this organization"));
+                .orElseThrow(() -> new BadRequestException("Target user is not a member of this organization"));
 
         List<String> hierarchy = List.of("OWNER", "ADMIN", "MANAGER", "USER", "VIEWER");
 
@@ -312,19 +318,21 @@ public class TeamService {
         }
 
         if (callerId.equals(targetUserId)) {
-            throw new RuntimeException("You cannot change the status of your own account");
+            throw new BadRequestException("You cannot change the status of your own account");
         }
 
         if (!"OWNER".equals(callerRoleStr) && !"ADMIN".equals(callerRoleStr)) {
-            throw new RuntimeException("Only Owner and Admin have permission to toggle user status");
+            throw new ForbiddenException("Only Owner and Admin have permission to toggle user status");
         }
 
         if (callerLevel >= targetLevel) {
-            throw new RuntimeException("You do not have permission to change status of user with equal or higher role");
+            throw new ForbiddenException(
+                    "You do not have permission to change status of user with equal or higher role");
         }
 
-        User targetUser =
-                userRepository.findById(targetUserId).orElseThrow(() -> new RuntimeException("User not found"));
+        User targetUser = userRepository
+                .findById(targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         targetUser.setIsActive(active);
 

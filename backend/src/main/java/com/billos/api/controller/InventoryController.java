@@ -8,6 +8,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,16 +19,19 @@ public class InventoryController {
     private final InventoryService inventoryService;
 
     @GetMapping("/levels")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<List<InventoryLevelDto>> getAllInventoryLevels() {
         return ResponseEntity.ok(inventoryService.getAllInventoryLevels());
     }
 
     @GetMapping("/products/{productId}/movements")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<List<StockMovementDto>> getProductMovements(@PathVariable UUID productId) {
         return ResponseEntity.ok(inventoryService.getProductMovements(productId));
     }
 
     @PostMapping("/adjust")
+    @PreAuthorize("@tenantSecurity.hasRole('USER')")
     public ResponseEntity<StockMovementDto> adjustStock(@RequestBody StockMovementDto request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(inventoryService.adjustStock(request));
     }

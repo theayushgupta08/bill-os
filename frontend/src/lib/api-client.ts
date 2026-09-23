@@ -141,6 +141,11 @@ export class ApiError extends Error {
   }
 }
 
+/** The user-facing message of a failed call (ApiError already carries the backend's message). */
+export function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
 /**
  * Downloads a PDF from the API using the Axios instance.
  */

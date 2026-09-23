@@ -33,6 +33,9 @@ public class DocumentGenerationServiceTest {
     @Mock
     private PurchaseOrderService purchaseOrderService;
 
+    @Mock
+    private com.billos.api.repository.OrganizationSettingsRepository organizationSettingsRepository;
+
     @InjectMocks
     private DocumentGenerationService documentGenerationService;
 
@@ -80,5 +83,31 @@ public class DocumentGenerationServiceTest {
         org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> {
             documentGenerationService.generatePdfFromHtml("<html><body>No closing tags");
         });
+    }
+
+    @org.junit.jupiter.api.Test
+    void dateFormatter_followsOrganizationPreference() {
+        java.util.UUID orgId = java.util.UUID.randomUUID();
+        com.billos.api.tenant.TenantContext.setCurrentTenant(orgId.toString());
+        try {
+            com.billos.api.entity.OrganizationSettings settings = new com.billos.api.entity.OrganizationSettings();
+            settings.setDateFormat("MM/DD/YYYY");
+            when(organizationSettingsRepository.findByOrganizationId(orgId))
+                    .thenReturn(java.util.Optional.of(settings));
+
+            String formatted = documentGenerationService.dateFormatter().format(java.time.LocalDate.of(2026, 9, 23));
+
+            org.assertj.core.api.Assertions.assertThat(formatted).isEqualTo("09/23/2026");
+        } finally {
+            com.billos.api.tenant.TenantContext.clear();
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    void toJavaPattern_defaultsToIndianDayFirst() {
+        org.assertj.core.api.Assertions.assertThat(DocumentGenerationService.toJavaPattern(null))
+                .isEqualTo("dd/MM/yyyy");
+        org.assertj.core.api.Assertions.assertThat(DocumentGenerationService.toJavaPattern("YYYY-MM-DD"))
+                .isEqualTo("yyyy-MM-dd");
     }
 }

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { api } from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -25,6 +27,7 @@ interface GSTR1Record {
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function Gstr1Report() {
+  const { formatMoney, formatDate } = useFormat();
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
 
@@ -80,7 +83,7 @@ export function Gstr1Report() {
               type="date" 
               value={startDate} 
               onChange={(e) => setStartDate(e.target.value)} 
-              className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+              className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
             />
           </div>
           <div className="space-y-1.5 flex-1">
@@ -89,7 +92,7 @@ export function Gstr1Report() {
               type="date" 
               value={endDate} 
               onChange={(e) => setEndDate(e.target.value)} 
-              className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+              className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
             />
           </div>
         </div>
@@ -102,7 +105,7 @@ export function Gstr1Report() {
           <div>
             <p className="text-xs text-slate-400 font-medium">Total Outward GST</p>
             <p className="text-lg font-bold text-white">
-              ₹{(totals.cgst + totals.sgst + totals.igst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              {formatMoney((totals.cgst + totals.sgst + totals.igst))}
             </p>
           </div>
         </div>
@@ -144,12 +147,12 @@ export function Gstr1Report() {
                 </TableCell>
                 <TableCell className="text-white text-sm font-medium">{row.customerName}</TableCell>
                 <TableCell className="text-slate-300 font-mono text-xs">{row.invoiceNumber}</TableCell>
-                <TableCell className="text-slate-350 text-xs font-mono">{row.invoiceDate}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-slate-300">₹{row.taxableValue?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-slate-350">₹{row.cgstAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-slate-350">₹{row.sgstAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-slate-350">₹{row.igstAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
-                <TableCell className="text-right pr-6 font-mono text-sm font-semibold text-white">₹{row.totalAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                <TableCell className="text-slate-300 text-xs font-mono">{formatDate(row.invoiceDate)}</TableCell>
+                <TableCell className="text-right font-mono text-xs text-slate-300">{formatMoney(row.taxableValue)}</TableCell>
+                <TableCell className="text-right font-mono text-xs text-slate-300">{formatMoney(row.cgstAmount)}</TableCell>
+                <TableCell className="text-right font-mono text-xs text-slate-300">{formatMoney(row.sgstAmount)}</TableCell>
+                <TableCell className="text-right font-mono text-xs text-slate-300">{formatMoney(row.igstAmount)}</TableCell>
+                <TableCell className="text-right pr-6 font-mono text-sm font-semibold text-white">{formatMoney(row.totalAmount)}</TableCell>
               </TableRow>
             ))}
             {!isLoading && data.length === 0 && (

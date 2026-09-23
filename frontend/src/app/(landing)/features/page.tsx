@@ -1,14 +1,14 @@
 import { Metadata } from "next";
 import { siteConfig } from "@/lib/config";
-import { 
-  FileText, 
-  Package, 
-  BrainCircuit, 
-  Workflow, 
-  CheckCircle2, 
-  ArrowRight 
+import {
+  FileText,
+  Package,
+  BrainCircuit,
+  Workflow,
+  CheckCircle2,
+  ArrowRight,
 } from "lucide-react";
-import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -126,7 +126,7 @@ export default function FeaturesPage() {
               <div className="relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl h-[400px] flex flex-col justify-center items-center text-center">
                 <BrainCircuit className="w-24 h-24 text-primary mb-6 animate-pulse" />
                 <h3 className="text-xl font-bold text-white mb-2">Ask your data anything</h3>
-                <p className="text-white/70 max-w-sm">"What were our top selling products last month across all branches?"</p>
+                <p className="text-white/70 max-w-sm">&quot;What were our top selling products last month across all branches?&quot;</p>
               </div>
             </div>
             <div className="order-1 md:order-2">

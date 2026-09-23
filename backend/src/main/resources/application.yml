@@ -51,9 +51,15 @@ spring:
 
 server:
   port: 8080
+  # Resolve the client IP (for rate limiting) and scheme from X-Forwarded-* safely via Tomcat's RemoteIpValve:
+  # the header is only honoured when it arrives from a trusted proxy. Private/loopback ranges are trusted by default
+  # (covers Render's internal load balancer). If a public CDN sits in front, add its ranges with
+  # SERVER_TOMCAT_REMOTEIP_TRUSTED_PROXIES (regex) — otherwise every client appears as the CDN's IP.
+  forward-headers-strategy: native
   error:
-    include-message: always
-    include-binding-errors: always
+    # API errors are rendered by GlobalExceptionHandler; don't leak raw exception text from anything else
+    include-message: never
+    include-binding-errors: never
 
 app:
   frontend:

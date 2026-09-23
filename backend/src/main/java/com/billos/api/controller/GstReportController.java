@@ -4,6 +4,7 @@ import com.billos.api.service.GstReportingService;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -14,11 +15,13 @@ public class GstReportController {
     private final GstReportingService gstReportingService;
 
     @GetMapping("/hsn-summary")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<Map<String, Object>> getHsnSummary() {
         return ResponseEntity.ok(gstReportingService.getHsnSummary());
     }
 
     @GetMapping("/einvoice/{invoiceId}")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<String> getEInvoiceJson(@PathVariable String invoiceId) {
         return ResponseEntity.ok()
                 .header("Content-Type", "application/json")

@@ -14,6 +14,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,6 +25,7 @@ public class ReportController {
     private final ReportService reportService;
 
     @GetMapping("/sales-register")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<List<SalesInvoiceDto>> getSalesRegister(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
@@ -31,6 +33,7 @@ public class ReportController {
     }
 
     @GetMapping("/purchase-register")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<List<PurchaseBillDto>> getPurchaseRegister(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
@@ -38,11 +41,13 @@ public class ReportController {
     }
 
     @GetMapping("/stock-summary")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<List<InventoryLevelDto>> getStockSummary() {
         return ResponseEntity.ok(reportService.getStockSummary());
     }
 
     @GetMapping("/pnl")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<PnlDto> getProfitAndLoss(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
@@ -50,16 +55,19 @@ public class ReportController {
     }
 
     @GetMapping("/outstanding-receivables")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<List<CustomerDto>> getOutstandingReceivables() {
         return ResponseEntity.ok(reportService.getOutstandingReceivables());
     }
 
     @GetMapping("/outstanding-payables")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<List<SupplierDto>> getOutstandingPayables() {
         return ResponseEntity.ok(reportService.getOutstandingPayables());
     }
 
     @GetMapping("/gstr1")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<List<Gstr1Dto>> getGstr1(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
@@ -67,6 +75,7 @@ public class ReportController {
     }
 
     @GetMapping("/gstr3b")
+    @PreAuthorize("@tenantSecurity.isMember()")
     public ResponseEntity<Gstr3bDto> getGstr3b(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {

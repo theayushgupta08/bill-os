@@ -1,16 +1,18 @@
 "use client";
 
+import { useFormat } from "@/lib/use-format";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { ChevronDown, Check, PackagePlus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Product } from "@/types";
+import type { Product } from "@/types";
+
 import { CreateProductDialog } from "@/features/products/components/create-product-dialog";
 
 interface ProductComboboxProps {
-  products: any[];
+  products: Product[];
   value: string;
-  onChange: (value: string, product?: any) => void;
+  onChange: (value: string, product?: Product) => void;
   className?: string;
 }
 
@@ -20,6 +22,7 @@ export function ProductCombobox({
   onChange,
   className,
 }: ProductComboboxProps) {
+  const { formatMoney } = useFormat();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -70,7 +73,7 @@ export function ProductCombobox({
     );
   }, [products, searchTerm]);
 
-  const handleSelectProduct = (product: any) => {
+  const handleSelectProduct = (product: Product) => {
     onChange(product.id, product);
     setIsOpen(false);
     setSearchTerm("");
@@ -177,7 +180,7 @@ export function ProductCombobox({
                         )}
                       </div>
                       <span className="text-xs font-mono font-semibold text-emerald-400 shrink-0">
-                        ₹{(Number(product.price ?? product.basePrice) || 0).toFixed(2)}
+                        {formatMoney((Number(product.price ?? product.basePrice) || 0))}
                       </span>
                     </div>
                   ))
@@ -217,7 +220,7 @@ export function ProductCombobox({
                         )}
                       </div>
                       <span className="text-xs font-mono font-semibold text-emerald-400 shrink-0">
-                        ₹{(Number(product.price ?? product.basePrice) || 0).toFixed(2)}
+                        {formatMoney((Number(product.price ?? product.basePrice) || 0))}
                       </span>
                     </div>
                   ))

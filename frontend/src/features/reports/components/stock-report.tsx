@@ -1,5 +1,7 @@
 "use client";
 
+import { useFormat } from "@/lib/use-format";
+
 import { api } from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +18,7 @@ interface StockRecord {
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function StockReport() {
+  const { formatNumber } = useFormat();
   const { data: stock = [], isLoading } = useQuery({
     queryKey: ["stock-summary"],
     queryFn: async () => {
@@ -52,7 +55,7 @@ export function StockReport() {
           <p className="text-xs text-slate-500 mt-0.5">Sum of all warehouse quantities</p>
         </div>
         <div className="text-3xl font-extrabold text-indigo-400 font-mono tracking-tight">
-          {totalQuantity.toLocaleString()}
+          {formatNumber(totalQuantity)}
         </div>
       </div>
 
@@ -77,10 +80,10 @@ export function StockReport() {
             ) : stock.map((item: StockRecord, idx: number) => (
               <TableRow key={idx} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                 <TableCell className="font-semibold text-white pl-6 py-4">{item.productName}</TableCell>
-                <TableCell className="text-slate-350 font-mono text-xs">{item.sku || "—"}</TableCell>
+                <TableCell className="text-slate-300 font-mono text-xs">{item.sku || "—"}</TableCell>
                 <TableCell className="text-slate-300 text-sm">{item.warehouseName}</TableCell>
-                <TableCell className={`text-right pr-6 font-mono text-sm font-semibold ${item.quantity <= 5 ? "text-rose-450" : "text-white"}`}>
-                  {item.quantity.toLocaleString()}
+                <TableCell className={`text-right pr-6 font-mono text-sm font-semibold ${item.quantity <= 5 ? "text-rose-400" : "text-white"}`}>
+                  {formatNumber(item.quantity)}
                 </TableCell>
               </TableRow>
             ))}

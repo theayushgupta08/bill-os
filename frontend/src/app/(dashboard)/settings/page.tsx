@@ -5,11 +5,9 @@ import {
   Building2,
   Users,
   Percent,
-  Receipt,
   FileText,
   Settings,
   ChevronRight,
-  Shield,
 } from "lucide-react";
 import {
   Card,

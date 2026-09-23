@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   const cookieStore = await cookies();
-  const cookiesToSetList: { name: string; value: string; options?: any }[] = [];
+  const cookiesToSetList: { name: string; value: string; options?: CookieOptions }[] = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

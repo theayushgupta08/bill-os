@@ -40,7 +40,7 @@ export default function TermsOfServicePage() {
       <section className="mb-16">
         <DocumentHeading id="acceptance">1. Acceptance of Terms</DocumentHeading>
         <p className="mb-4">
-          By accessing or using the services provided by {siteConfig.name} ("we," "our," or "us"), you agree to be bound by these Terms of Service. If you do not agree to these terms, you must not use our software or platform.
+          By accessing or using the services provided by {siteConfig.name} (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;), you agree to be bound by these Terms of Service. If you do not agree to these terms, you must not use our software or platform.
         </p>
       </section>
 
@@ -96,7 +96,7 @@ export default function TermsOfServicePage() {
       <section className="mb-16">
         <DocumentHeading id="ai-features">8. AI Features Disclaimer</DocumentHeading>
         <p className="mb-4">
-          {siteConfig.name} utilizes artificial intelligence to assist with data entry, categorization, and reporting. While we strive for accuracy, AI-generated insights are provided "as-is" and do not constitute professional accounting, financial, or legal advice. You remain solely responsible for reviewing and verifying the accuracy of all invoices, reports, and tax filings generated through our platform.
+          {siteConfig.name} utilizes artificial intelligence to assist with data entry, categorization, and reporting. While we strive for accuracy, AI-generated insights are provided &quot;as-is&quot; and do not constitute professional accounting, financial, or legal advice. You remain solely responsible for reviewing and verifying the accuracy of all invoices, reports, and tax filings generated through our platform.
         </p>
       </section>
 
@@ -159,7 +159,7 @@ export default function TermsOfServicePage() {
       <section className="mb-16">
         <DocumentHeading id="changes">17. Changes to Terms</DocumentHeading>
         <p className="mb-4">
-          We reserve the right to modify these Terms at our discretion. If a revision is material, we will provide at least 30 days' notice prior to any new terms taking effect. By continuing to access the service after revisions become effective, you agree to be bound by the revised terms.
+          We reserve the right to modify these Terms at our discretion. If a revision is material, we will provide at least 30 days&apos; notice prior to any new terms taking effect. By continuing to access the service after revisions become effective, you agree to be bound by the revised terms.
         </p>
       </section>
 

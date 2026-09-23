@@ -2,6 +2,7 @@ package com.billos.api.service;
 
 import com.billos.api.dto.WarehouseDto;
 import com.billos.api.entity.Warehouse;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.WarehouseMapper;
 import com.billos.api.repository.WarehouseRepository;
 import com.billos.api.tenant.TenantContext;
@@ -32,7 +33,7 @@ public class WarehouseService {
         return warehouseRepository
                 .findById(id)
                 .map(warehouseMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Warehouse not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
     }
 
     @Transactional
@@ -45,8 +46,9 @@ public class WarehouseService {
 
     @Transactional
     public WarehouseDto updateWarehouse(UUID id, WarehouseDto dto) {
-        Warehouse existing =
-                warehouseRepository.findById(id).orElseThrow(() -> new RuntimeException("Warehouse not found"));
+        Warehouse existing = warehouseRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
 
         existing.setName(dto.getName());
         existing.setCode(dto.getCode());

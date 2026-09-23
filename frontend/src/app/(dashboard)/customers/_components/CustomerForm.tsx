@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,22 +39,23 @@ export default function CustomerForm({ customerId }: CustomerFormProps) {
     enabled: !!customerId,
   });
 
-  useEffect(() => {
-    if (customer) {
-      setFormData({
-        name: customer.name || "",
-        email: customer.email || "",
-        phone: customer.phone || "",
-        gstin: customer.gstin || "",
-        billingAddressLine1: customer.billingAddressLine1 || "",
-        billingAddressLine2: customer.billingAddressLine2 || "",
-        billingCity: customer.billingCity || "",
-        billingState: customer.billingState || "",
-        billingPincode: customer.billingPincode || "",
-        billingCountry: customer.billingCountry || "",
-      });
-    }
-  }, [customer]);
+  // Copy freshly fetched data into the editable form state (render-time sync instead of an effect)
+  const [syncedCustomer, setSyncedCustomer] = useState<typeof customer>(undefined);
+  if (customer && customer !== syncedCustomer) {
+    setSyncedCustomer(customer);
+    setFormData({
+      name: customer.name || "",
+      email: customer.email || "",
+      phone: customer.phone || "",
+      gstin: customer.gstin || "",
+      billingAddressLine1: customer.billingAddressLine1 || "",
+      billingAddressLine2: customer.billingAddressLine2 || "",
+      billingCity: customer.billingCity || "",
+      billingState: customer.billingState || "",
+      billingPincode: customer.billingPincode || "",
+      billingCountry: customer.billingCountry || "",
+    });
+  }
 
   const saveMutation = useMutation({
     mutationFn: (data: typeof formData) => {

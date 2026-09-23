@@ -1,8 +1,10 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { api } from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { IndianRupee, ArrowDownRight, Users } from "lucide-react";
+import { ArrowDownRight, Users } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { useQuery } from "@tanstack/react-query";
 
@@ -17,6 +19,7 @@ interface PayableRecord {
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function PayablesReport() {
+  const { formatMoney } = useFormat();
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["outstanding-payables"],
     queryFn: async () => {
@@ -53,8 +56,7 @@ export function PayablesReport() {
           <p className="text-xs text-slate-500 mt-0.5">Sum of all outstanding supplier balances</p>
         </div>
         <div className="text-3xl font-extrabold text-amber-400 font-mono tracking-tight flex items-center">
-          <IndianRupee className="h-6 w-6 mr-0.5" />
-          {totalOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          {formatMoney(totalOutstanding)}
         </div>
       </div>
 
@@ -82,7 +84,7 @@ export function PayablesReport() {
                 <TableCell className="text-slate-300 font-mono text-xs">{s.gstin || "—"}</TableCell>
                 <TableCell className="text-slate-300 text-sm">{s.phone || "—"}</TableCell>
                 <TableCell className="text-right pr-6 font-mono text-sm font-semibold text-amber-400">
-                  ₹{s.outstandingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  {formatMoney(s.outstandingBalance)}
                 </TableCell>
               </TableRow>
             ))}

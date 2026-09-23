@@ -3,6 +3,8 @@ package com.billos.api.service;
 import com.billos.api.entity.CollectionQrCode;
 import com.billos.api.entity.Customer;
 import com.billos.api.entity.Product;
+import com.billos.api.exception.BadRequestException;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.repository.CollectionQrCodeRepository;
 import com.billos.api.repository.CustomerRepository;
 import com.billos.api.repository.ProductRepository;
@@ -30,7 +32,7 @@ public class SharedEntityResolver {
     public UUID currentOrgId() {
         String tenant = TenantContext.getCurrentTenant();
         if (tenant == null) {
-            throw new IllegalStateException("No active organization");
+            throw new BadRequestException("No active organization");
         }
         return UUID.fromString(tenant);
     }
@@ -40,7 +42,7 @@ public class SharedEntityResolver {
         UUID orgId = currentOrgId();
         return customerRepository
                 .findAccessibleById(id, orgId, organizationService.resolvePrimaryOrgId(orgId))
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
     }
 
     /** A product owned by the current org, or shared by its parent — for referencing on documents. */
@@ -48,7 +50,7 @@ public class SharedEntityResolver {
         UUID orgId = currentOrgId();
         return productRepository
                 .findAccessibleById(id, orgId, organizationService.resolvePrimaryOrgId(orgId))
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
     }
 
     /** A QR code owned by the current org, or shared by its parent. */
@@ -56,7 +58,7 @@ public class SharedEntityResolver {
         UUID orgId = currentOrgId();
         return qrCodeRepository
                 .findAccessibleById(id, orgId, organizationService.resolvePrimaryOrgId(orgId))
-                .orElseThrow(() -> new RuntimeException("QR Code not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("QR Code not found"));
     }
 
     /** True when the record belongs to the current org itself (not inherited from the parent). */

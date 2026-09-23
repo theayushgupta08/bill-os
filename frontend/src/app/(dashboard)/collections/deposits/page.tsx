@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,11 +45,8 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function formatCurrency(amount: number) {
-  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
-
 export default function DepositsPage() {
+  const { formatDate, formatMoney } = useFormat();
   const { data: deposits, isLoading } = useSettlementDeposits();
   const recordMutation = useRecordDeposit();
   const approveMutation = useApproveDeposit();
@@ -170,10 +169,10 @@ export default function DepositsPage() {
                 {(deposits ?? []).map((d) => (
                   <TableRow key={d.id} className="border-slate-800/40">
                     <TableCell className="text-slate-300 text-sm">{d.userEmail}</TableCell>
-                    <TableCell className="text-slate-400 text-sm">{d.depositDate}</TableCell>
+                    <TableCell className="text-slate-400 text-sm">{formatDate(d.depositDate)}</TableCell>
                     <TableCell className="text-slate-300 text-sm font-mono">{d.referenceNumber}</TableCell>
                     <TableCell className="text-right text-violet-400 font-medium text-sm">
-                      {formatCurrency(d.amount)}
+                      {formatMoney(d.amount)}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={d.status} />

@@ -12,8 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, GitBranch, Sparkles, Check } from "lucide-react";
-import { api } from "@/lib/api-client";
+import { GitBranch } from "lucide-react";
+import { api, errorMessage } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Organization, switchActiveOrganization } from "@/lib/use-organization";
 import { useQueryClient } from "@tanstack/react-query";
@@ -88,8 +88,8 @@ export function CreateBranchDialog({
       if (switchToNewBranch && created.id) {
         switchActiveOrganization(created.id);
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err.message || "An error occurred while creating branch.");
+    } catch (err: unknown) {
+      toast.error(errorMessage(err, "An error occurred while creating branch."));
     } finally {
       setIsSubmitting(false);
     }

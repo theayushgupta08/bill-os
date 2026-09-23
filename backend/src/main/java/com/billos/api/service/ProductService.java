@@ -4,6 +4,8 @@ import com.billos.api.dto.BulkImportResultDto;
 import com.billos.api.dto.ProductDto;
 import com.billos.api.entity.Product;
 import com.billos.api.entity.ProductCategory;
+import com.billos.api.exception.ForbiddenException;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.ProductMapper;
 import com.billos.api.repository.ProductCategoryRepository;
 import com.billos.api.repository.ProductRepository;
@@ -69,7 +71,7 @@ public class ProductService {
         if (dto.getCategoryId() != null) {
             ProductCategory category = productCategoryRepository
                     .findById(dto.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
             product.setCategory(category);
         }
 
@@ -156,7 +158,7 @@ public class ProductService {
 
         // Fixed price enforcement: Secondary organizations cannot alter master product pricing
         if (!existingProduct.getOrganizationId().equals(currentOrgId)) {
-            throw new RuntimeException(
+            throw new ForbiddenException(
                     "Branch cannot modify master products owned by the Primary Organization. Product prices are fixed to the Primary Master Price.");
         }
 
@@ -165,7 +167,7 @@ public class ProductService {
         if (dto.getCategoryId() != null) {
             ProductCategory category = productCategoryRepository
                     .findById(dto.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
             existingProduct.setCategory(category);
         } else {
             existingProduct.setCategory(null);
@@ -183,7 +185,7 @@ public class ProductService {
         Product product = sharedEntityResolver.accessibleProduct(id);
 
         if (!product.getOrganizationId().equals(currentOrgId)) {
-            throw new RuntimeException("Branch cannot delete master products owned by the Primary Organization.");
+            throw new ForbiddenException("Branch cannot delete master products owned by the Primary Organization.");
         }
 
         productRepository.delete(product);

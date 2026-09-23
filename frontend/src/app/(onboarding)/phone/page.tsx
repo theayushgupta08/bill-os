@@ -2,11 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api-client";
+import { api, errorMessage } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -42,7 +41,6 @@ export default function PhoneOnboardingPage() {
   // Status & Error
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [demoHint, setDemoHint] = useState<string | null>(null);
 
   // Clean raw digits and check validity
   const rawDigits = phoneNumber.replace(/\s+/g, "");
@@ -88,7 +86,6 @@ export default function PhoneOnboardingPage() {
     setTimer(30);
     setCanResend(false);
     setOtp(["", "", "", "", "", ""]);
-    setDemoHint("Demo OTP: 123456 (or any 6 digits)");
 
     // Auto-focus the first OTP input box on next tick
     setTimeout(() => {
@@ -163,7 +160,6 @@ export default function PhoneOnboardingPage() {
     setTimer(30);
     setCanResend(false);
     setOtp(["", "", "", "", "", ""]);
-    setDemoHint("Demo OTP resent: 123456");
     setError(null);
     otpInputRefs.current[0]?.focus();
   };
@@ -242,11 +238,7 @@ export default function PhoneOnboardingPage() {
       }
     } catch (err: unknown) {
       console.error("Failed to verify phone number:", err);
-      const errorMessage =
-        (err as Error)?.message ||
-        (err as AxiosError<{ message?: string }>)?.response?.data?.message ||
-        "Failed to verify phone number. Please try again.";
-      setError(errorMessage);
+      setError(errorMessage(err, "Failed to verify phone number. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -427,7 +419,7 @@ export default function PhoneOnboardingPage() {
 
               {/* Resend OTP countdown */}
               <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-zinc-500">Didn't receive the code?</span>
+                <span className="text-zinc-500">Didn&apos;t receive the code?</span>
                 {canResend ? (
                   <button
                     type="button"

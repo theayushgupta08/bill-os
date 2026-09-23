@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useSuffixAvailability } from "@/hooks/use-suffix-availability";
+import { useState, useRef } from "react";
 import { api } from "@/lib/api-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,11 +24,6 @@ export function OrganizationSettingsForm() {
   const { data: orgTree } = useOrganizationTree();
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // Email Suffix validation state
-  const [suffixChecking, setSuffixChecking] = useState(false);
-  const [suffixAvailable, setSuffixAvailable] = useState<boolean | null>(null);
-  const [suffixError, setSuffixError] = useState<string | null>(null);
-
   const { data: orgData, isLoading } = useQuery({
     queryKey: ["organizations"],
     queryFn: async () => {
@@ -36,72 +32,22 @@ export function OrganizationSettingsForm() {
     }
   });
 
-  useEffect(() => {
-    if (orgData && orgData.length > 0) {
-      const activeOrgId = typeof window !== "undefined" ? localStorage.getItem("active_org_id") : null;
-      const matched = orgData.find((o) => o.id === activeOrgId) || orgData[0];
-      const fetchedOrg = { ...matched };
-      if (!fetchedOrg.secondaryPhones) {
-        fetchedOrg.secondaryPhones = [];
-      }
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOrg(fetchedOrg);
-    }
-  }, [orgData]);
+  // Copy each freshly fetched organization into the editable form state (render-time sync instead of an effect)
+  const [syncedOrgData, setSyncedOrgData] = useState<Organization[] | undefined>(undefined);
+  if (orgData && orgData.length > 0 && orgData !== syncedOrgData) {
+    setSyncedOrgData(orgData);
+    const activeOrgId = typeof window !== "undefined" ? localStorage.getItem("active_org_id") : null;
+    const matched = orgData.find((o) => o.id === activeOrgId) || orgData[0];
+    setOrg({ ...matched, secondaryPhones: matched.secondaryPhones ?? [] });
+  }
 
-  // Debounced check for email suffix uniqueness when edited
-  useEffect(() => {
-    if (!org?.emailSuffix) {
-      setSuffixAvailable(null);
-      setSuffixError(null);
-      setSuffixChecking(false);
-      return;
-    }
-
-    const currentSaved = orgData?.find((o) => o.id === org.id)?.emailSuffix;
-    const cleaned = org.emailSuffix.trim().toLowerCase();
-
-    // If unchanged from currently saved in DB, it's already theirs
-    if (cleaned === currentSaved) {
-      setSuffixAvailable(true);
-      setSuffixError(null);
-      setSuffixChecking(false);
-      return;
-    }
-
-    const regex = /^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])?$/;
-    if (cleaned.length < 3 || cleaned.length > 30 || !regex.test(cleaned)) {
-      setSuffixAvailable(false);
-      setSuffixError("Suffix must be 3-30 chars: lowercase letters, numbers, and hyphens only");
-      setSuffixChecking(false);
-      return;
-    }
-
-    setSuffixChecking(true);
-    setSuffixError(null);
-
-    const timer = setTimeout(async () => {
-      try {
-        const res = await api.get<{ available: boolean; reason?: string }>(
-          `/public/check-suffix?suffix=${encodeURIComponent(cleaned)}`
-        );
-        if (res.available) {
-          setSuffixAvailable(true);
-          setSuffixError(null);
-        } else {
-          setSuffixAvailable(false);
-          setSuffixError(res.reason || "This suffix is already taken by another organization");
-        }
-      } catch {
-        setSuffixAvailable(false);
-        setSuffixError("Unable to verify suffix availability");
-      } finally {
-        setSuffixChecking(false);
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [org?.emailSuffix, org?.id, orgData]);
+  // Email suffix validation; the org's current suffix counts as available
+  const savedSuffix = orgData?.find((o) => o.id === org?.id)?.emailSuffix;
+  const {
+    available: suffixAvailable,
+    error: suffixError,
+    checking: suffixChecking,
+  } = useSuffixAvailability(org?.emailSuffix, savedSuffix);
 
   const updateMutation = useMutation({
     mutationFn: (payload: Partial<Organization>) => api.put<Organization>(`/organizations/${payload.id}`, payload),
@@ -405,6 +351,9 @@ export function OrganizationSettingsForm() {
               <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-800 bg-slate-950/40">
                 <div className="w-16 h-16 rounded-xl border border-slate-700 bg-slate-900/90 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
                   {org.logoUrl ? (
+                    // Plain <img>: this previews a just-uploaded data: URL or an arbitrary logo URL, which
+                    // next/image can't optimise without whitelisting every host — there is nothing to gain here.
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={org.logoUrl}
                       alt={org.name || "Organization Logo"}
@@ -689,7 +638,7 @@ export function OrganizationSettingsForm() {
           open={createBranchOpen}
           onOpenChange={setCreateBranchOpen}
           parentOrg={
-            (orgTree?.find((t) => t.primaryOrganization.id === org.id || t.primaryOrganization.id === org.parentOrganizationId)?.primaryOrganization as any) || org
+            (orgTree?.find((t) => t.primaryOrganization.id === org.id || t.primaryOrganization.id === org.parentOrganizationId)?.primaryOrganization as Organization | undefined) || org
           }
         />
       )}

@@ -27,7 +27,7 @@ import {
   Landmark,
 } from "lucide-react";
 import { OrganizationSwitcher } from "@/components/organization/organization-switcher";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface NavItem {
   label: string;
@@ -223,7 +223,10 @@ export function Sidebar() {
   );
 
   // When pathname changes (navigation occurs), ensure the active section's dropdown is open
-  useEffect(() => {
+  // Expand the group containing the current page whenever the route changes (render-time, no effect)
+  const [syncedPathname, setSyncedPathname] = useState<string | null>(null);
+  if (pathname !== syncedPathname) {
+    setSyncedPathname(pathname);
     const matched = navGroups.find(
       (g) =>
         g.label &&
@@ -234,7 +237,7 @@ export function Sidebar() {
     if (matched) {
       setOpenGroup(matched.label);
     }
-  }, [pathname]);
+  }
 
   const handleToggle = (label: string) => {
     setOpenGroup((prev) => (prev === label ? null : label));

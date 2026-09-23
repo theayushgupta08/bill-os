@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,24 +10,11 @@ import { toast } from "sonner";
 import { PageLoader } from "@/components/ui/loader";
 
 export default function GstReportsPage() {
-  const [hsnSummary, setHsnSummary] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [downloadingJson, setDownloadingJson] = useState(false);
-
-  useEffect(() => {
-    loadHsnSummary();
-  }, []);
-
-  const loadHsnSummary = async () => {
-    try {
-      const data = await api.get<unknown[]>("/reports/gst/hsn-summary");
-      setHsnSummary(data);
-    } catch (error) {
-      console.error("Failed to load HSN summary", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: hsnSummary, isLoading: loading } = useQuery({
+    queryKey: ["gst-hsn-summary"],
+    queryFn: () => api.get<{ status?: string; data?: string }>("/reports/gst/hsn-summary"),
+  });
 
   const downloadEInvoiceJson = async (invoiceId: string) => {
     setDownloadingJson(true);

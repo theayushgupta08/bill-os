@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,15 +40,16 @@ export default function ProductCategoryForm({ categoryId }: ProductCategoryFormP
     enabled: !!categoryId,
   });
 
-  useEffect(() => {
-    if (category) {
-      setFormData({
-        name: category.name || "",
-        description: category.description || "",
-        parentId: category.parentId || "",
-      });
-    }
-  }, [category]);
+  // Copy freshly fetched data into the editable form state (render-time sync instead of an effect)
+  const [syncedCategory, setSyncedCategory] = useState<typeof category>(undefined);
+  if (category && category !== syncedCategory) {
+    setSyncedCategory(category);
+    setFormData({
+      name: category.name || "",
+      description: category.description || "",
+      parentId: category.parentId || "",
+    });
+  }
 
   const saveMutation = useMutation({
     mutationFn: (data: typeof formData) => {

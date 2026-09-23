@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState, useRef, useMemo } from "react";
 import * as XLSX from "xlsx";
 import {
@@ -19,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { api } from "@/lib/api-client";
+import { api, errorMessage } from "@/lib/api-client";
 import { toast } from "sonner";
 import {
   UploadCloud,
@@ -43,10 +45,15 @@ interface BulkImportDialogProps {
   onSuccess?: () => void;
 }
 
+/** A spreadsheet row as parsed by XLSX with `raw: false` + `defval: ""`: every cell is its formatted text. */
+type SheetRow = Record<string, string>;
+/** A normalized row ready to POST to a bulk endpoint. */
+type ImportRecord = Record<string, string | number | boolean | null | undefined>;
+
 interface ParsedRow {
   rowNumber: number;
-  raw: Record<string, any>;
-  data: Record<string, any>;
+  raw: SheetRow;
+  data: ImportRecord;
   isValid: boolean;
   errors: string[];
 }
@@ -64,6 +71,7 @@ export function BulkImportDialog({
   entity,
   onSuccess,
 }: BulkImportDialogProps) {
+  const { formatMoney } = useFormat();
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
@@ -112,7 +120,7 @@ export function BulkImportDialog({
             },
           ],
           columnHeaders: ["Name", "SKU", "Base Price", "Tax Rate %", "Unit", "HSN/SAC"],
-          normalizeRow: (raw: Record<string, any>): { data: Record<string, any>; errors: string[] } => {
+          normalizeRow: (raw: SheetRow): { data: ImportRecord; errors: string[] } => {
             const getVal = (keys: string[]) => {
               for (const k of keys) {
                 const found = Object.keys(raw).find(
@@ -206,7 +214,7 @@ export function BulkImportDialog({
             },
           ],
           columnHeaders: ["Name", "Phone", "Email", "GSTIN", "City", "State"],
-          normalizeRow: (raw: Record<string, any>): { data: Record<string, any>; errors: string[] } => {
+          normalizeRow: (raw: SheetRow): { data: ImportRecord; errors: string[] } => {
             const getVal = (keys: string[]) => {
               for (const k of keys) {
                 const found = Object.keys(raw).find(
@@ -276,7 +284,7 @@ export function BulkImportDialog({
             },
           ],
           columnHeaders: ["Category Name", "Description"],
-          normalizeRow: (raw: Record<string, any>): { data: Record<string, any>; errors: string[] } => {
+          normalizeRow: (raw: SheetRow): { data: ImportRecord; errors: string[] } => {
             const getVal = (keys: string[]) => {
               for (const k of keys) {
                 const found = Object.keys(raw).find(
@@ -324,7 +332,7 @@ export function BulkImportDialog({
 
       const ext = format === "xlsx" ? "xlsx" : "csv";
       XLSX.writeFile(wb, `${config.sampleFileName}.${ext}`, {
-        bookType: ext as any,
+        bookType: ext as XLSX.BookType,
       });
       toast.success(`Template ${config.sampleFileName}.${ext} downloaded!`);
     } catch (err) {
@@ -350,7 +358,7 @@ export function BulkImportDialog({
       }
 
       const worksheet = workbook.Sheets[firstSheetName];
-      const rawRows: Record<string, any>[] = XLSX.utils.sheet_to_json(worksheet, {
+      const rawRows: SheetRow[] = XLSX.utils.sheet_to_json<SheetRow>(worksheet, {
         defval: "",
         raw: false,
       });
@@ -368,19 +376,19 @@ export function BulkImportDialog({
 
         // Check duplicates inside the uploaded file
         if (entity === "products" && data.sku) {
-          const lowerSku = data.sku.toLowerCase();
+          const lowerSku = String(data.sku).toLowerCase();
           if (seenDuplicates.has(lowerSku)) {
             errors.push(`Duplicate SKU '${data.sku}' within this file`);
           }
           seenDuplicates.add(lowerSku);
         } else if (entity === "customers" && data.phone) {
-          const p = data.phone;
+          const p = String(data.phone);
           if (seenDuplicates.has(p)) {
             errors.push(`Duplicate phone number '${data.phone}' within this file`);
           }
           seenDuplicates.add(p);
         } else if (entity === "categories" && data.name) {
-          const lowerName = data.name.toLowerCase();
+          const lowerName = String(data.name).toLowerCase();
           if (seenDuplicates.has(lowerName)) {
             errors.push(`Duplicate category name '${data.name}' within this file`);
           }
@@ -398,9 +406,9 @@ export function BulkImportDialog({
 
       setParsedRows(parsed);
       toast.info(`Parsed ${parsed.length} rows from ${uploadedFile.name}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(`Error parsing file: ${err.message || "Invalid file format"}`);
+      toast.error(`Error parsing file: ${errorMessage(err, "Invalid file format")}`);
     } finally {
       setIsParsing(false);
     }
@@ -464,14 +472,9 @@ export function BulkImportDialog({
           `${res.skippedCount} items were skipped because they already exist in the database.`
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Bulk import failed:", err);
-      const errorMsg =
-        err?.message ||
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        `Failed to import ${entity}. Please check server logs.`;
-      toast.error(errorMsg);
+      toast.error(errorMessage(err, `Failed to import ${entity}. Please check server logs.`));
     } finally {
       setIsSubmitting(false);
     }
@@ -758,7 +761,7 @@ export function BulkImportDialog({
                                 {row.data.sku || "—"}
                               </TableCell>
                               <TableCell className="font-mono text-white py-2.5 whitespace-nowrap">
-                                ₹{Number(row.data.basePrice || 0).toFixed(2)}
+                                {formatMoney(Number(row.data.basePrice || 0))}
                               </TableCell>
                               <TableCell className="text-slate-300 py-2.5 whitespace-nowrap">
                                 {row.data.taxRate}%

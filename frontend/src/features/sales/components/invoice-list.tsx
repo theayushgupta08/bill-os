@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
 import { api, downloadPdf } from "@/lib/api-client";
@@ -33,6 +35,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export function InvoiceList() {
+  const { formatMoney, formatDate } = useFormat();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -178,14 +181,14 @@ export function InvoiceList() {
               paginatedData.map((inv: Invoice) => (
                 <TableRow key={inv.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                  <TableCell>{inv.invoiceDate}</TableCell>
+                  <TableCell>{formatDate(inv.invoiceDate)}</TableCell>
                   <TableCell>{inv.customerName}</TableCell>
                   <TableCell>
                     <Badge variant="default" className={STATUS_BADGE[inv.status] ?? "bg-blue-500"}>
                       {inv.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-medium">₹{inv.totalAmount?.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatMoney(inv.totalAmount)}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button variant="outline" size="sm" onClick={() => downloadPdf(`/sales-invoices/${inv.id}/pdf`, `Invoice-${inv.invoiceNumber}.pdf`)}>
                       PDF

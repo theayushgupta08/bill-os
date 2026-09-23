@@ -3,6 +3,7 @@ package com.billos.api.service;
 import com.billos.api.dto.PurchaseOrderDto;
 import com.billos.api.dto.PurchaseOrderLineDto;
 import com.billos.api.entity.*;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.PurchaseOrderMapper;
 import com.billos.api.repository.PurchaseOrderRepository;
 import com.billos.api.repository.SupplierRepository;
@@ -39,7 +40,7 @@ public class PurchaseOrderService {
         return purchaseOrderRepository
                 .findById(id)
                 .map(purchaseOrderMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found"));
     }
 
     @Transactional
@@ -48,7 +49,7 @@ public class PurchaseOrderService {
 
         Supplier supplier = supplierRepository
                 .findById(dto.getSupplierId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
 
         PurchaseOrder po = new PurchaseOrder();
         po.setOrganizationId(orgId);
@@ -69,7 +70,7 @@ public class PurchaseOrderService {
             if (lineDto.getTaxRateId() != null) {
                 taxRate = taxRateRepository
                         .findById(lineDto.getTaxRateId())
-                        .orElseThrow(() -> new RuntimeException("Tax Rate not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Tax Rate not found"));
             }
 
             PurchaseOrderLine line = new PurchaseOrderLine();
@@ -107,7 +108,7 @@ public class PurchaseOrderService {
     public PurchaseOrderDto issueOrder(UUID id) {
         PurchaseOrder po = purchaseOrderRepository
                 .findById(id)
-                .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found"));
         po.setStatus(PurchaseOrderStatus.ISSUED);
         return purchaseOrderMapper.toDto(purchaseOrderRepository.save(po));
     }

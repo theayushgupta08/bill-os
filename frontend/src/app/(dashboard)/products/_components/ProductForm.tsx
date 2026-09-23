@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,20 +46,21 @@ export default function ProductForm({ productId }: ProductFormProps) {
     enabled: !!productId,
   });
 
-  useEffect(() => {
-    if (product) {
-      setFormData({
-        name: product.name || "",
-        description: product.description || "",
-        sku: product.sku || "",
-        hsnSac: product.hsnSac || "",
-        basePrice: product.basePrice || 0,
-        taxRate: Number(product.taxRate) || 0,
-        unitOfMeasure: product.unitOfMeasure || "",
-        categoryId: product.categoryId || "",
-      });
-    }
-  }, [product]);
+  // Copy freshly fetched data into the editable form state (render-time sync instead of an effect)
+  const [syncedProduct, setSyncedProduct] = useState<typeof product>(undefined);
+  if (product && product !== syncedProduct) {
+    setSyncedProduct(product);
+    setFormData({
+      name: product.name || "",
+      description: product.description || "",
+      sku: product.sku || "",
+      hsnSac: product.hsnSac || "",
+      basePrice: product.basePrice || 0,
+      taxRate: Number(product.taxRate) || 0,
+      unitOfMeasure: product.unitOfMeasure || "",
+      categoryId: product.categoryId || "",
+    });
+  }
 
   const saveMutation = useMutation({
     mutationFn: (data: typeof formData) => {

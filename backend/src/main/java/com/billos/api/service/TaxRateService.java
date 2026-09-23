@@ -2,6 +2,7 @@ package com.billos.api.service;
 
 import com.billos.api.dto.TaxRateDto;
 import com.billos.api.entity.TaxRate;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.TaxRateMapper;
 import com.billos.api.repository.TaxRateRepository;
 import com.billos.api.tenant.TenantContext;
@@ -30,7 +31,7 @@ public class TaxRateService {
         return taxRateRepository
                 .findById(id)
                 .map(taxRateMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Tax Rate not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tax Rate not found"));
     }
 
     @Transactional
@@ -43,7 +44,8 @@ public class TaxRateService {
 
     @Transactional
     public TaxRateDto updateTaxRate(UUID id, TaxRateDto dto) {
-        TaxRate existing = taxRateRepository.findById(id).orElseThrow(() -> new RuntimeException("Tax Rate not found"));
+        TaxRate existing =
+                taxRateRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Tax Rate not found"));
 
         existing.setName(dto.getName());
         existing.setRate(dto.getRate());

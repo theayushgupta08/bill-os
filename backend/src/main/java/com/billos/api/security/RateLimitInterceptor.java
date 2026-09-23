@@ -116,12 +116,14 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         return new RateLimitConfig("rl:crud:" + userKey, LIMIT_CRUD);
     }
 
+    /**
+     * The real client address. Never read X-Forwarded-For here: its left-most entry is whatever the client sent,
+     * so trusting it lets anyone pick a fresh rate-limit bucket per request. Tomcat's RemoteIpValve
+     * ({@code server.forward-headers-strategy: native}) already resolves the client by walking the header from the
+     * right and only trusting hops from configured proxies, and exposes the result as the remote address.
+     */
     private String getClientIp(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader == null) {
-            return request.getRemoteAddr();
-        }
-        return xfHeader.split(",")[0];
+        return request.getRemoteAddr();
     }
 
     private Optional<String> getAuthenticatedUserKey() {

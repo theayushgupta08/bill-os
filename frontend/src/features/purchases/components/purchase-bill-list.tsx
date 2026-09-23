@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
@@ -25,6 +27,7 @@ import { PurchaseBill, balanceDue } from "@/types";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function PurchaseBillList() {
+  const { formatMoney, formatDate } = useFormat();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -162,10 +165,10 @@ export function PurchaseBillList() {
               paginatedData.map((bill: PurchaseBill) => (
                 <TableRow key={bill.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{bill.billNumber}</TableCell>
-                  <TableCell>{bill.billDate}</TableCell>
+                  <TableCell>{formatDate(bill.billDate)}</TableCell>
                   <TableCell>{bill.supplierName || "-"}</TableCell>
                   <TableCell>{getStatusBadge(bill.status)}</TableCell>
-                  <TableCell className="text-right font-medium">₹{bill.totalAmount?.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatMoney(bill.totalAmount)}</TableCell>
                   <TableCell className="text-right">
                     {(bill.status === 'UNPAID' || bill.status === 'PARTIAL') && (
                       <Button variant="outline" size="sm" onClick={() => payMutation.mutate(bill)} disabled={payMutation.isPending}>

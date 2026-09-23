@@ -3,6 +3,7 @@ package com.billos.api.service;
 import com.billos.api.dto.BulkImportResultDto;
 import com.billos.api.dto.ProductCategoryDto;
 import com.billos.api.entity.ProductCategory;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.ProductCategoryMapper;
 import com.billos.api.repository.ProductCategoryRepository;
 import com.billos.api.tenant.TenantContext;
@@ -33,7 +34,7 @@ public class ProductCategoryService {
         return productCategoryRepository
                 .findById(id)
                 .map(productCategoryMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("ProductCategory not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("ProductCategory not found"));
     }
 
     @Transactional
@@ -44,7 +45,7 @@ public class ProductCategoryService {
         if (dto.getParentId() != null) {
             ProductCategory parent = productCategoryRepository
                     .findById(dto.getParentId())
-                    .orElseThrow(() -> new RuntimeException("Parent category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
             category.setParent(parent);
         }
 
@@ -109,14 +110,14 @@ public class ProductCategoryService {
     public ProductCategoryDto updateCategory(UUID id, ProductCategoryDto dto) {
         ProductCategory existingCategory = productCategoryRepository
                 .findById(id)
-                .orElseThrow(() -> new RuntimeException("ProductCategory not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("ProductCategory not found"));
 
         productCategoryMapper.updateEntityFromDto(dto, existingCategory);
 
         if (dto.getParentId() != null) {
             ProductCategory parent = productCategoryRepository
                     .findById(dto.getParentId())
-                    .orElseThrow(() -> new RuntimeException("Parent category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
             existingCategory.setParent(parent);
         } else {
             existingCategory.setParent(null);
@@ -130,7 +131,7 @@ public class ProductCategoryService {
     public void deleteCategory(UUID id) {
         ProductCategory category = productCategoryRepository
                 .findById(id)
-                .orElseThrow(() -> new RuntimeException("ProductCategory not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("ProductCategory not found"));
         productCategoryRepository.delete(category);
     }
 }

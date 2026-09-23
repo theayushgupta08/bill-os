@@ -32,7 +32,7 @@ export default function NotFound() {
         </h2>
         
         <p className="text-zinc-400 text-sm mb-8 leading-relaxed">
-          The page you are looking for doesn't exist or has been moved. 
+          The page you are looking for doesn&apos;t exist or has been moved. 
           Double-check the URL or head back to the dashboard.
         </p>
 

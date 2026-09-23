@@ -1,5 +1,8 @@
 "use client";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+import { useFormat } from "@/lib/use-format";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -8,7 +11,6 @@ import {
   Menu,
   ChevronRight,
   Bell,
-  Search,
   LogOut,
   Settings,
   Building2,
@@ -37,8 +39,10 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useOrganization, getOrgInitials, getOrgGradient } from "@/lib/use-organization";
-import { api } from "@/lib/api-client";
+
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/lib/use-current-user";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNotifications, useMarkNotificationRead } from "@/features/collections/hooks/use-collections";
 import { CollectPaymentModal } from "@/features/collections/components/collect-payment-modal";
 import { UpdateProfileDialog } from "@/components/user/update-profile-dialog";
@@ -84,12 +88,15 @@ function getRouteLabel(segment: string): string {
 }
 
 export function Header() {
+  const { formatDateTime } = useFormat();
   const router = useRouter();
   const pathname = usePathname();
   const { data: org } = useOrganization();
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [userAvatar, setUserAvatar] = useState("");
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
+  const userName = currentUser?.name ?? "";
+  const userEmail = currentUser?.email ?? "";
+  const userAvatar = currentUser?.avatarUrl ?? "";
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const supabase = createClient();
 
@@ -114,67 +121,17 @@ export function Header() {
     }
   };
 
-  const getUserData = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const meta = (session.user.user_metadata || {}) as Record<string, any>;
-        const identityMeta = (session.user.identities?.[0]?.identity_data || {}) as Record<string, any>;
-
-        // Resolve real user name from OAuth (Google) / signup metadata
-        const resolvedName =
-          meta.full_name ||
-          meta.name ||
-          (meta.first_name ? `${meta.first_name} ${meta.last_name || ""}`.trim() : null) ||
-          (meta.given_name ? `${meta.given_name} ${meta.family_name || ""}`.trim() : null) ||
-          identityMeta.full_name ||
-          identityMeta.name ||
-          (identityMeta.given_name ? `${identityMeta.given_name} ${identityMeta.family_name || ""}`.trim() : null);
-
-        if (resolvedName) {
-          setUserName(resolvedName);
-        } else if (session.user.email) {
-          const prefix = session.user.email.split("@")[0];
-          setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
-        }
-
-        if (session.user.email) {
-          setUserEmail(session.user.email);
-        }
-
-        const avatar = meta.avatar_url || meta.picture || identityMeta.avatar_url || identityMeta.picture;
-        if (avatar) {
-          setUserAvatar(avatar);
-        }
-
-        api.get<{email: string; firstName?: string; lastName?: string}[]>("/team").then((res) => {
-          const email = session.user.email;
-          if (email) {
-            const current = res.find(
-              (m) => m.email.toLowerCase() === email.toLowerCase()
-            );
-            if (current && current.firstName) {
-              setUserName(`${current.firstName} ${current.lastName || ""}`.trim());
-            }
-          }
-        }).catch(() => {});
-      }
-    } catch (e) {
-      // Ignored
-    }
-  };
-
+  // Drop any leftover token from the pre-Supabase auth flow so it doesn't pollute the browser
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
-    }
-    getUserData();
+    localStorage.removeItem("token");
   }, []);
 
   const handleLogout = async () => {
     localStorage.removeItem("token");
     localStorage.removeItem("active_org_id");
     await supabase.auth.signOut();
+    // Drop every cached query so the next person to sign in on this tab never sees this user's data
+    queryClient.clear();
     router.push("/login");
   };
 
@@ -373,7 +330,7 @@ export function Header() {
                     </span>
                     {notif.createdAt && (
                       <span className="text-[10px] text-muted-foreground mt-1">
-                        {new Date(notif.createdAt).toLocaleString()}
+                        {formatDateTime(notif.createdAt)}
                       </span>
                     )}
                   </div>
@@ -388,11 +345,13 @@ export function Header() {
           <DropdownMenuTrigger render={
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full overflow-hidden p-0" />
           }>
-            {userAvatar ? (
-              <img src={userAvatar} alt={userName} className="w-full h-full object-cover rounded-full" />
-            ) : (
-              <CircleUser className="h-5 w-5" />
-            )}
+            <Avatar className="size-full after:hidden">
+              {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
+              {/* Shown when there is no avatar or the provider's image fails to load */}
+              <AvatarFallback className="bg-transparent">
+                <CircleUser className="h-5 w-5" />
+              </AvatarFallback>
+            </Avatar>
             <span className="sr-only">Toggle user menu</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
@@ -487,7 +446,6 @@ export function Header() {
           open={profileDialogOpen}
           onOpenChange={setProfileDialogOpen}
           userAvatar={userAvatar}
-          onProfileUpdated={(updated) => setUserName(updated.fullName)}
         />
       </div>
     </header>

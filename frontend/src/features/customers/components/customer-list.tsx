@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, Edit, Trash2, BookOpen, Upload } from "lucide-react";
@@ -24,6 +26,7 @@ import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { BulkImportDialog } from "@/components/common/bulk-import-dialog";
 
 export function CustomerList() {
+  const { formatMoney } = useFormat();
   const queryClient = useQueryClient();
   const [ledgerCustomerId, setLedgerCustomerId] = useState<string | null>(null);
   const [ledgerCustomerName, setLedgerCustomerName] = useState<string>("");
@@ -140,7 +143,7 @@ export function CustomerList() {
                   <TableCell>{customer.email || "-"}</TableCell>
                   <TableCell>{customer.phone || "-"}</TableCell>
                   <TableCell>{customer.gstin || "-"}</TableCell>
-                  <TableCell>₹{customer.outstandingBalance?.toFixed(2) || "0.00"}</TableCell>
+                  <TableCell>{formatMoney(customer.outstandingBalance)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1.5">
                       <Button

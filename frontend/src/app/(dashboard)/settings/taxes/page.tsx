@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "@/lib/api-client";
 import { useOrganization } from "@/lib/use-organization";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { Percent, Settings, Plus } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tooltip";
-import { TaxRate } from "@/types";
+import { TaxRate, TaxSettings } from "@/types";
 
 export default function TaxSettingsAndRatesPage() {
   const queryClient = useQueryClient();
@@ -41,7 +41,7 @@ export default function TaxSettingsAndRatesPage() {
     queryKey: ["taxSettings", orgId],
     queryFn: async () => {
       if (!orgId) return null;
-      const res = await api.get<any>(`/organizations/${orgId}/settings`);
+      const res = await api.get<TaxSettings>(`/organizations/${orgId}/settings`);
       return res;
     },
     enabled: !!orgId
@@ -54,41 +54,26 @@ export default function TaxSettingsAndRatesPage() {
       queryClient.invalidateQueries({ queryKey: ["taxSettings", orgId] });
       toast.success("Tax configurations updated successfully!");
     },
-    onError: (error: unknown) => {
-      console.error("Failed to update tax settings", error);
-      toast.error("Failed to save tax configurations.");
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to save tax configurations.");
     }
   });
 
-  // Automatically enforce default tax rate rule
-  useEffect(() => {
-    if (taxes && taxes.length > 0 && taxSettings && orgId) {
-      const activeTaxes = taxes.filter(t => t.isActive);
-      
-      // Rule 1: If there is only one active tax rate, that is the default
-      if (activeTaxes.length === 1) {
-        const singleRate = activeTaxes[0].rate;
-        if (taxSettings.defaultGstRate !== singleRate) {
-          updateSettingsMutation.mutate({
-            ...taxSettings,
-            defaultGstRate: singleRate
-          });
-        }
-      } 
-      // Rule 2: If defaultGstRate is not set but we have active rates, set the first one as default
-      else if (!taxSettings.defaultGstRate && activeTaxes.length > 0) {
-        updateSettingsMutation.mutate({
-          ...taxSettings,
-          defaultGstRate: activeTaxes[0].rate
-        });
-      }
-    }
-  }, [taxes, taxSettings, orgId]);
+  // Default-rate rules, derived rather than auto-saved: viewing this page must never write settings (and
+  // non-admins can't). A single active rate is the default; otherwise the stored default, else the first rate.
+  const activeTaxes = taxes.filter((t) => t.isActive);
+  const effectiveDefaultRate = (list: TaxRate[], stored?: number | null): number | undefined => {
+    const active = list.filter((t) => t.isActive);
+    if (active.length === 1) return Number(active[0].rate);
+    if (stored != null && active.some((t) => Number(t.rate) === Number(stored))) return Number(stored);
+    return active.length > 0 ? Number(active[0].rate) : undefined;
+  };
+  const defaultRate = effectiveDefaultRate(taxes, taxSettings?.defaultGstRate);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     if (!orgId || !taxSettings) return;
-    updateSettingsMutation.mutate(taxSettings);
+    updateSettingsMutation.mutate({ ...taxSettings, defaultGstRate: defaultRate });
   };
 
   const handleAddTaxRate = async (e: React.FormEvent) => {
@@ -101,7 +86,12 @@ export default function TaxSettingsAndRatesPage() {
       setNewTaxName("");
       setNewTaxRate("");
       toast.success("Tax rate added successfully!");
-      refetchTaxes();
+      // Adding a rate can change which rate is the default — persist that as part of this admin action
+      const { data: refreshed = [] } = await refetchTaxes();
+      const nextDefault = effectiveDefaultRate(refreshed, taxSettings?.defaultGstRate);
+      if (taxSettings && nextDefault !== undefined && nextDefault !== taxSettings.defaultGstRate) {
+        updateSettingsMutation.mutate({ ...taxSettings, defaultGstRate: nextDefault });
+      }
     } catch (error: unknown) {
       console.error("Failed to add tax rate", error);
       toast.error("Failed to add tax rate.");
@@ -112,7 +102,7 @@ export default function TaxSettingsAndRatesPage() {
 
   const handleDefaultGstChange = (val: string) => {
     if (!taxSettings) return;
-    const rateVal = val ? Number(val) : null;
+    const rateVal = val ? Number(val) : undefined;
     queryClient.setQueryData(["taxSettings", orgId], {
       ...taxSettings,
       defaultGstRate: rateVal
@@ -132,8 +122,6 @@ export default function TaxSettingsAndRatesPage() {
       <BrandLoader size="lg" text="Loading tax settings..." variant="card" showBrandText />
     );
   }
-
-  const activeTaxes = taxes.filter(t => t.isActive);
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -157,7 +145,7 @@ export default function TaxSettingsAndRatesPage() {
                 <Settings className="w-4 h-4 text-indigo-400" />
                 Configurations
               </CardTitle>
-              <CardDescription className="text-xs text-slate-450 leading-relaxed">
+              <CardDescription className="text-xs text-slate-400 leading-relaxed">
                 Configure default tax rules for sales and purchases.
               </CardDescription>
             </CardHeader>
@@ -166,15 +154,15 @@ export default function TaxSettingsAndRatesPage() {
                 {/* Default GST Rate Select */}
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <Label htmlFor="defaultGstRate" className="text-slate-350 text-xs">Default Tax Code</Label>
+                    <Label htmlFor="defaultGstRate" className="text-slate-300 text-xs">Default Tax Code</Label>
                     <HelpTooltip text="Select the default tax rate code pre-filled when creating invoices or items." />
                   </div>
                   <select
                     id="defaultGstRate"
-                    value={taxSettings?.defaultGstRate ?? ""}
+                    value={defaultRate ?? ""}
                     onChange={(e) => handleDefaultGstChange(e.target.value)}
                     disabled={activeTaxes.length <= 1}
-                    className="w-full bg-slate-850 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {activeTaxes.length === 0 ? (
                       <option value="">No Active Rates</option>
@@ -204,7 +192,7 @@ export default function TaxSettingsAndRatesPage() {
                     onCheckedChange={handleInclusivePricingChange}
                   />
                   <div className="flex items-center">
-                    <Label htmlFor="taxInclusivePricing" className="font-normal text-xs text-slate-350 cursor-pointer select-none">
+                    <Label htmlFor="taxInclusivePricing" className="font-normal text-xs text-slate-300 cursor-pointer select-none">
                       Tax Inclusive Default
                     </Label>
                     <HelpTooltip text="When checked, transaction item pricing includes calculated taxes by default." />
@@ -237,7 +225,7 @@ export default function TaxSettingsAndRatesPage() {
               <form onSubmit={handleAddTaxRate} className="flex flex-col sm:flex-row gap-4 items-end">
                 <div className="space-y-1.5 flex-1 w-full">
                   <div className="flex items-center">
-                    <Label className="text-slate-350 text-xs">Tax Name</Label>
+                    <Label className="text-slate-300 text-xs">Tax Name</Label>
                     <HelpTooltip text="The name tag of this tax rate (e.g. GST 18%, VAT 5%)." />
                   </div>
                   <Input 
@@ -245,12 +233,12 @@ export default function TaxSettingsAndRatesPage() {
                     onChange={e => setNewTaxName(e.target.value)} 
                     required 
                     placeholder="e.g. GST 18%" 
-                    className="h-9 bg-slate-850 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-indigo-500/20 text-xs" 
+                    className="h-9 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-indigo-500/20 text-xs" 
                   />
                 </div>
                 <div className="space-y-1.5 flex-1 w-full">
                   <div className="flex items-center">
-                    <Label className="text-slate-350 text-xs">Rate (%)</Label>
+                    <Label className="text-slate-300 text-xs">Rate (%)</Label>
                     <HelpTooltip text="The exact decimal percentage rate of tax (e.g. 18.00)." />
                   </div>
                   <Input 
@@ -260,7 +248,7 @@ export default function TaxSettingsAndRatesPage() {
                     onChange={e => setNewTaxRate(e.target.value)} 
                     required 
                     placeholder="18.00" 
-                    className="h-9 bg-slate-850 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-indigo-500/20 text-xs" 
+                    className="h-9 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-indigo-500/20 text-xs" 
                   />
                 </div>
                 <Button 

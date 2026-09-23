@@ -2,6 +2,7 @@ package com.billos.api.service;
 
 import com.billos.api.dto.*;
 import com.billos.api.entity.*;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.PurchaseBillMapper;
 import com.billos.api.repository.*;
 import com.billos.api.tenant.TenantContext;
@@ -42,7 +43,7 @@ public class PurchaseBillService {
         return purchaseBillRepository
                 .findById(id)
                 .map(purchaseBillMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Purchase Bill not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Bill not found"));
     }
 
     @Transactional
@@ -51,11 +52,11 @@ public class PurchaseBillService {
 
         Supplier supplier = supplierRepository
                 .findById(dto.getSupplierId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
 
         Organization org = organizationRepository
                 .findById(orgId)
-                .orElseThrow(() -> new RuntimeException("Organization not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
         boolean isInterState = org.getState() != null
                 && supplier.getState() != null
@@ -68,7 +69,7 @@ public class PurchaseBillService {
         if (dto.getPoId() != null) {
             PurchaseOrder po = purchaseOrderRepository
                     .findById(dto.getPoId())
-                    .orElseThrow(() -> new RuntimeException("PO not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("PO not found"));
             bill.setPurchaseOrder(po);
             po.setStatus(PurchaseOrderStatus.BILLED);
             purchaseOrderRepository.save(po);
@@ -87,13 +88,13 @@ public class PurchaseBillService {
             Product product = sharedEntityResolver.accessibleProduct(lineDto.getProductId());
             Warehouse warehouse = warehouseRepository
                     .findById(lineDto.getWarehouseId())
-                    .orElseThrow(() -> new RuntimeException("Warehouse not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
 
             TaxRate taxRate = null;
             if (lineDto.getTaxRateId() != null) {
                 taxRate = taxRateRepository
                         .findById(lineDto.getTaxRateId())
-                        .orElseThrow(() -> new RuntimeException("Tax Rate not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Tax Rate not found"));
             }
 
             PurchaseBillLine line = new PurchaseBillLine();

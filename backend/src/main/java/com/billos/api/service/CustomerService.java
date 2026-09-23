@@ -5,6 +5,7 @@ import com.billos.api.dto.ConsolidatedCustomerLedgerDto;
 import com.billos.api.dto.ConsolidatedLedgerEntryDto;
 import com.billos.api.dto.CustomerDto;
 import com.billos.api.entity.Customer;
+import com.billos.api.exception.ForbiddenException;
 import com.billos.api.mapper.CustomerMapper;
 import com.billos.api.repository.CustomerRepository;
 import com.billos.api.tenant.TenantContext;
@@ -226,7 +227,7 @@ public class CustomerService {
     private Customer ownedCustomer(UUID id, String action) {
         Customer customer = sharedEntityResolver.accessibleCustomer(id);
         if (!sharedEntityResolver.isOwnedByCurrentOrg(customer.getOrganizationId())) {
-            throw new RuntimeException("Branch cannot " + action + " customers owned by the Primary Organization.");
+            throw new ForbiddenException("Branch cannot " + action + " customers owned by the Primary Organization.");
         }
         return customer;
     }

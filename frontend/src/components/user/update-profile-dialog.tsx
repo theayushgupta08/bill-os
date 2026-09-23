@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Phone, Mail, CheckCircle2, ShieldAlert, Sparkles, Loader2 } from "lucide-react";
+import { User, Phone, Mail, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { CURRENT_USER_KEY } from "@/lib/use-current-user";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserProfile, UpdateProfileRequest } from "@/types";
@@ -48,14 +49,15 @@ export function UpdateProfileDialog({
     enabled: open,
   });
 
-  useEffect(() => {
-    if (profile) {
-      setFirstName(profile.firstName || "");
-      setLastName(profile.lastName || "");
-      setPhone(profile.phone || "");
-      setEmail(profile.email || "");
-    }
-  }, [profile]);
+  // Copy freshly fetched data into the editable form state (render-time sync instead of an effect)
+  const [syncedProfile, setSyncedProfile] = useState<typeof profile>(undefined);
+  if (profile && profile !== syncedProfile) {
+    setSyncedProfile(profile);
+    setFirstName(profile.firstName || "");
+    setLastName(profile.lastName || "");
+    setPhone(profile.phone || "");
+    setEmail(profile.email || "");
+  }
 
   const updateMutation = useMutation({
     mutationFn: async (payload: UpdateProfileRequest) => {
@@ -77,6 +79,7 @@ export function UpdateProfileDialog({
       }
 
       queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      queryClient.invalidateQueries({ queryKey: CURRENT_USER_KEY });
       queryClient.invalidateQueries({ queryKey: ["team"] });
 
       const fullName = `${updated.firstName} ${updated.lastName}`.trim();
@@ -92,10 +95,8 @@ export function UpdateProfileDialog({
       toast.success("Profile updated successfully!");
       onOpenChange(false);
     },
-    onError: (error: any) => {
-      console.error("Failed to update profile", error);
-      const msg = error?.response?.data?.message || "Failed to update profile details. Please verify your inputs.";
-      toast.error(msg);
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update profile details. Please verify your inputs.");
     },
   });
 

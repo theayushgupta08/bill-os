@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -55,6 +57,7 @@ interface TeamMember {
 }
 
 export function TeamTable() {
+  const { formatDate, formatDateTime } = useFormat();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
@@ -188,7 +191,6 @@ export function TeamTable() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchTeam();
   }, []);
 
@@ -297,11 +299,7 @@ export function TeamTable() {
       if (diffDays === 1) return "Yesterday";
       if (diffDays < 7) return `${diffDays}d ago`;
 
-      return new Intl.DateTimeFormat("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }).format(date);
+      return formatDate(date);
     } catch {
       return "Never";
     }
@@ -587,7 +585,7 @@ export function TeamTable() {
                         className="text-xs text-slate-300"
                         title={
                           member.lastActiveAt
-                            ? new Date(member.lastActiveAt).toLocaleString()
+                            ? formatDateTime(member.lastActiveAt)
                             : "No activity recorded"
                         }
                       >
@@ -595,11 +593,7 @@ export function TeamTable() {
                       </span>
                       {member.lastActiveAt && (
                         <span className="text-[10px] text-muted-foreground font-mono">
-                          {new Intl.DateTimeFormat("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          }).format(new Date(member.lastActiveAt))}
+                          {formatDate(member.lastActiveAt)}
                         </span>
                       )}
                     </div>

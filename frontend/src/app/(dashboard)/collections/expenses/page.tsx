@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
@@ -51,13 +53,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function formatCurrency(amount: number) {
-  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
-
 const CATEGORIES = ["FUEL", "PACKING", "TRAVEL", "FOOD", "COURIER", "MISC"];
 
 export default function ExpensesPage() {
+  const { formatDate, formatMoney } = useFormat();
   const { data: expenses, isLoading } = useCollectionExpenses();
   const recordMutation = useRecordExpense();
   const approveMutation = useApproveExpense();
@@ -196,9 +195,9 @@ export default function ExpensesPage() {
                     <TableCell className="text-slate-300 text-sm">{e.userEmail}</TableCell>
                     <TableCell className="text-slate-200 text-sm">{e.category}</TableCell>
                     <TableCell className="text-slate-300 text-sm">{e.vendor}</TableCell>
-                    <TableCell className="text-slate-400 text-sm">{e.expenseDate}</TableCell>
+                    <TableCell className="text-slate-400 text-sm">{formatDate(e.expenseDate)}</TableCell>
                     <TableCell className="text-right text-rose-400 font-medium text-sm">
-                      {formatCurrency(e.amount)}
+                      {formatMoney(e.amount)}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={e.status} />

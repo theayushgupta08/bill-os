@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "@/lib/api-client";
 import { useOrganization } from "@/lib/use-organization";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { BrandLoader } from "@/components/ui/loader";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tooltip";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
-import { InvoiceSettings, Organization } from "@/types";
+import { InvoiceSettings } from "@/types";
 
 interface BankDetails {
   bankName: string;
@@ -39,7 +39,6 @@ function parseTerms(raw: string | undefined | null): string[] {
     .map((line) => line.trim().replace(/^(\d+\.|\*|-|•)\s*/, "").trim())
     .filter(Boolean);
 }
-
 
 export function InvoiceSettingsForm() {
   const queryClient = useQueryClient();
@@ -69,37 +68,36 @@ export function InvoiceSettingsForm() {
     enabled: !!orgId
   });
 
-  useEffect(() => {
-    if (invoiceSettings) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSettings(invoiceSettings);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTermsList(parseTerms(invoiceSettings.invoiceTerms));
-      
-      // Parse bankDetails string
-      let parsedBank: BankDetails = {
-        bankName: "",
-        accountNumber: "",
-        ifscCode: "",
-        branchName: "",
-        accountHolder: "",
-        bankAddress: "",
-      };
-      try {
-        if (invoiceSettings.bankDetails) {
-          const parsed = JSON.parse(invoiceSettings.bankDetails);
-          if (parsed && typeof parsed === "object") {
-            parsedBank = { ...parsedBank, ...parsed };
-          }
+  // Copy freshly fetched data into the editable form state (render-time sync instead of an effect)
+  const [syncedInvoiceSettings, setSyncedInvoiceSettings] = useState<typeof invoiceSettings>(undefined);
+  if (invoiceSettings && invoiceSettings !== syncedInvoiceSettings) {
+    setSyncedInvoiceSettings(invoiceSettings);
+
+    setSettings(invoiceSettings);
+    setTermsList(parseTerms(invoiceSettings.invoiceTerms));
+    
+    // Parse bankDetails string
+    let parsedBank: BankDetails = {
+      bankName: "",
+      accountNumber: "",
+      ifscCode: "",
+      branchName: "",
+      accountHolder: "",
+      bankAddress: "",
+    };
+    try {
+      if (invoiceSettings.bankDetails) {
+        const parsed = JSON.parse(invoiceSettings.bankDetails);
+        if (parsed && typeof parsed === "object") {
+          parsedBank = { ...parsedBank, ...parsed };
         }
-      } catch {
-        // If parsing fails, treat the entire string as the bankName for backward compatibility
-        parsedBank.bankName = invoiceSettings.bankDetails || "";
       }
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setBankFields(parsedBank);
+    } catch {
+      // If parsing fails, treat the entire string as the bankName for backward compatibility
+      parsedBank.bankName = invoiceSettings.bankDetails || "";
     }
-  }, [invoiceSettings]);
+    setBankFields(parsedBank);
+  }
 
   const updateMutation = useMutation({
     onSuccess: () => {
@@ -222,8 +220,8 @@ export function InvoiceSettingsForm() {
 
             {/* Bank Details Section */}
             <div className="space-y-4 border-t pt-4">
-              <h3 className="text-sm font-semibold text-slate-350">Bank Account Details</h3>
-              <p className="text-xs text-slate-450 leading-relaxed">
+              <h3 className="text-sm font-semibold text-slate-300">Bank Account Details</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
                 Provide the details of the bank account where customers should deposit invoice payments. These fields will format cleanly at the bottom of your printed invoices.
               </p>
               

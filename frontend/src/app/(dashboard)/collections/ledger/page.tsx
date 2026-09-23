@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -14,11 +16,8 @@ import { useCollectionLedger } from "@/features/collections/hooks/use-collection
 
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
-function formatCurrency(amount: number) {
-  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
-
 export default function LedgerPage() {
+  const { formatDateTime, formatMoney } = useFormat();
   const { data: ledger, isLoading } = useCollectionLedger();
 
   return (
@@ -55,7 +54,7 @@ export default function LedgerPage() {
                 {(ledger ?? []).map((entry) => (
                   <TableRow key={entry.id} className="border-slate-800/40">
                     <TableCell className="text-slate-400 text-sm">
-                      {new Date(entry.createdAt).toLocaleString()}
+                      {formatDateTime(entry.createdAt)}
                     </TableCell>
                     <TableCell className="text-slate-300 text-sm">{entry.userEmail}</TableCell>
                     <TableCell>
@@ -75,7 +74,7 @@ export default function LedgerPage() {
                       }`}
                     >
                       {entry.amount > 0 ? "+" : ""}
-                      {formatCurrency(entry.amount)}
+                      {formatMoney(entry.amount)}
                     </TableCell>
                     <TableCell className="text-slate-400 text-sm truncate max-w-xs">
                       {entry.notes || "-"}

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useFormat } from "@/lib/use-format";
+import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { useOrganization } from "@/lib/use-organization";
 import { toast } from "sonner";
-import { Customer, Product, TaxRate, Warehouse } from "@/types";
+import { Customer, InvoiceSettings, Product, TaxRate, Warehouse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,6 +84,7 @@ function parseTerms(raw: string | undefined | null): string[] {
 }
 
 export function InvoiceForm() {
+  const { formatMoney } = useFormat();
   const router = useRouter();
   const searchParams = useSearchParams();
   const soId = searchParams.get("soId");
@@ -144,7 +146,7 @@ export function InvoiceForm() {
     queryKey: ["invoiceSettings", orgId],
     queryFn: async () => {
       if (!orgId) return null;
-      const res = await api.get<any>(`/organizations/${orgId}/settings`);
+      const res = await api.get<InvoiceSettings & { defaultGstRate?: number }>(`/organizations/${orgId}/settings`);
       return res;
     },
     enabled: !!orgId
@@ -173,12 +175,10 @@ export function InvoiceForm() {
     return taxes.find((t) => Number(t.rate) === 18) || taxes[0];
   }, [taxes, defaultGstRate]);
 
-  // Pre-select default tax rate in consolidated tax mode
-  useEffect(() => {
-    if (defaultTaxRate && !consolidatedTaxRateId) {
-      setConsolidatedTaxRateId(defaultTaxRate.id);
-    }
-  }, [defaultTaxRate, consolidatedTaxRateId]);
+  // Pre-select default tax rate in consolidated tax mode (guarded render-time update, no effect)
+  if (defaultTaxRate && !consolidatedTaxRateId) {
+    setConsolidatedTaxRateId(defaultTaxRate.id);
+  }
 
   // Default warehouse (Main / code=MAIN / first)
   const defaultWarehouse = useMemo(() => {
@@ -189,17 +189,17 @@ export function InvoiceForm() {
     );
   }, [warehouses]);
 
-  // Autopopulate default warehouse on initial lines
-  useEffect(() => {
-    if (defaultWarehouse) {
-      setLines((prevLines) =>
-        prevLines.map((line) => ({
-          ...line,
-          warehouseId: line.warehouseId || defaultWarehouse.id,
-        }))
-      );
-    }
-  }, [defaultWarehouse]);
+  // Autopopulate the default warehouse on lines that have none, once per default (render-time, no effect)
+  const [appliedWarehouseId, setAppliedWarehouseId] = useState<string | null>(null);
+  if (defaultWarehouse && defaultWarehouse.id !== appliedWarehouseId) {
+    setAppliedWarehouseId(defaultWarehouse.id);
+    setLines((prevLines) =>
+      prevLines.map((line) => ({
+        ...line,
+        warehouseId: line.warehouseId || defaultWarehouse.id,
+      }))
+    );
+  }
 
   const initialLoading = loadingCustomers || loadingProducts || loadingTaxes || loadingWarehouses;
 
@@ -260,7 +260,7 @@ export function InvoiceForm() {
   };
 
   // General field change (e.g. quantity, unitPrice, warehouseId, taxRateId)
-  const handleLineChange = (id: string, field: keyof LineItem, value: any) => {
+  const handleLineChange = <K extends keyof LineItem>(id: string, field: K, value: LineItem[K]) => {
     setLines((prev) =>
       prev.map((line) => {
         if (line.id === id) {
@@ -383,9 +383,8 @@ export function InvoiceForm() {
       router.push("/sales/invoices");
       router.refresh();
     },
-    onError: (error: any) => {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Failed to create invoice");
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create invoice");
     }
   });
 
@@ -493,7 +492,6 @@ export function InvoiceForm() {
                 onChange={(val) => setFormData((prev) => ({ ...prev, customerId: val }))}
               />
             </div>
-
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -658,7 +656,7 @@ export function InvoiceForm() {
 
                         {/* Line Total */}
                         <TableCell className="text-right font-medium font-mono text-xs text-white py-2.5">
-                          ₹{lineTotal.toFixed(2)}
+                          {formatMoney(lineTotal)}
                         </TableCell>
 
                         {/* Remove Action */}
@@ -867,29 +865,29 @@ export function InvoiceForm() {
                 {/* Subtotal */}
                 <div className="flex justify-between text-slate-300">
                   <span>Subtotal</span>
-                  <span className="font-mono text-white">₹{totals.subtotal.toFixed(2)}</span>
+                  <span className="font-mono text-white">{formatMoney(totals.subtotal)}</span>
                 </div>
 
                 {/* Divided Total Tax Section */}
                 <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
                   <div className="flex justify-between font-medium text-slate-200">
                     <span>Total Tax</span>
-                    <span className="font-mono text-emerald-400">₹{totals.taxTotal.toFixed(2)}</span>
+                    <span className="font-mono text-emerald-400">{formatMoney(totals.taxTotal)}</span>
                   </div>
 
                   {/* Three-part Tax Breakdown: CGST, SGST, IGST */}
                   <div className="pl-3 border-l-2 border-indigo-500/40 space-y-1 text-[11px] text-slate-400">
                     <div className="flex justify-between">
                       <span>CGST (Central Tax)</span>
-                      <span className="font-mono text-slate-300">₹{totals.cgstAmount.toFixed(2)}</span>
+                      <span className="font-mono text-slate-300">{formatMoney(totals.cgstAmount)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>SGST (State Tax)</span>
-                      <span className="font-mono text-slate-300">₹{totals.sgstAmount.toFixed(2)}</span>
+                      <span className="font-mono text-slate-300">{formatMoney(totals.sgstAmount)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>IGST (Integrated Tax)</span>
-                      <span className="font-mono text-slate-300">₹{totals.igstAmount.toFixed(2)}</span>
+                      <span className="font-mono text-slate-300">{formatMoney(totals.igstAmount)}</span>
                     </div>
                   </div>
                 </div>
@@ -897,7 +895,7 @@ export function InvoiceForm() {
                 {/* Grand Total */}
                 <div className="border-t border-slate-800 pt-3 mt-3 flex justify-between font-bold text-base text-white">
                   <span>Grand Total</span>
-                  <span className="font-mono text-indigo-400">₹{totals.total.toFixed(2)}</span>
+                  <span className="font-mono text-indigo-400">{formatMoney(totals.total)}</span>
                 </div>
 
                 {/* Action Buttons */}

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
 import { api, downloadPdf } from "@/lib/api-client";
@@ -23,6 +25,7 @@ import { PurchaseOrder } from "@/types";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function PurchaseOrderList() {
+  const { formatMoney, formatDate } = useFormat();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const { data: orders = [] as PurchaseOrder[], isLoading } = useQuery({
@@ -132,10 +135,10 @@ export function PurchaseOrderList() {
               paginatedData.map((po: PurchaseOrder) => (
                 <TableRow key={po.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{po.poNumber}</TableCell>
-                  <TableCell>{po.orderDate}</TableCell>
+                  <TableCell>{formatDate(po.orderDate)}</TableCell>
                   <TableCell>{po.supplierName}</TableCell>
                   <TableCell>{getStatusBadge(po.status)}</TableCell>
-                  <TableCell className="text-right font-medium">₹{po.totalAmount?.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatMoney(po.totalAmount)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" onClick={() => downloadPdf(`/purchase-orders/${po.id}/pdf`, `PO-${po.poNumber}.pdf`)}>
                       PDF

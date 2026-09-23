@@ -2,6 +2,10 @@ package com.billos.api.service;
 
 import com.billos.api.dto.*;
 import com.billos.api.entity.*;
+import com.billos.api.exception.BadRequestException;
+import com.billos.api.exception.ConflictException;
+import com.billos.api.exception.ForbiddenException;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.repository.*;
 import com.billos.api.security.UserPrincipal;
 import com.billos.api.tenant.TenantContext;
@@ -68,11 +72,11 @@ public class CollectionService {
         UUID finalTargetUserId = targetUserId;
         User user = userRepository
                 .findById(finalTargetUserId)
-                .orElseThrow(() -> new RuntimeException("Selected user not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Selected user not found"));
 
         userOrgRoleRepository
                 .findByUserIdAndOrganizationId(user.getId(), orgId)
-                .orElseThrow(() -> new RuntimeException("Selected user does not belong to this organization"));
+                .orElseThrow(() -> new BadRequestException("Selected user does not belong to this organization"));
 
         CollectionQrCode qr = new CollectionQrCode();
         qr.setOrganizationId(orgId);
@@ -88,7 +92,7 @@ public class CollectionService {
     public CollectionQrCodeDto updateQrCode(UUID id, CollectionQrCodeDto dto) {
         CollectionQrCode qr = sharedEntityResolver.accessibleQrCode(id);
         if (!sharedEntityResolver.isOwnedByCurrentOrg(qr.getOrganizationId())) {
-            throw new RuntimeException("Branch cannot modify QR codes owned by the Primary Organization.");
+            throw new ForbiddenException("Branch cannot modify QR codes owned by the Primary Organization.");
         }
 
         if (dto.getNickname() != null) {
@@ -104,10 +108,10 @@ public class CollectionService {
             UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
             User user = userRepository
                     .findById(dto.getUserId())
-                    .orElseThrow(() -> new RuntimeException("Selected user not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Selected user not found"));
             userOrgRoleRepository
                     .findByUserIdAndOrganizationId(user.getId(), orgId)
-                    .orElseThrow(() -> new RuntimeException("Selected user does not belong to this organization"));
+                    .orElseThrow(() -> new BadRequestException("Selected user does not belong to this organization"));
             qr.setUser(user);
         }
 
@@ -132,7 +136,7 @@ public class CollectionService {
 
         CollectionQrCode qr = qrCodeRepository
                 .findAccessibleById(dto.getQrCodeId(), currentOrgId, primaryOrgId)
-                .orElseThrow(() -> new RuntimeException("QR Code not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("QR Code not found"));
 
         Customer customer = null;
         if (dto.getCustomerId() != null) {
@@ -178,11 +182,12 @@ public class CollectionService {
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User verifier = userRepository.findById(principal.getId()).orElseThrow();
 
-        CollectionPayment payment =
-                paymentRepository.findById(id).orElseThrow(() -> new RuntimeException("Payment record not found"));
+        CollectionPayment payment = paymentRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment record not found"));
 
         if (!"PENDING_VERIFICATION".equals(payment.getStatus())) {
-            throw new RuntimeException("Payment is already verified or rejected");
+            throw new ConflictException("Payment is already verified or rejected");
         }
 
         // Only QR owner or Owner/Admin can verify
@@ -191,7 +196,7 @@ public class CollectionService {
         boolean hasAccess = isOwner || "OWNER".equals(verifierRole) || "ADMIN".equals(verifierRole);
 
         if (!hasAccess) {
-            throw new RuntimeException("You do not have permission to verify this payment");
+            throw new ForbiddenException("You do not have permission to verify this payment");
         }
 
         payment.setVerifiedBy(verifier);
@@ -329,11 +334,12 @@ public class CollectionService {
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User verifier = userRepository.findById(principal.getId()).orElseThrow();
 
-        CollectionExpense expense =
-                expenseRepository.findById(id).orElseThrow(() -> new RuntimeException("Expense record not found"));
+        CollectionExpense expense = expenseRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense record not found"));
 
         if (!"SUBMITTED".equals(expense.getStatus())) {
-            throw new RuntimeException("Expense is already approved or rejected");
+            throw new ConflictException("Expense is already approved or rejected");
         }
 
         String verifierRole = getMemberRole(verifier.getId(), orgId);
@@ -344,7 +350,7 @@ public class CollectionService {
         int targetLevel = hierarchy.indexOf(targetRole);
 
         if (callerLevel == -1 || targetLevel == -1 || callerLevel >= targetLevel) {
-            throw new RuntimeException("You do not have permission to approve expenses for this user role");
+            throw new ForbiddenException("You do not have permission to approve expenses for this user role");
         }
 
         expense.setApprovedBy(verifier);
@@ -436,16 +442,17 @@ public class CollectionService {
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User verifier = userRepository.findById(principal.getId()).orElseThrow();
 
-        SettlementDeposit deposit =
-                depositRepository.findById(id).orElseThrow(() -> new RuntimeException("Deposit record not found"));
+        SettlementDeposit deposit = depositRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Deposit record not found"));
 
         if (!"PENDING_APPROVAL".equals(deposit.getStatus())) {
-            throw new RuntimeException("Deposit is already approved or rejected");
+            throw new ConflictException("Deposit is already approved or rejected");
         }
 
         String verifierRole = getMemberRole(verifier.getId(), orgId);
         if (!"OWNER".equals(verifierRole) && !"ADMIN".equals(verifierRole) && !"MANAGER".equals(verifierRole)) {
-            throw new RuntimeException("Only Owners, Admins, and Managers can approve settlement deposits");
+            throw new ForbiddenException("Only Owners, Admins, and Managers can approve settlement deposits");
         }
 
         deposit.setApprovedBy(verifier);

@@ -5,6 +5,9 @@ import com.billos.api.entity.Organization;
 import com.billos.api.entity.OrganizationSettings;
 import com.billos.api.entity.User;
 import com.billos.api.entity.UserOrgRole;
+import com.billos.api.exception.ConflictException;
+import com.billos.api.exception.ForbiddenException;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.repository.OrganizationRepository;
 import com.billos.api.repository.OrganizationSettingsRepository;
 import com.billos.api.repository.UserOrgRoleRepository;
@@ -34,8 +37,9 @@ public class OrganizationService {
         // Get current user
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        User currentUser =
-                userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+        User currentUser = userRepository
+                .findById(principal.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // The body is bound straight onto the entity, so neutralise fields a caller must never control:
         // a client-supplied id would make saveAndFlush merge over an existing organization, and a
@@ -75,13 +79,14 @@ public class OrganizationService {
         // Get current user
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        User currentUser =
-                userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+        User currentUser = userRepository
+                .findById(principal.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // Validate email suffix uniqueness
         String suffix = request.getEmailSuffix().toLowerCase().trim();
         if (organizationRepository.existsByEmailSuffix(suffix)) {
-            throw new RuntimeException("Email suffix '" + suffix + "' is already taken. Please choose another.");
+            throw new ConflictException("Email suffix '" + suffix + "' is already taken. Please choose another.");
         }
 
         Organization org = new Organization();
@@ -132,12 +137,13 @@ public class OrganizationService {
             @NonNull UUID parentOrgId, @NonNull com.billos.api.dto.CreateBranchRequest request) {
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        User currentUser =
-                userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+        User currentUser = userRepository
+                .findById(principal.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Organization parentOrg = organizationRepository
                 .findById(parentOrgId)
-                .orElseThrow(() -> new RuntimeException("Primary parent organization not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Primary parent organization not found"));
 
         // Validate user is authorized on parent organization
         java.util.Optional<UserOrgRole> parentRoleOpt =
@@ -145,7 +151,7 @@ public class OrganizationService {
         if (parentRoleOpt.isEmpty()
                 || (!"OWNER".equalsIgnoreCase(parentRoleOpt.get().getRole())
                         && !"ADMIN".equalsIgnoreCase(parentRoleOpt.get().getRole()))) {
-            throw new RuntimeException("Only an OWNER or ADMIN of the parent organization can create branches");
+            throw new ForbiddenException("Only an OWNER or ADMIN of the parent organization can create branches");
         }
 
         Organization branch = new Organization();
@@ -278,8 +284,9 @@ public class OrganizationService {
 
     @Transactional
     public Organization updateOrganization(java.util.UUID id, Organization updatedDetails) {
-        Organization org =
-                organizationRepository.findById(id).orElseThrow(() -> new RuntimeException("Organization not found"));
+        Organization org = organizationRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
         // Simple update logic
         if (updatedDetails.getName() != null) org.setName(updatedDetails.getName());
@@ -303,7 +310,7 @@ public class OrganizationService {
                     updatedDetails.getEmailSuffix().toLowerCase().trim().replaceAll("[^a-z0-9-]", "");
             if (!newSuffix.equals(org.getEmailSuffix())) {
                 if (organizationRepository.existsByEmailSuffix(newSuffix)) {
-                    throw new RuntimeException(
+                    throw new ConflictException(
                             "Email suffix '" + newSuffix + "' is already taken. Please choose another.");
                 }
                 org.setEmailSuffix(newSuffix);
@@ -317,7 +324,7 @@ public class OrganizationService {
     public OrganizationSettingsDto getOrganizationSettings(UUID orgId) {
         OrganizationSettings settings = organizationSettingsRepository
                 .findByOrganizationId(orgId)
-                .orElseThrow(() -> new RuntimeException("Settings not found for organization"));
+                .orElseThrow(() -> new ResourceNotFoundException("Settings not found for organization"));
 
         return mapToDto(settings);
     }
@@ -326,7 +333,7 @@ public class OrganizationService {
     public OrganizationSettingsDto updateOrganizationSettings(UUID orgId, OrganizationSettingsDto dto) {
         OrganizationSettings settings = organizationSettingsRepository
                 .findByOrganizationId(orgId)
-                .orElseThrow(() -> new RuntimeException("Settings not found for organization"));
+                .orElseThrow(() -> new ResourceNotFoundException("Settings not found for organization"));
 
         if (dto.getDefaultGstRate() != null) settings.setDefaultGstRate(dto.getDefaultGstRate());
         if (dto.getTaxInclusivePricing() != null) settings.setTaxInclusivePricing(dto.getTaxInclusivePricing());

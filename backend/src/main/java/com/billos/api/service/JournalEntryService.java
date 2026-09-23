@@ -5,6 +5,7 @@ import com.billos.api.dto.JournalEntryLineDto;
 import com.billos.api.entity.Account;
 import com.billos.api.entity.JournalEntry;
 import com.billos.api.entity.JournalEntryLine;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.JournalEntryMapper;
 import com.billos.api.repository.AccountRepository;
 import com.billos.api.repository.JournalEntryRepository;
@@ -38,7 +39,7 @@ public class JournalEntryService {
         return journalEntryRepository
                 .findById(id)
                 .map(journalEntryMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Journal Entry not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Journal Entry not found"));
     }
 
     @Transactional
@@ -64,7 +65,7 @@ public class JournalEntryService {
             JournalEntryLine line = journalEntryMapper.lineToEntity(lineDto);
             Account account = accountRepository
                     .findById(lineDto.getAccountId())
-                    .orElseThrow(() -> new RuntimeException("Account not found: " + lineDto.getAccountId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found: " + lineDto.getAccountId()));
             line.setAccount(account);
             entry.addLine(line);
 

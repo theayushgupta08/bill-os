@@ -3,6 +3,7 @@ package com.billos.api.service;
 import com.billos.api.dto.InventoryLevelDto;
 import com.billos.api.dto.StockMovementDto;
 import com.billos.api.entity.*;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.InventoryMapper;
 import com.billos.api.repository.InventoryLevelRepository;
 import com.billos.api.repository.ProductRepository;
@@ -50,7 +51,7 @@ public class InventoryService {
 
         Warehouse warehouse = warehouseRepository
                 .findById(request.getWarehouseId())
-                .orElseThrow(() -> new RuntimeException("Warehouse not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
         Product product = sharedEntityResolver.accessibleProduct(request.getProductId());
 
         // 1. Get or create InventoryLevel

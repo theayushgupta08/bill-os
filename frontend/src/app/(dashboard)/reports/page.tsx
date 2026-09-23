@@ -31,7 +31,7 @@ const reportCategories = [
         description: "Summarized snapshot of organization revenues, purchases, and net margins.",
         href: "/reports/pnl",
         icon: TrendingUp,
-        color: "text-emerald-450 border-emerald-500/20 bg-emerald-500/5",
+        color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5",
         hoverBg: "hover:bg-emerald-500/10",
       },
     ],

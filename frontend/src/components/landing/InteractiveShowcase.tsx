@@ -20,7 +20,7 @@ export function InteractiveShowcase() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-            Everything you need. <span className="text-muted-foreground">Nothing you don't.</span>
+            Everything you need. <span className="text-muted-foreground">Nothing you don&apos;t.</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             A cohesive suite of tools designed to work together perfectly. Say goodbye to scattered spreadsheets and clunky interfaces.

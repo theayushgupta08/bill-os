@@ -38,7 +38,7 @@
                 <div class="title">PURCHASE ORDER</div>
                 <div style="text-align: right; margin-top: 10px;">
                     <strong>PO #:</strong> <span th:text="${po.poNumber}">PO-0001</span><br/>
-                    <strong>Date:</strong> <span th:text="${po.orderDate}">2023-01-01</span>
+                    <strong>Date:</strong> <span th:text="${po.orderDate != null ? dates.format(po.orderDate) : ''}">2023-01-01</span>
                 </div>
             </td>
         </tr>

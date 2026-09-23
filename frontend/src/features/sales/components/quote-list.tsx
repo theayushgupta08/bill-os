@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
 import { api, downloadPdf } from "@/lib/api-client";
@@ -23,6 +25,7 @@ import { Quotation } from "@/types";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function QuoteList() {
+  const { formatMoney, formatDate } = useFormat();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const { data: quotes = [], isLoading } = useQuery({
@@ -124,10 +127,10 @@ export function QuoteList() {
               paginatedData.map((q: Quotation) => (
                 <TableRow key={q.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{q.quoteNumber}</TableCell>
-                  <TableCell>{q.quoteDate}</TableCell>
+                  <TableCell>{formatDate(q.quoteDate)}</TableCell>
                   <TableCell>{q.customerName}</TableCell>
                   <TableCell><Badge variant="outline">{q.status}</Badge></TableCell>
-                  <TableCell className="text-right font-medium">₹{q.totalAmount?.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatMoney(q.totalAmount)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" onClick={() => downloadPdf(`/quotations/${q.id}/pdf`, `Quote-${q.quoteNumber}.pdf`)}>
                       PDF

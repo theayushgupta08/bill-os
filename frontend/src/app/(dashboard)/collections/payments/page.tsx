@@ -1,12 +1,13 @@
 "use client";
 
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+
 import {
   Dialog,
   DialogContent,
@@ -52,13 +53,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function formatCurrency(amount: number) {
-  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
-
 const PLACES = ["SHOP", "ONLINE", "FIELD_VISIT", "OTHER"];
 
 export default function PaymentsPage() {
+  const { formatMoney } = useFormat();
   const { data: payments, isLoading } = useCollectionPayments();
   const { data: qrCodes } = useQrCodes();
   const recordMutation = useRecordPayment();
@@ -208,7 +206,7 @@ export default function PaymentsPage() {
                     <TableCell className="text-slate-300 text-sm">{p.qrOwnerEmail}</TableCell>
                     <TableCell className="text-slate-400 text-sm">{p.place.replace(/_/g, " ")}</TableCell>
                     <TableCell className="text-right text-emerald-400 font-medium text-sm">
-                      {formatCurrency(p.amount)}
+                      {formatMoney(p.amount)}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={p.status} />

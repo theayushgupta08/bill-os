@@ -100,4 +100,23 @@ class TenantSecurityTest {
 
         assertThat(tenantSecurity.isMemberOf(orgId)).isFalse();
     }
+
+    @Test
+    void shouldResolveRoleOncePerRequest_acrossRepeatedChecks() {
+        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(
+                new org.springframework.web.context.request.ServletRequestAttributes(
+                        new org.springframework.mock.web.MockHttpServletRequest()));
+        try {
+            when(userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId))
+                    .thenReturn(Optional.of(role("OWNER")));
+
+            assertThat(tenantSecurity.isMemberOf(orgId)).isTrue();
+            assertThat(tenantSecurity.hasRoleIn(orgId, "ADMIN")).isTrue();
+            assertThat(tenantSecurity.hasRoleIn(orgId, "OWNER")).isTrue();
+
+            verify(userOrgRoleRepository, times(1)).findByUserIdAndOrganizationId(userId, orgId);
+        } finally {
+            org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+        }
+    }
 }

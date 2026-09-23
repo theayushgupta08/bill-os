@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 @Service("tenantSecurity")
 @RequiredArgsConstructor
@@ -19,6 +21,9 @@ public class TenantSecurity {
 
     private final UserOrgRoleRepository userOrgRoleRepository;
     private final OrganizationRepository organizationRepository;
+
+    private static final String ROLE_CACHE_ATTRIBUTE = TenantSecurity.class.getName() + ".role:";
+    private static final String NO_ROLE = "";
 
     private static final List<String> ROLE_HIERARCHY = List.of("OWNER", "ADMIN", "MANAGER", "USER", "VIEWER");
 
@@ -53,7 +58,7 @@ public class TenantSecurity {
             return false;
         }
 
-        String userRole = resolveEffectiveRole(userId.get(), orgId);
+        String userRole = effectiveRoleForRequest(userId.get(), orgId);
         if (userRole == null) {
             return false;
         }
@@ -79,6 +84,26 @@ public class TenantSecurity {
             return Optional.empty();
         }
         return Optional.of(principal.getId());
+    }
+
+    /**
+     * The membership interceptor and each {@code @PreAuthorize} ask for the same role within one request;
+     * memoize it in request scope so that costs one lookup instead of several.
+     */
+    private String effectiveRoleForRequest(UUID userId, UUID orgId) {
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        String key = ROLE_CACHE_ATTRIBUTE + userId + ":" + orgId;
+        if (attributes != null) {
+            Object cached = attributes.getAttribute(key, RequestAttributes.SCOPE_REQUEST);
+            if (cached != null) {
+                return NO_ROLE.equals(cached) ? null : (String) cached;
+            }
+        }
+        String role = resolveEffectiveRole(userId, orgId);
+        if (attributes != null) {
+            attributes.setAttribute(key, role != null ? role : NO_ROLE, RequestAttributes.SCOPE_REQUEST);
+        }
+        return role;
     }
 
     private String resolveEffectiveRole(UUID userId, UUID orgId) {

@@ -3,6 +3,9 @@ package com.billos.api.service;
 import com.billos.api.dto.PaymentAllocationDto;
 import com.billos.api.dto.PaymentDto;
 import com.billos.api.entity.*;
+import com.billos.api.exception.BadRequestException;
+import com.billos.api.exception.ConflictException;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.PaymentMapper;
 import com.billos.api.repository.*;
 import com.billos.api.tenant.TenantContext;
@@ -46,7 +49,7 @@ public class PaymentService {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
         if (dto.getAmount() == null || dto.getAmount().signum() <= 0) {
-            throw new RuntimeException("Payment amount must be greater than zero");
+            throw new BadRequestException("Payment amount must be greater than zero");
         }
 
         // Validate before touching any document so a rejected payment leaves no partial side effects
@@ -54,12 +57,12 @@ public class PaymentService {
         for (PaymentAllocationDto allocDto : dto.getAllocations()) {
             if (allocDto.getAllocatedAmount() == null
                     || allocDto.getAllocatedAmount().signum() <= 0) {
-                throw new RuntimeException("Allocated amount must be greater than zero");
+                throw new BadRequestException("Allocated amount must be greater than zero");
             }
             totalAllocated = totalAllocated.add(allocDto.getAllocatedAmount());
         }
         if (totalAllocated.compareTo(dto.getAmount()) > 0) {
-            throw new RuntimeException("Total allocated amount exceeds payment amount");
+            throw new BadRequestException("Total allocated amount exceeds payment amount");
         }
 
         Payment payment = new Payment();
@@ -78,16 +81,16 @@ public class PaymentService {
             if (type == PaymentType.RECEIPT && allocDto.getSalesInvoiceId() != null) {
                 SalesInvoice invoice = salesInvoiceRepository
                         .findById(allocDto.getSalesInvoiceId())
-                        .orElseThrow(() -> new RuntimeException("Invoice not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
                 if (invoice.getStatus() != SalesInvoiceStatus.ISSUED
                         && invoice.getStatus() != SalesInvoiceStatus.PARTIAL) {
-                    throw new RuntimeException("Cannot record a payment against a " + invoice.getStatus() + " invoice ("
-                            + invoice.getInvoiceNumber() + ")");
+                    throw new ConflictException("Cannot record a payment against a " + invoice.getStatus()
+                            + " invoice (" + invoice.getInvoiceNumber() + ")");
                 }
 
                 BigDecimal newPaid = invoice.getAmountPaid().add(amount);
                 if (newPaid.compareTo(invoice.getTotalAmount()) > 0) {
-                    throw new RuntimeException("Payment of " + amount + " exceeds the balance due of "
+                    throw new BadRequestException("Payment of " + amount + " exceeds the balance due of "
                             + invoice.getTotalAmount().subtract(invoice.getAmountPaid()) + " on invoice "
                             + invoice.getInvoiceNumber());
                 }
@@ -106,15 +109,15 @@ public class PaymentService {
             } else if (type == PaymentType.PAYMENT && allocDto.getPurchaseBillId() != null) {
                 PurchaseBill bill = purchaseBillRepository
                         .findById(allocDto.getPurchaseBillId())
-                        .orElseThrow(() -> new RuntimeException("Bill not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Bill not found"));
                 if (bill.getStatus() != PurchaseBillStatus.UNPAID && bill.getStatus() != PurchaseBillStatus.PARTIAL) {
-                    throw new RuntimeException("Cannot record a payment against a " + bill.getStatus() + " bill ("
+                    throw new ConflictException("Cannot record a payment against a " + bill.getStatus() + " bill ("
                             + bill.getBillNumber() + ")");
                 }
 
                 BigDecimal newPaid = bill.getAmountPaid().add(amount);
                 if (newPaid.compareTo(bill.getTotalAmount()) > 0) {
-                    throw new RuntimeException("Payment of " + amount + " exceeds the balance due of "
+                    throw new BadRequestException("Payment of " + amount + " exceeds the balance due of "
                             + bill.getTotalAmount().subtract(bill.getAmountPaid()) + " on bill "
                             + bill.getBillNumber());
                 }
@@ -130,7 +133,7 @@ public class PaymentService {
                 supplier.setOutstandingBalance(supplier.getOutstandingBalance().subtract(amount));
                 supplierRepository.save(supplier);
             } else {
-                throw new RuntimeException(
+                throw new BadRequestException(
                         type == PaymentType.RECEIPT
                                 ? "Receipt allocations must reference a sales invoice"
                                 : "Payment allocations must reference a purchase bill");

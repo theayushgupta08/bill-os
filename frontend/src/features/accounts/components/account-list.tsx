@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
@@ -39,6 +41,7 @@ interface Account {
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function AccountList() {
+  const { formatMoney } = useFormat();
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
 
@@ -163,7 +166,7 @@ export function AccountList() {
                     <Badge variant="outline">{account.type}</Badge>
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    ₹{account.balance.toFixed(2)}
+                    {formatMoney(account.balance)}
                   </TableCell>
                   <TableCell>
                     {account.isActive ? (

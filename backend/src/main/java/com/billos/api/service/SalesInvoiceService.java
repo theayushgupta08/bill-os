@@ -2,6 +2,9 @@ package com.billos.api.service;
 
 import com.billos.api.dto.*;
 import com.billos.api.entity.*;
+import com.billos.api.exception.BadRequestException;
+import com.billos.api.exception.ConflictException;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.SalesInvoiceMapper;
 import com.billos.api.repository.*;
 import com.billos.api.tenant.TenantContext;
@@ -44,7 +47,7 @@ public class SalesInvoiceService {
         return salesInvoiceRepository
                 .findById(id)
                 .map(salesInvoiceMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Sales Invoice not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice not found"));
     }
 
     @Transactional
@@ -55,7 +58,7 @@ public class SalesInvoiceService {
 
         Organization org = organizationRepository
                 .findById(orgId)
-                .orElseThrow(() -> new RuntimeException("Organization not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
         boolean isInterState = org.getState() != null
                 && customer.getBillingState() != null
@@ -66,21 +69,21 @@ public class SalesInvoiceService {
         invoice.setCustomer(customer);
 
         if (dto.getLines() == null || dto.getLines().isEmpty()) {
-            throw new RuntimeException("An invoice needs at least one line");
+            throw new BadRequestException("An invoice needs at least one line");
         }
 
         // Clients may only create drafts or issue immediately; PARTIAL/PAID/VOID are reached via payments/voiding
         SalesInvoiceStatus initialStatus = dto.getStatus() != null ? dto.getStatus() : SalesInvoiceStatus.DRAFT;
         if (initialStatus != SalesInvoiceStatus.DRAFT && initialStatus != SalesInvoiceStatus.ISSUED) {
-            throw new RuntimeException("A new invoice can only be DRAFT or ISSUED, not " + initialStatus);
+            throw new BadRequestException("A new invoice can only be DRAFT or ISSUED, not " + initialStatus);
         }
 
         if (dto.getSoId() != null) {
             SalesOrder so = salesOrderRepository
                     .findById(dto.getSoId())
-                    .orElseThrow(() -> new RuntimeException("SO not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("SO not found"));
             if (so.getStatus() == SalesOrderStatus.INVOICED || so.getStatus() == SalesOrderStatus.CANCELLED) {
-                throw new RuntimeException("Sales order " + so.getSoNumber() + " is already " + so.getStatus());
+                throw new ConflictException("Sales order " + so.getSoNumber() + " is already " + so.getStatus());
             }
             // invoice.setSalesOrder(so); // Left commented out as not mapped directly in basic implementation
             so.setStatus(SalesOrderStatus.INVOICED);
@@ -101,13 +104,13 @@ public class SalesInvoiceService {
             Product product = sharedEntityResolver.accessibleProduct(lineDto.getProductId());
             Warehouse warehouse = warehouseRepository
                     .findById(lineDto.getWarehouseId())
-                    .orElseThrow(() -> new RuntimeException("Warehouse not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
 
             TaxRate taxRate = null;
             if (lineDto.getTaxRateId() != null) {
                 taxRate = taxRateRepository
                         .findById(lineDto.getTaxRateId())
-                        .orElseThrow(() -> new RuntimeException("Tax Rate not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Tax Rate not found"));
             }
 
             SalesInvoiceLine line = new SalesInvoiceLine();
@@ -157,11 +160,12 @@ public class SalesInvoiceService {
 
     @Transactional
     public SalesInvoiceDto issueInvoice(UUID id) {
-        SalesInvoice invoice =
-                salesInvoiceRepository.findById(id).orElseThrow(() -> new RuntimeException("Invoice not found"));
+        SalesInvoice invoice = salesInvoiceRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
 
         if (invoice.getStatus() != SalesInvoiceStatus.DRAFT) {
-            throw new RuntimeException("Only DRAFT invoices can be issued");
+            throw new ConflictException("Only DRAFT invoices can be issued");
         }
 
         invoice.setStatus(SalesInvoiceStatus.ISSUED);
@@ -195,12 +199,13 @@ public class SalesInvoiceService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> generateEInvoiceJson(UUID id) {
-        SalesInvoice invoice =
-                salesInvoiceRepository.findById(id).orElseThrow(() -> new RuntimeException("Invoice not found"));
+        SalesInvoice invoice = salesInvoiceRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
 
         Organization org = organizationRepository
                 .findById(invoice.getOrganizationId())
-                .orElseThrow(() -> new RuntimeException("Organization not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
         Customer customer = invoice.getCustomer();
 

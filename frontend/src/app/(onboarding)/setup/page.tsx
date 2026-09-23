@@ -1,13 +1,14 @@
 "use client";
 
+
+import { useSuffixAvailability } from "@/hooks/use-suffix-availability";
 import { useState, useEffect, useRef } from "react";
-import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api-client";
+import { api, errorMessage } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { BrandLoader } from "@/components/ui/loader";
 import {
@@ -94,53 +95,12 @@ export default function SetupOrganizationPage() {
 
   // Email Suffix for Team Accounts
   const [emailSuffix, setEmailSuffix] = useState("");
-  const [suffixChecking, setSuffixChecking] = useState(false);
-  const [suffixAvailable, setSuffixAvailable] = useState<boolean | null>(null);
-  const [suffixError, setSuffixError] = useState<string | null>(null);
+  const {
+    available: suffixAvailable,
+    error: suffixError,
+    checking: suffixChecking,
+  } = useSuffixAvailability(emailSuffix);
 
-  // Real-time email suffix uniqueness check with debouncing
-  useEffect(() => {
-    const cleaned = emailSuffix.trim().toLowerCase();
-    if (!cleaned) {
-      setSuffixAvailable(null);
-      setSuffixError(null);
-      setSuffixChecking(false);
-      return;
-    }
-
-    const regex = /^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])?$/;
-    if (cleaned.length < 3 || cleaned.length > 30 || !regex.test(cleaned)) {
-      setSuffixAvailable(false);
-      setSuffixError("Suffix must be 3-30 chars: lowercase letters, numbers, and hyphens only");
-      setSuffixChecking(false);
-      return;
-    }
-
-    setSuffixChecking(true);
-    setSuffixError(null);
-
-    const timer = setTimeout(async () => {
-      try {
-        const res = await api.get<{ available: boolean; reason?: string }>(
-          `/public/check-suffix?suffix=${encodeURIComponent(cleaned)}`
-        );
-        if (res.available) {
-          setSuffixAvailable(true);
-          setSuffixError(null);
-        } else {
-          setSuffixAvailable(false);
-          setSuffixError(res.reason || "This suffix is already in use");
-        }
-      } catch {
-        setSuffixAvailable(false);
-        setSuffixError("Unable to verify suffix availability");
-      } finally {
-        setSuffixChecking(false);
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [emailSuffix]);
 
   // -------------------------------------------------------------
   // STEP 2: Organisation Settings & Bank Details
@@ -565,11 +525,7 @@ export default function SetupOrganizationPage() {
     } catch (err: unknown) {
       console.error("Failed to setup organization:", err);
       setIsLaunching(false);
-      const axiosErr = err as AxiosError<{ message?: string }>;
-      setError(
-        axiosErr.response?.data?.message ||
-          "Failed to complete organization setup. Please try again."
-      );
+      setError(errorMessage(err, "Failed to complete organization setup. Please try again."));
     }
   };
 

@@ -2,16 +2,14 @@ import { Metadata } from "next";
 import { siteConfig } from "@/lib/config";
 import { DocumentLayout, DocumentSection } from "@/components/layout/DocumentLayout";
 import { DocumentHeading } from "@/components/layout/DocumentHeading";
-import { 
-  Shield, 
-  Lock, 
-  Key, 
-  Database, 
-  Server, 
-  RefreshCcw, 
-  AlertTriangle, 
+import {
+  Lock,
+  Key,
+  Database,
+  Server,
+  AlertTriangle,
   BrainCircuit,
-  FileBadge
+  FileBadge,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -90,7 +88,7 @@ export default function SecurityPage() {
                 <Database className="w-5 h-5 text-primary" /> Data Isolation
               </h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Our architecture is designed to enforce strict logical tenant isolation. Every database query is scoped specifically to the requesting tenant's unique identifier. This ensures that cross-tenant data leakage is fundamentally prevented at the application layer.
+                Our architecture is designed to enforce strict logical tenant isolation. Every database query is scoped specifically to the requesting tenant&apos;s unique identifier. This ensures that cross-tenant data leakage is fundamentally prevented at the application layer.
               </p>
             </div>
           </div>

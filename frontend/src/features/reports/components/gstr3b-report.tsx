@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { api } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,6 +46,7 @@ interface GSTR3BData {
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function Gstr3bReport() {
+  const { formatMoney } = useFormat();
   const [startDate, setStartDate] = useQueryState('startDate', { defaultValue: '' });
   const [endDate, setEndDate] = useQueryState('endDate', { defaultValue: '' });
 
@@ -89,7 +92,7 @@ export function Gstr3bReport() {
               type="date" 
               value={startDate} 
               onChange={(e) => setStartDate(e.target.value)} 
-              className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+              className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
             />
           </div>
           <div className="space-y-1.5 flex-1">
@@ -98,7 +101,7 @@ export function Gstr3bReport() {
               type="date" 
               value={endDate} 
               onChange={(e) => setEndDate(e.target.value)} 
-              className="bg-slate-850 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+              className="bg-slate-800 border-slate-700 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
             />
           </div>
         </div>
@@ -111,8 +114,8 @@ export function Gstr3bReport() {
             </div>
             <div>
               <p className="text-xs text-slate-400 font-medium">{netGstPayable >= 0 ? "Net GST Liability" : "Net ITC Carryforward"}</p>
-              <p className={`text-lg font-bold ${netGstPayable >= 0 ? "text-amber-450" : "text-emerald-400"}`}>
-                ₹{Math.abs(netGstPayable).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              <p className={`text-lg font-bold ${netGstPayable >= 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                {formatMoney(Math.abs(netGstPayable))}
               </p>
             </div>
           </div>
@@ -137,25 +140,25 @@ export function Gstr3bReport() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 text-sm">Total Taxable Value</span>
-                  <span className="font-semibold text-white">₹{data.outwardTaxableValue?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="font-semibold text-white">{formatMoney(data.outwardTaxableValue)}</span>
                 </div>
-                <div className="space-y-2.5 pl-4 border-l-2 border-slate-850">
+                <div className="space-y-2.5 pl-4 border-l-2 border-slate-800">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500">CGST (Outward)</span>
-                    <span className="text-slate-300 font-mono">₹{data.outwardCgst?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-slate-300 font-mono">{formatMoney(data.outwardCgst)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500">SGST (Outward)</span>
-                    <span className="text-slate-300 font-mono">₹{data.outwardSgst?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-slate-300 font-mono">{formatMoney(data.outwardSgst)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500">IGST (Outward)</span>
-                    <span className="text-slate-300 font-mono">₹{data.outwardIgst?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-slate-300 font-mono">{formatMoney(data.outwardIgst)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center font-bold pt-3 border-t border-slate-800/60 text-sm text-indigo-400">
                   <span>Total Tax Payable</span>
-                  <span className="font-mono text-base">₹{data.outwardTotalTax?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="font-mono text-base">{formatMoney(data.outwardTotalTax)}</span>
                 </div>
               </div>
             </CardContent>
@@ -173,25 +176,25 @@ export function Gstr3bReport() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 text-sm">Total Taxable Value</span>
-                  <span className="font-semibold text-white">₹{data.inwardTaxableValue?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="font-semibold text-white">{formatMoney(data.inwardTaxableValue)}</span>
                 </div>
-                <div className="space-y-2.5 pl-4 border-l-2 border-slate-850">
+                <div className="space-y-2.5 pl-4 border-l-2 border-slate-800">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500">CGST (Inward)</span>
-                    <span className="text-slate-300 font-mono">₹{data.inwardCgst?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-slate-300 font-mono">{formatMoney(data.inwardCgst)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500">SGST (Inward)</span>
-                    <span className="text-slate-300 font-mono">₹{data.inwardSgst?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-slate-300 font-mono">{formatMoney(data.inwardSgst)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500">IGST (Inward)</span>
-                    <span className="text-slate-300 font-mono">₹{data.inwardIgst?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-slate-300 font-mono">{formatMoney(data.inwardIgst)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center font-bold pt-3 border-t border-slate-800/60 text-sm text-emerald-400">
                   <span>Total Input Tax Credit</span>
-                  <span className="font-mono text-base">₹{data.inwardTotalTax?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="font-mono text-base">{formatMoney(data.inwardTotalTax)}</span>
                 </div>
               </div>
             </CardContent>

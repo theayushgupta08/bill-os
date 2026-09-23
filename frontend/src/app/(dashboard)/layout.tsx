@@ -1,9 +1,11 @@
 import { PropsWithChildren } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { FormatPreferencesProvider } from "@/lib/use-format";
 
 export default function DashboardLayout({ children }: PropsWithChildren) {
   return (
+    <FormatPreferencesProvider>
     <div className="flex min-h-screen w-full">
       {/* Sidebar: fixed width, full height */}
       <div className="hidden md:flex flex-col w-[220px] lg:w-[260px] flex-shrink-0 h-screen sticky top-0 overflow-hidden">
@@ -17,5 +19,6 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
         </main>
       </div>
     </div>
+    </FormatPreferencesProvider>
   );
 }

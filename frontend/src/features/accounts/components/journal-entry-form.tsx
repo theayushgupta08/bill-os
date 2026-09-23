@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
@@ -41,6 +43,7 @@ interface JournalLine {
 }
 
 export function JournalEntryForm() {
+  const { formatMoney } = useFormat();
   const router = useRouter();
   const queryClient = useQueryClient();
   
@@ -242,15 +245,15 @@ export function JournalEntryForm() {
         <div className="w-64 space-y-2 text-right">
           <div className="flex justify-between font-medium">
             <span>Total Debits:</span>
-            <span>₹{totalDebits.toFixed(2)}</span>
+            <span>{formatMoney(totalDebits)}</span>
           </div>
           <div className="flex justify-between font-medium">
             <span>Total Credits:</span>
-            <span>₹{totalCredits.toFixed(2)}</span>
+            <span>{formatMoney(totalCredits)}</span>
           </div>
           <div className={`flex justify-between font-bold ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
             <span>Difference:</span>
-            <span>₹{Math.abs(totalDebits - totalCredits).toFixed(2)}</span>
+            <span>{formatMoney(Math.abs(totalDebits - totalCredits))}</span>
           </div>
         </div>
       </div>

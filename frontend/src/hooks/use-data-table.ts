@@ -42,12 +42,14 @@ export function useDataTable<T>({
     }
   }, [debouncedSearch, searchParam, setSearchParam, setPageParam]);
 
-  // Keep local searchTerm in sync if URL query param changes externally (e.g. back button)
-  useEffect(() => {
+  // Keep local searchTerm in sync if the URL param changes externally, e.g. back button (render-time, no effect)
+  const [prevSearchParam, setPrevSearchParam] = useState(searchParam);
+  if (searchParam !== prevSearchParam) {
+    setPrevSearchParam(searchParam);
     if (searchParam !== searchTerm && searchParam !== debouncedSearch) {
       setSearchTerm(searchParam || "");
     }
-  }, [searchParam]);
+  }
 
   // Handle instant clear
   const clearSearch = useCallback(() => {

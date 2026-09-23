@@ -36,7 +36,8 @@ jobs:
       # Run ESLint
       - name: Run ESLint
         working-directory: ./frontend
-        run: pnpm run lint
+        # Warnings fail the build too — the codebase is warning-free, keep it that way
+        run: pnpm run lint --max-warnings 0
 
       # Run TypeScript Check
       - name: Run TypeScript Check

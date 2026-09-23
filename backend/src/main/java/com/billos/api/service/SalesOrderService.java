@@ -3,6 +3,7 @@ package com.billos.api.service;
 import com.billos.api.dto.SalesOrderDto;
 import com.billos.api.dto.SalesOrderLineDto;
 import com.billos.api.entity.*;
+import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.SalesOrderMapper;
 import com.billos.api.repository.SalesOrderRepository;
 import com.billos.api.repository.TaxRateRepository;
@@ -38,7 +39,7 @@ public class SalesOrderService {
         return salesOrderRepository
                 .findById(id)
                 .map(salesOrderMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Sales Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Sales Order not found"));
     }
 
     @Transactional
@@ -65,7 +66,7 @@ public class SalesOrderService {
             if (lineDto.getTaxRateId() != null) {
                 taxRate = taxRateRepository
                         .findById(lineDto.getTaxRateId())
-                        .orElseThrow(() -> new RuntimeException("Tax Rate not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Tax Rate not found"));
             }
 
             SalesOrderLine line = new SalesOrderLine();

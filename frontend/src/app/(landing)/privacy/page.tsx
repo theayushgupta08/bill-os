@@ -129,7 +129,7 @@ export default function PrivacyPolicyPage() {
       </section>
 
       <section className="mb-16">
-        <DocumentHeading id="childrens-privacy">11. Children's Privacy</DocumentHeading>
+        <DocumentHeading id="childrens-privacy">11. Children&apos;s Privacy</DocumentHeading>
         <p className="mb-4">
           Our Service does not address anyone under the age of 18. We do not knowingly collect personally identifiable information 
           from anyone under the age of 18.
@@ -156,7 +156,7 @@ export default function PrivacyPolicyPage() {
         <DocumentHeading id="changes-to-policy">14. Changes to this Policy</DocumentHeading>
         <p className="mb-4">
           We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page 
-          and updating the "Last Updated" date at the top of this Privacy Policy.
+          and updating the &quot;Last Updated&quot; date at the top of this Privacy Policy.
         </p>
       </section>
 

@@ -86,7 +86,7 @@ class SharedEntityResolverTest {
         TenantContext.clear();
 
         assertThatThrownBy(() -> resolver.accessibleProduct(UUID.randomUUID()))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(com.billos.api.exception.BadRequestException.class);
         verifyNoInteractions(productRepository);
     }
 }

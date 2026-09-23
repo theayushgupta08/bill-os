@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormat } from "@/lib/use-format";
 import React, { useState } from "react";
 import {
   Dialog,
@@ -8,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+
 import {
   Table,
   TableBody,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { BookOpen, GitBranch, ArrowDownLeft, ArrowUpRight, Filter } from "lucide-react";
+import { BookOpen, ArrowDownLeft, ArrowUpRight, Filter } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 
 interface LedgerEntry {
@@ -65,14 +66,13 @@ export function ConsolidatedCustomerLedgerDialog({
   open,
   onOpenChange,
 }: ConsolidatedCustomerLedgerDialogProps) {
+  const { formatMoney } = useFormat();
   const [selectedBranch, setSelectedBranch] = useState<string>("ALL");
 
   const { data, isLoading } = useQuery<ConsolidatedCustomerLedger>({
     queryKey: ["consolidated-ledger", customerId],
-    queryFn: async () => {
-      if (!customerId) return null as any;
-      return await api.get<ConsolidatedCustomerLedger>(`/customers/${customerId}/consolidated-ledger`);
-    },
+    // Only runs when customerId is set (see `enabled`)
+    queryFn: () => api.get<ConsolidatedCustomerLedger>(`/customers/${customerId}/consolidated-ledger`),
     enabled: open && !!customerId,
   });
 
@@ -144,7 +144,7 @@ export function ConsolidatedCustomerLedgerDialog({
                   Total Invoiced
                 </span>
                 <p className="text-base font-bold text-white mt-0.5">
-                  ₹{(data?.totalInvoiced || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  {formatMoney((data?.totalInvoiced || 0))}
                 </p>
               </div>
 
@@ -153,7 +153,7 @@ export function ConsolidatedCustomerLedgerDialog({
                   Total Collected / Paid
                 </span>
                 <p className="text-base font-bold text-emerald-400 mt-0.5">
-                  ₹{(data?.totalPaid || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  {formatMoney((data?.totalPaid || 0))}
                 </p>
               </div>
 
@@ -162,7 +162,7 @@ export function ConsolidatedCustomerLedgerDialog({
                   Net Group Outstanding
                 </span>
                 <p className="text-base font-bold text-amber-400 mt-0.5">
-                  ₹{(data?.netOutstandingBalance || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  {formatMoney((data?.netOutstandingBalance || 0))}
                 </p>
               </div>
             </div>
@@ -223,16 +223,16 @@ export function ConsolidatedCustomerLedgerDialog({
                           </TableCell>
                           <TableCell className="text-xs text-right font-medium text-slate-200">
                             {entry.debit > 0
-                              ? `₹${Number(entry.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                              ? formatMoney(Number(entry.debit))
                               : "-"}
                           </TableCell>
                           <TableCell className="text-xs text-right font-medium text-emerald-400">
                             {entry.credit > 0
-                              ? `₹${Number(entry.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                              ? formatMoney(Number(entry.credit))
                               : "-"}
                           </TableCell>
                           <TableCell className="text-xs text-right font-bold text-amber-400 font-mono">
-                            ₹{Number(entry.runningBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            {formatMoney(Number(entry.runningBalance))}
                           </TableCell>
                         </TableRow>
                       );

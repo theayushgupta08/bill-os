@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useFormat } from "@/lib/use-format";
 import Link from "next/link";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,7 @@ import { Supplier } from "@/types";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function SupplierList() {
+  const { formatMoney } = useFormat();
   const queryClient = useQueryClient();
 
   const { data: suppliers = [] as Supplier[], isLoading } = useQuery({
@@ -117,7 +120,7 @@ export function SupplierList() {
                   <TableCell>{supplier.email || "-"}</TableCell>
                   <TableCell>{supplier.phone || "-"}</TableCell>
                   <TableCell>{supplier.gstin || "-"}</TableCell>
-                  <TableCell>₹{supplier.outstandingBalance?.toFixed(2) || "0.00"}</TableCell>
+                  <TableCell>{formatMoney(supplier.outstandingBalance)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Link href={`/suppliers/${supplier.id}`}>

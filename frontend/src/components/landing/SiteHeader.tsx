@@ -1,5 +1,7 @@
 "use client";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -7,66 +9,18 @@ import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/config";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
-import { api } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { CURRENT_USER_KEY, useCurrentUser } from "@/lib/use-current-user";
 
 export function SiteHeader() {
-  const supabase = createClient();
+  const queryClient = useQueryClient();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState("");
-  const [userAvatar, setUserAvatar] = useState("");
-
-  const getUserData = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setIsLoggedIn(true);
-        const meta = (session.user.user_metadata || {}) as Record<string, any>;
-        const identityMeta = (session.user.identities?.[0]?.identity_data || {}) as Record<string, any>;
-
-        // Resolve real user name from OAuth (Google) / signup metadata
-        const resolvedName =
-          meta.full_name ||
-          meta.name ||
-          (meta.first_name ? `${meta.first_name} ${meta.last_name || ""}`.trim() : null) ||
-          (meta.given_name ? `${meta.given_name} ${meta.family_name || ""}`.trim() : null) ||
-          identityMeta.full_name ||
-          identityMeta.name ||
-          (identityMeta.given_name ? `${identityMeta.given_name} ${identityMeta.family_name || ""}`.trim() : null);
-
-        if (resolvedName) {
-          setUserName(resolvedName);
-        } else if (session.user.email) {
-          const prefix = session.user.email.split("@")[0];
-          setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
-        }
-
-        const avatar = meta.avatar_url || meta.picture || identityMeta.avatar_url || identityMeta.picture;
-        if (avatar) {
-          setUserAvatar(avatar);
-        }
-
-        api.get<{email: string; firstName?: string; lastName?: string}[]>("/team").then((res) => {
-          const email = session.user.email;
-          if (email) {
-            const current = res.find(
-              (m) => m.email.toLowerCase() === email.toLowerCase()
-            );
-            if (current && current.firstName) {
-              setUserName(`${current.firstName} ${current.lastName || ""}`.trim());
-            }
-          }
-        }).catch(() => {});
-      } else {
-        setIsLoggedIn(false);
-      }
-    } catch (e) {
-      setIsLoggedIn(false);
-    }
-  };
+  const { data: currentUser } = useCurrentUser();
+  const isLoggedIn = !!currentUser;
+  const userName = currentUser?.name ?? "";
+  const userAvatar = currentUser?.avatarUrl ?? "";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -77,24 +31,15 @@ export function SiteHeader() {
   }, []);
 
   useEffect(() => {
-    // Also remove the old legacy token so it doesn't pollute the browser
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
-    }
-    
-    getUserData();
+    // Drop any leftover token from the pre-Supabase auth flow so it doesn't pollute the browser
+    localStorage.removeItem("token");
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsLoggedIn(!!session);
-      if (session) {
-        getUserData();
-      }
+    // Sign-in/sign-out in this or another tab: refresh the cached user instead of tracking it by hand
+    const { data: { subscription } } = createClient().auth.onAuthStateChange(() => {
+      queryClient.invalidateQueries({ queryKey: CURRENT_USER_KEY });
     });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    return () => subscription.unsubscribe();
+  }, [queryClient]);
 
   return (
     <>
@@ -204,11 +149,13 @@ export function SiteHeader() {
                   </Link>
                   <Button asChild className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all gap-2">
                     <Link prefetch={false} href="/dashboard">
-                      {userAvatar ? (
-                        <img src={userAvatar} alt={userName} className="w-4 h-4 rounded-full object-cover shrink-0" />
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="7" r="4"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/></svg>
-                      )}
+                      <Avatar className="size-4 after:hidden">
+                        {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
+                        {/* Shown when there is no avatar or the provider's image fails to load */}
+                        <AvatarFallback className="bg-transparent text-current">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="7" r="4"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/></svg>
+                        </AvatarFallback>
+                      </Avatar>
                       <span>{userName || "Dashboard"}</span>
                     </Link>
                   </Button>
