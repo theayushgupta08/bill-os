@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { useOrganization } from "@/lib/use-organization";
 import { toast } from "sonner";
-import { Customer, Product, TaxRate, Warehouse, Organization } from "@/types";
+import { Customer, Product, TaxRate, Warehouse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,7 +95,6 @@ export function InvoiceForm() {
   const [formData, setFormData] = useState(() => ({
     customerId: "",
     soId: soId || "",
-    invoiceNumber: "",
     invoiceDate: new Date().toISOString().split("T")[0],
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
   }));
@@ -136,16 +136,9 @@ export function InvoiceForm() {
     }
   });
 
-  const { data: orgs } = useQuery({
-    queryKey: ["organizations"],
-    queryFn: async () => {
-      const res = await api.get<Organization[]>("/organizations");
-      return res;
-    }
-  });
-
-  const orgId = orgs?.[0]?.id;
-  const currentOrg = orgs?.[0];
+  // The active organization (branch-aware) decides settings, numbering and intra- vs inter-state GST
+  const { data: currentOrg } = useOrganization();
+  const orgId = currentOrg?.id;
 
   const { data: invoiceSettings } = useQuery({
     queryKey: ["invoiceSettings", orgId],
@@ -157,82 +150,28 @@ export function InvoiceForm() {
     enabled: !!orgId
   });
 
-  // Query sales invoices for sequential numbering fallback & history
-  const { data: existingInvoices = [] } = useQuery({
-    queryKey: ["sales-invoices"],
-    queryFn: async () => {
-      const res = await api.get<any[]>("/sales-invoices");
-      return res || [];
-    }
-  });
-
-  // Query backend next invoice number preview
-  const { data: nextNumberData } = useQuery({
+  // Preview of the number the backend will assign; the real number is always generated server-side on save
+  const { data: sequentialInvoiceNumber } = useQuery({
     queryKey: ["next-invoice-number", orgId],
     queryFn: async () => {
-      try {
-        const res = await api.get<{ nextInvoiceNumber: string }>("/sales-invoices/next-number");
-        return res?.nextInvoiceNumber;
-      } catch {
-        return null;
-      }
+      const res = await api.get<{ nextInvoiceNumber: string }>("/sales-invoices/next-number");
+      return res?.nextInvoiceNumber ?? null;
     },
     enabled: !!orgId,
   });
 
-  // Company Invoice Prefix from settings (default "INV-")
-  const companyPrefix = useMemo(() => {
-    return invoiceSettings?.invoicePrefix?.trim() || "INV-";
-  }, [invoiceSettings?.invoicePrefix]);
-
-  // System-generated sequential invoice number: Prefix + 0001, 0002...
-  const sequentialInvoiceNumber = useMemo(() => {
-    if (nextNumberData) return nextNumberData;
-
-    if (!existingInvoices || existingInvoices.length === 0) {
-      return `${companyPrefix}0001`;
-    }
-
-    const sequenceNumbers = existingInvoices
-      .map((inv: any) => inv.invoiceNumber)
-      .filter(Boolean)
-      .map((numStr: string) => {
-        if (numStr.toLowerCase().startsWith(companyPrefix.toLowerCase())) {
-          const suffix = numStr.substring(companyPrefix.length);
-          const parsed = parseInt(suffix, 10);
-          return isNaN(parsed) ? null : parsed;
-        }
-        const match = numStr.match(/(\d+)$/);
-        return match ? parseInt(match[1], 10) : null;
-      })
-      .filter((n: number | null): n is number => n !== null);
-
-    const highest = sequenceNumbers.length > 0 ? Math.max(...sequenceNumbers) : 0;
-    const nextSeq = highest + 1;
-    return `${companyPrefix}${String(nextSeq).padStart(4, "0")}`;
-  }, [nextNumberData, existingInvoices, companyPrefix]);
-
-  // Sync sequential invoice number into formData
-  useEffect(() => {
-    if (sequentialInvoiceNumber) {
-      setFormData((prev) => ({
-        ...prev,
-        invoiceNumber: sequentialInvoiceNumber,
-      }));
-    }
-  }, [sequentialInvoiceNumber]);
-
   // Default tax rate (from org settings or 18% GST standard or first active)
+  const defaultGstRate = invoiceSettings?.defaultGstRate;
   const defaultTaxRate = useMemo(() => {
     if (!taxes || taxes.length === 0) return null;
-    if (invoiceSettings?.defaultGstRate) {
+    if (defaultGstRate) {
       const matched = taxes.find(
-        (t) => Math.abs(Number(t.rate) - Number(invoiceSettings.defaultGstRate)) < 0.01
+        (t) => Math.abs(Number(t.rate) - Number(defaultGstRate)) < 0.01
       );
       if (matched) return matched;
     }
     return taxes.find((t) => Number(t.rate) === 18) || taxes[0];
-  }, [taxes, invoiceSettings?.defaultGstRate]);
+  }, [taxes, defaultGstRate]);
 
   // Pre-select default tax rate in consolidated tax mode
   useEffect(() => {
@@ -463,7 +402,6 @@ export function InvoiceForm() {
 
     const payload = {
       ...formData,
-      invoiceNumber: formData.invoiceNumber || sequentialInvoiceNumber,
       status,
       notes: invoiceSettings?.invoiceTerms || "",
       lines: lines.map((l) => ({
@@ -568,7 +506,7 @@ export function InvoiceForm() {
                 </span>
               </div>
               <Input
-                value={formData.invoiceNumber || sequentialInvoiceNumber}
+                value={sequentialInvoiceNumber ?? "Auto-generated"}
                 readOnly
                 disabled
                 tabIndex={-1}

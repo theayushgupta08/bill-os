@@ -24,6 +24,7 @@ public class ProductService {
     private final ProductCategoryRepository productCategoryRepository;
     private final ProductMapper productMapper;
     private final OrganizationService organizationService;
+    private final SharedEntityResolver sharedEntityResolver;
 
     @Transactional(readOnly = true)
     public List<ProductDto> getAllProducts() {
@@ -48,20 +49,10 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public ProductDto getProductById(UUID id) {
-        String currentTenant = TenantContext.getCurrentTenant();
-        UUID currentOrgId = currentTenant != null ? UUID.fromString(currentTenant) : null;
-        UUID primaryOrgId = currentOrgId != null ? organizationService.resolvePrimaryOrgId(currentOrgId) : null;
-
-        Product product = (currentOrgId != null && primaryOrgId != null)
-                ? productRepository
-                        .findAccessibleById(id, currentOrgId, primaryOrgId)
-                        .orElseThrow(() -> new RuntimeException("Product not found"))
-                : productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = sharedEntityResolver.accessibleProduct(id);
 
         ProductDto dto = productMapper.toDto(product);
-        if (currentOrgId != null) {
-            dto.setIsMasterShared(!product.getOrganizationId().equals(currentOrgId));
-        }
+        dto.setIsMasterShared(!sharedEntityResolver.isOwnedByCurrentOrg(product.getOrganizationId()));
         return dto;
     }
 
@@ -161,8 +152,7 @@ public class ProductService {
         String currentTenant = TenantContext.getCurrentTenant();
         UUID currentOrgId = UUID.fromString(currentTenant);
 
-        Product existingProduct =
-                productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        Product existingProduct = sharedEntityResolver.accessibleProduct(id);
 
         // Fixed price enforcement: Secondary organizations cannot alter master product pricing
         if (!existingProduct.getOrganizationId().equals(currentOrgId)) {
@@ -190,7 +180,7 @@ public class ProductService {
         String currentTenant = TenantContext.getCurrentTenant();
         UUID currentOrgId = UUID.fromString(currentTenant);
 
-        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = sharedEntityResolver.accessibleProduct(id);
 
         if (!product.getOrganizationId().equals(currentOrgId)) {
             throw new RuntimeException("Branch cannot delete master products owned by the Primary Organization.");

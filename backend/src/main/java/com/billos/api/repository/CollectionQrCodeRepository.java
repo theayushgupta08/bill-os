@@ -19,7 +19,7 @@ public interface CollectionQrCodeRepository extends JpaRepository<CollectionQrCo
             @Param("currentOrgId") UUID currentOrgId, @Param("parentOrgId") UUID parentOrgId);
 
     @Query(
-            "SELECT q FROM CollectionQrCode q WHERE q.id = :id AND (q.organizationId = :currentOrgId OR q.organizationId = :parentOrgId)")
+            "SELECT q FROM CollectionQrCode q WHERE q.id = :id AND (q.organizationId = :currentOrgId OR (q.organizationId = :parentOrgId AND q.isShared = true))")
     Optional<CollectionQrCode> findAccessibleById(
             @Param("id") UUID id, @Param("currentOrgId") UUID currentOrgId, @Param("parentOrgId") UUID parentOrgId);
 }

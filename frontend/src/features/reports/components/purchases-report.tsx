@@ -10,7 +10,7 @@ import { useQueryState } from 'nuqs';
 import { ShoppingBag, IndianRupee } from "lucide-react";
 import { BrandLoader } from "@/components/ui/loader";
 
-import { PurchaseOrder } from "@/types";
+import { PurchaseBill } from "@/types";
 
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
@@ -25,7 +25,7 @@ export function PurchasesReport() {
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       
-      const res = await api.get<PurchaseOrder[]>(`/reports/purchase-register?${params.toString()}`);
+      const res = await api.get<PurchaseBill[]>(`/reports/purchase-register?${params.toString()}`);
       return res;
     }
   });
@@ -36,14 +36,16 @@ export function PurchasesReport() {
         return <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 font-semibold">PAID</Badge>;
       case "UNPAID":
         return <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/25 font-semibold">UNPAID</Badge>;
-      case "OVERDUE":
-        return <Badge className="bg-rose-500/10 text-rose-400 border border-rose-500/25 font-semibold">OVERDUE</Badge>;
+      case "PARTIAL":
+        return <Badge className="bg-blue-500/10 text-blue-400 border border-blue-500/25 font-semibold">PARTIAL</Badge>;
+      case "VOID":
+        return <Badge className="bg-rose-500/10 text-rose-400 border border-rose-500/25 font-semibold">VOID</Badge>;
       default:
         return <Badge className="bg-slate-500/10 text-slate-400 border border-slate-500/25 font-semibold">{status}</Badge>;
     }
   };
 
-  const totalAmount = bills.reduce((sum: number, bill: PurchaseOrder) => sum + (bill.totalAmount || 0), 0);
+  const totalAmount = bills.reduce((sum: number, bill: PurchaseBill) => sum + (bill.totalAmount || 0), 0);
 
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-6xl mx-auto">

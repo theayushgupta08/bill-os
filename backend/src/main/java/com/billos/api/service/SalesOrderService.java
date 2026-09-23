@@ -4,8 +4,6 @@ import com.billos.api.dto.SalesOrderDto;
 import com.billos.api.dto.SalesOrderLineDto;
 import com.billos.api.entity.*;
 import com.billos.api.mapper.SalesOrderMapper;
-import com.billos.api.repository.CustomerRepository;
-import com.billos.api.repository.ProductRepository;
 import com.billos.api.repository.SalesOrderRepository;
 import com.billos.api.repository.TaxRateRepository;
 import com.billos.api.tenant.TenantContext;
@@ -23,8 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SalesOrderService {
 
     private final SalesOrderRepository salesOrderRepository;
-    private final CustomerRepository customerRepository;
-    private final ProductRepository productRepository;
+    private final SharedEntityResolver sharedEntityResolver;
     private final TaxRateRepository taxRateRepository;
     private final SalesOrderMapper salesOrderMapper;
     private final SequenceGeneratorService sequenceGeneratorService;
@@ -48,9 +45,7 @@ public class SalesOrderService {
     public SalesOrderDto createSalesOrder(SalesOrderDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
-        Customer customer = customerRepository
-                .findById(dto.getCustomerId())
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+        Customer customer = sharedEntityResolver.accessibleCustomer(dto.getCustomerId());
 
         SalesOrder so = new SalesOrder();
         so.setOrganizationId(orgId);
@@ -64,9 +59,7 @@ public class SalesOrderService {
         BigDecimal taxTotal = BigDecimal.ZERO;
 
         for (SalesOrderLineDto lineDto : dto.getLines()) {
-            Product product = productRepository
-                    .findById(lineDto.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
+            Product product = sharedEntityResolver.accessibleProduct(lineDto.getProductId());
 
             TaxRate taxRate = null;
             if (lineDto.getTaxRateId() != null) {
@@ -81,11 +74,11 @@ public class SalesOrderService {
             line.setQuantity(lineDto.getQuantity());
             line.setUnitPrice(lineDto.getUnitPrice());
 
-            BigDecimal lineBase = line.getQuantity().multiply(line.getUnitPrice());
+            BigDecimal lineBase = TaxMath.money(line.getQuantity().multiply(line.getUnitPrice()));
             subtotal = subtotal.add(lineBase);
 
             if (taxRate != null) {
-                BigDecimal lineTax = lineBase.multiply(taxRate.getRate()).divide(new BigDecimal("100"));
+                BigDecimal lineTax = TaxMath.percentOf(lineBase, taxRate.getRate());
                 line.setTaxAmount(lineTax);
                 taxTotal = taxTotal.add(lineTax);
                 line.setLineTotal(lineBase.add(lineTax));

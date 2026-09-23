@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
+import { useOrganization } from "@/lib/use-organization";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,25 +19,13 @@ import { TaxRate } from "@/types";
 
 export default function TaxSettingsAndRatesPage() {
   const queryClient = useQueryClient();
-  const [orgId, setOrgId] = useState<string | null>(null);
   const [newTaxName, setNewTaxName] = useState("");
   const [newTaxRate, setNewTaxRate] = useState("");
   const [isAddingTax, setIsAddingTax] = useState(false);
 
-  // Fetch Organizations
-  const { data: orgs, isLoading: loadingOrgs } = useQuery({
-    queryKey: ["organizations"],
-    queryFn: async () => {
-      const res = await api.get<any>(`/organizations`);
-      return res;
-    }
-  });
-
-  useEffect(() => {
-    if (orgs && orgs.length > 0) {
-      setOrgId(orgs[0].id);
-    }
-  }, [orgs]);
+  // Settings belong to the active organization (branch-aware), not simply the first one the user can see
+  const { data: activeOrg, isLoading: loadingOrgs } = useOrganization();
+  const orgId = activeOrg?.id ?? null;
 
   // Fetch Tax Rates
   const { data: taxes = [], isLoading: loadingTaxes, refetch: refetchTaxes } = useQuery({

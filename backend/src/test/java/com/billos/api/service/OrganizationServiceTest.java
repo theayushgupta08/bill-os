@@ -109,6 +109,32 @@ class OrganizationServiceTest {
     }
 
     @Test
+    @DisplayName("createOrganization - should ignore client-supplied id and parent to prevent hijacking")
+    void createOrganization_shouldIgnoreClientSuppliedIdAndParent() {
+        // Arrange — an attacker posts an existing org's id and a victim parent id
+        Organization orgInput = new Organization();
+        orgInput.setId(UUID.randomUUID());
+        orgInput.setParentOrganizationId(UUID.randomUUID());
+        orgInput.setIsPrimary(false);
+        orgInput.setName("Evil Branch");
+
+        Organization savedOrg = new Organization();
+        savedOrg.setId(UUID.randomUUID());
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(currentUser));
+        when(organizationRepository.saveAndFlush(orgInput)).thenReturn(savedOrg);
+
+        // Act
+        organizationService.createOrganization(orgInput);
+
+        // Assert — the entity handed to JPA is a fresh, standalone primary org
+        assertThat(orgInput.getId()).isNull();
+        assertThat(orgInput.getParentOrganizationId()).isNull();
+        assertThat(orgInput.getIsPrimary()).isTrue();
+        assertThat(orgInput.getCreatedBy()).isEqualTo(userId);
+    }
+
+    @Test
     @DisplayName("createOrganization - should throw if user not found in DB")
     void createOrganization_shouldThrowIfUserNotFound() {
         // Arrange

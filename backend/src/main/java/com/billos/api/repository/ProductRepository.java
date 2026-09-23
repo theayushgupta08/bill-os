@@ -19,7 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             @Param("currentOrgId") UUID currentOrgId, @Param("parentOrgId") UUID parentOrgId);
 
     @Query(
-            "SELECT p FROM Product p WHERE p.id = :id AND (p.organizationId = :currentOrgId OR p.organizationId = :parentOrgId)")
+            "SELECT p FROM Product p WHERE p.id = :id AND (p.organizationId = :currentOrgId OR (p.organizationId = :parentOrgId AND p.isShared = true))")
     Optional<Product> findAccessibleById(
             @Param("id") UUID id, @Param("currentOrgId") UUID currentOrgId, @Param("parentOrgId") UUID parentOrgId);
 

@@ -25,6 +25,7 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
     private final OrganizationService organizationService;
+    private final SharedEntityResolver sharedEntityResolver;
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional(readOnly = true)
@@ -42,30 +43,15 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public CustomerDto getCustomerById(UUID id) {
-        String currentTenant = TenantContext.getCurrentTenant();
-        UUID currentOrgId = currentTenant != null ? UUID.fromString(currentTenant) : null;
-        UUID primaryOrgId = currentOrgId != null ? organizationService.resolvePrimaryOrgId(currentOrgId) : null;
-
-        Customer customer = (currentOrgId != null && primaryOrgId != null)
-                ? customerRepository
-                        .findAccessibleById(id, currentOrgId, primaryOrgId)
-                        .orElseThrow(() -> new RuntimeException("Customer not found"))
-                : customerRepository.findById(id).orElseThrow(() -> new RuntimeException("Customer not found"));
+        Customer customer = sharedEntityResolver.accessibleCustomer(id);
 
         return customerMapper.toDto(customer);
     }
 
     @Transactional(readOnly = true)
     public ConsolidatedCustomerLedgerDto getConsolidatedLedger(UUID customerId) {
-        String currentTenant = TenantContext.getCurrentTenant();
-        UUID currentOrgId = currentTenant != null ? UUID.fromString(currentTenant) : null;
-        UUID primaryOrgId = organizationService.resolvePrimaryOrgId(currentOrgId);
-
-        Customer customer = (currentOrgId != null && primaryOrgId != null)
-                ? customerRepository
-                        .findAccessibleById(customerId, currentOrgId, primaryOrgId)
-                        .orElseThrow(() -> new RuntimeException("Customer not found"))
-                : customerRepository.findById(customerId).orElseThrow(() -> new RuntimeException("Customer not found"));
+        Customer customer = sharedEntityResolver.accessibleCustomer(customerId);
+        UUID primaryOrgId = organizationService.resolvePrimaryOrgId(sharedEntityResolver.currentOrgId());
 
         CustomerDto customerDto = customerMapper.toDto(customer);
 
@@ -224,8 +210,7 @@ public class CustomerService {
 
     @Transactional
     public CustomerDto updateCustomer(UUID id, CustomerDto customerDto) {
-        Customer existingCustomer =
-                customerRepository.findById(id).orElseThrow(() -> new RuntimeException("Customer not found"));
+        Customer existingCustomer = ownedCustomer(id, "modify");
 
         customerMapper.updateEntityFromDto(customerDto, existingCustomer);
         Customer updatedCustomer = customerRepository.save(existingCustomer);
@@ -234,8 +219,15 @@ public class CustomerService {
 
     @Transactional
     public void deleteCustomer(UUID id) {
-        Customer customer =
-                customerRepository.findById(id).orElseThrow(() -> new RuntimeException("Customer not found"));
+        Customer customer = ownedCustomer(id, "delete");
         customerRepository.delete(customer);
+    }
+
+    private Customer ownedCustomer(UUID id, String action) {
+        Customer customer = sharedEntityResolver.accessibleCustomer(id);
+        if (!sharedEntityResolver.isOwnedByCurrentOrg(customer.getOrganizationId())) {
+            throw new RuntimeException("Branch cannot " + action + " customers owned by the Primary Organization.");
+        }
+        return customer;
     }
 }

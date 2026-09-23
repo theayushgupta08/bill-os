@@ -1,5 +1,6 @@
 package com.billos.api.service;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -86,5 +87,84 @@ class PaymentServiceTest {
         // Verify Customer balance updated
         assertEquals(new BigDecimal("400"), customer.getOutstandingBalance());
         verify(customerRepository).save(customer);
+    }
+
+    private SalesInvoice issuedInvoice(UUID id, String total, Customer customer) {
+        SalesInvoice invoice = new SalesInvoice();
+        invoice.setId(id);
+        invoice.setCustomer(customer);
+        invoice.setTotalAmount(new BigDecimal(total));
+        invoice.setStatus(SalesInvoiceStatus.ISSUED);
+        return invoice;
+    }
+
+    private PaymentDto receipt(UUID invoiceId, String amount) {
+        PaymentDto dto = new PaymentDto();
+        dto.setAmount(new BigDecimal(amount));
+        PaymentAllocationDto alloc = new PaymentAllocationDto();
+        alloc.setSalesInvoiceId(invoiceId);
+        alloc.setAllocatedAmount(new BigDecimal(amount));
+        dto.setAllocations(List.of(alloc));
+        return dto;
+    }
+
+    @Test
+    void recordReceipt_accumulatesPartialPayments_untilInvoiceIsPaid() {
+        UUID invoiceId = UUID.randomUUID();
+        Customer customer = new Customer();
+        customer.setOutstandingBalance(new BigDecimal("100"));
+        SalesInvoice invoice = issuedInvoice(invoiceId, "100", customer);
+
+        when(sequenceGeneratorService.getNextDocumentNumber(DocumentType.PAYMENT_RECEIPT))
+                .thenReturn("REC-001");
+        when(salesInvoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(paymentMapper.toDto(any(Payment.class))).thenReturn(new PaymentDto());
+
+        paymentService.recordReceipt(receipt(invoiceId, "40"));
+        assertEquals(SalesInvoiceStatus.PARTIAL, invoice.getStatus());
+        assertEquals(0, new BigDecimal("40").compareTo(invoice.getAmountPaid()));
+
+        paymentService.recordReceipt(receipt(invoiceId, "60"));
+        assertEquals(SalesInvoiceStatus.PAID, invoice.getStatus());
+        assertEquals(0, new BigDecimal("100").compareTo(invoice.getAmountPaid()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(customer.getOutstandingBalance()));
+    }
+
+    @Test
+    void recordReceipt_rejectsAllocationAboveRemainingBalance() {
+        UUID invoiceId = UUID.randomUUID();
+        SalesInvoice invoice = issuedInvoice(invoiceId, "100", new Customer());
+        invoice.setAmountPaid(new BigDecimal("70"));
+        invoice.setStatus(SalesInvoiceStatus.PARTIAL);
+
+        when(salesInvoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+
+        assertThatThrownBy(() -> paymentService.recordReceipt(receipt(invoiceId, "50")))
+                .hasMessageContaining("exceeds the balance due");
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void recordReceipt_rejectsPaymentAgainstDraftInvoice() {
+        UUID invoiceId = UUID.randomUUID();
+        SalesInvoice invoice = issuedInvoice(invoiceId, "100", new Customer());
+        invoice.setStatus(SalesInvoiceStatus.DRAFT);
+
+        when(salesInvoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+
+        assertThatThrownBy(() -> paymentService.recordReceipt(receipt(invoiceId, "100")))
+                .hasMessageContaining("DRAFT");
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void recordReceipt_rejectsAllocationsAbovePaymentAmount() {
+        UUID invoiceId = UUID.randomUUID();
+        PaymentDto dto = receipt(invoiceId, "100");
+        dto.setAmount(new BigDecimal("50"));
+
+        assertThatThrownBy(() -> paymentService.recordReceipt(dto)).hasMessageContaining("exceeds payment amount");
+        verifyNoInteractions(salesInvoiceRepository, paymentRepository);
     }
 }

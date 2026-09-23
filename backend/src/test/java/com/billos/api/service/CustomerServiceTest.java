@@ -9,7 +9,6 @@ import com.billos.api.entity.Customer;
 import com.billos.api.mapper.CustomerMapper;
 import com.billos.api.repository.CustomerRepository;
 import com.billos.api.tenant.TenantContext;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +34,9 @@ class CustomerServiceTest {
 
     @Mock
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    @Mock
+    private SharedEntityResolver sharedEntityResolver;
 
     @InjectMocks
     private CustomerService customerService;
@@ -88,16 +90,13 @@ class CustomerServiceTest {
     void getCustomerById_shouldReturnCustomer() {
         // Arrange
         UUID customerId = UUID.randomUUID();
-        UUID orgUuid = UUID.fromString(tenantId);
         Customer customer = new Customer();
         customer.setId(customerId);
 
         CustomerDto dto = new CustomerDto();
         dto.setId(customerId);
 
-        when(organizationService.resolvePrimaryOrgId(orgUuid)).thenReturn(orgUuid);
-        when(customerRepository.findAccessibleById(customerId, orgUuid, orgUuid))
-                .thenReturn(Optional.of(customer));
+        when(sharedEntityResolver.accessibleCustomer(customerId)).thenReturn(customer);
         when(customerMapper.toDto(customer)).thenReturn(dto);
 
         // Act
@@ -112,14 +111,43 @@ class CustomerServiceTest {
     void getCustomerById_shouldThrowIfNotFound() {
         // Arrange
         UUID customerId = UUID.randomUUID();
-        UUID orgUuid = UUID.fromString(tenantId);
-        when(organizationService.resolvePrimaryOrgId(orgUuid)).thenReturn(orgUuid);
-        when(customerRepository.findAccessibleById(customerId, orgUuid, orgUuid))
-                .thenReturn(Optional.empty());
+        when(sharedEntityResolver.accessibleCustomer(customerId)).thenThrow(new RuntimeException("Customer not found"));
 
         // Act & Assert
         assertThatThrownBy(() -> customerService.getCustomerById(customerId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Customer not found");
+    }
+
+    @Test
+    @DisplayName("deleteCustomer - should refuse to delete a parent org's shared customer")
+    void deleteCustomer_shouldRefuse_whenCustomerOwnedByParentOrg() {
+        UUID customerId = UUID.randomUUID();
+        UUID parentOrgId = UUID.randomUUID();
+        Customer customer = new Customer();
+        customer.setId(customerId);
+        customer.setOrganizationId(parentOrgId);
+        when(sharedEntityResolver.accessibleCustomer(customerId)).thenReturn(customer);
+        when(sharedEntityResolver.isOwnedByCurrentOrg(parentOrgId)).thenReturn(false);
+
+        assertThatThrownBy(() -> customerService.deleteCustomer(customerId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Branch cannot delete");
+        verify(customerRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("deleteCustomer - should delete a customer owned by the current org")
+    void deleteCustomer_shouldDelete_whenOwnedByCurrentOrg() {
+        UUID customerId = UUID.randomUUID();
+        UUID orgId = UUID.fromString(tenantId);
+        Customer customer = new Customer();
+        customer.setOrganizationId(orgId);
+        when(sharedEntityResolver.accessibleCustomer(customerId)).thenReturn(customer);
+        when(sharedEntityResolver.isOwnedByCurrentOrg(orgId)).thenReturn(true);
+
+        customerService.deleteCustomer(customerId);
+
+        verify(customerRepository).delete(customer);
     }
 }

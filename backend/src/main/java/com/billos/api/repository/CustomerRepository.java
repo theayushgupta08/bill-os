@@ -19,7 +19,7 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
             @Param("currentOrgId") UUID currentOrgId, @Param("parentOrgId") UUID parentOrgId);
 
     @Query(
-            "SELECT c FROM Customer c WHERE c.id = :id AND (c.organizationId = :currentOrgId OR c.organizationId = :parentOrgId)")
+            "SELECT c FROM Customer c WHERE c.id = :id AND (c.organizationId = :currentOrgId OR (c.organizationId = :parentOrgId AND c.isShared = true))")
     Optional<Customer> findAccessibleById(
             @Param("id") UUID id, @Param("currentOrgId") UUID currentOrgId, @Param("parentOrgId") UUID parentOrgId);
 

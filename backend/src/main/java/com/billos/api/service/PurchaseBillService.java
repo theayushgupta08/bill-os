@@ -20,9 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class PurchaseBillService {
 
     private final PurchaseBillRepository purchaseBillRepository;
+    private final SharedEntityResolver sharedEntityResolver;
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final SupplierRepository supplierRepository;
-    private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
     private final TaxRateRepository taxRateRepository;
     private final OrganizationRepository organizationRepository;
@@ -84,9 +84,7 @@ public class PurchaseBillService {
         BigDecimal taxTotal = BigDecimal.ZERO;
 
         for (PurchaseBillLineDto lineDto : dto.getLines()) {
-            Product product = productRepository
-                    .findById(lineDto.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
+            Product product = sharedEntityResolver.accessibleProduct(lineDto.getProductId());
             Warehouse warehouse = warehouseRepository
                     .findById(lineDto.getWarehouseId())
                     .orElseThrow(() -> new RuntimeException("Warehouse not found"));
@@ -106,19 +104,19 @@ public class PurchaseBillService {
             line.setUnitPrice(lineDto.getUnitPrice());
 
             // Re-calculate totals
-            BigDecimal lineBase = line.getQuantity().multiply(line.getUnitPrice());
+            BigDecimal lineBase = TaxMath.money(line.getQuantity().multiply(line.getUnitPrice()));
             subtotal = subtotal.add(lineBase);
 
             if (taxRate != null) {
-                BigDecimal lineTax = lineBase.multiply(taxRate.getRate()).divide(new BigDecimal("100"));
+                BigDecimal lineTax = TaxMath.percentOf(lineBase, taxRate.getRate());
                 line.setTaxAmount(lineTax);
 
                 if (isInterState) {
                     line.setIgstAmount(lineTax);
                 } else {
-                    BigDecimal halfTax = lineTax.divide(new BigDecimal("2"));
-                    line.setCgstAmount(halfTax);
-                    line.setSgstAmount(halfTax);
+                    BigDecimal cgst = TaxMath.cgstHalf(lineTax);
+                    line.setCgstAmount(cgst);
+                    line.setSgstAmount(lineTax.subtract(cgst));
                 }
 
                 taxTotal = taxTotal.add(lineTax);

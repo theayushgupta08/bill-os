@@ -69,6 +69,7 @@ app:
 
 logging:
   level:
-    org.springframework.security: TRACE
-    org.springframework.web.cors: DEBUG
-    com.billos: DEBUG
+    # TRACE/DEBUG here logs auth details on every request — raise locally via env, never by default.
+    org.springframework.security: ${LOG_LEVEL_SECURITY:INFO}
+    org.springframework.web.cors: ${LOG_LEVEL_CORS:INFO}
+    com.billos: ${LOG_LEVEL_APP:INFO}

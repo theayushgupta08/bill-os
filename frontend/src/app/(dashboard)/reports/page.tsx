@@ -89,7 +89,7 @@ const reportCategories = [
         description: "Statement of outward supplies of goods or services for GST filings.",
         href: "/reports/gstr1",
         icon: Percent,
-        color: "text-indigo-405 border-indigo-500/20 bg-indigo-500/5",
+        color: "text-indigo-400 border-indigo-500/20 bg-indigo-500/5",
         hoverBg: "hover:bg-indigo-500/10",
       },
       {
@@ -97,7 +97,7 @@ const reportCategories = [
         description: "Monthly summary of supplies to compute final tax liability.",
         href: "/reports/gstr3b",
         icon: Percent,
-        color: "text-violet-405 border-violet-500/20 bg-violet-500/5",
+        color: "text-violet-400 border-violet-500/20 bg-violet-500/5",
         hoverBg: "hover:bg-violet-500/10",
       },
     ],
@@ -178,7 +178,7 @@ export default function ReportsOverviewPage() {
                           </CardTitle>
                           <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 transition-all duration-200 transform group-hover:translate-x-1" />
                         </div>
-                        <CardDescription className="text-xs text-slate-405 leading-relaxed pt-0.5">
+                        <CardDescription className="text-xs text-slate-400 leading-relaxed pt-0.5">
                           {item.description}
                         </CardDescription>
                       </div>

@@ -86,10 +86,9 @@ export function OrderList() {
             </SelectTrigger>
             <SelectContent className="rounded-lg border border-slate-800 bg-slate-900/95 backdrop-blur-xl shadow-xl text-slate-200">
               <SelectItem value="ALL" className="text-xs">All Statuses</SelectItem>
-              <SelectItem value="PENDING" className="text-xs">Pending</SelectItem>
+              <SelectItem value="DRAFT" className="text-xs">Draft</SelectItem>
               <SelectItem value="CONFIRMED" className="text-xs">Confirmed</SelectItem>
-              <SelectItem value="SHIPPED" className="text-xs">Shipped</SelectItem>
-              <SelectItem value="DELIVERED" className="text-xs">Delivered</SelectItem>
+              <SelectItem value="INVOICED" className="text-xs">Invoiced</SelectItem>
               <SelectItem value="CANCELLED" className="text-xs">Cancelled</SelectItem>
             </SelectContent>
           </Select>

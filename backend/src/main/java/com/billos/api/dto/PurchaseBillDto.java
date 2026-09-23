@@ -21,6 +21,7 @@ public class PurchaseBillDto {
     private BigDecimal subtotal;
     private BigDecimal taxTotal;
     private BigDecimal totalAmount;
+    private BigDecimal amountPaid;
     private String notes;
     private List<PurchaseBillLineDto> lines;
 }

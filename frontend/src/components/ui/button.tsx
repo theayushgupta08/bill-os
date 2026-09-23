@@ -52,15 +52,15 @@ function Button({
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { asChild?: boolean; isLoading?: boolean }) {
   if (asChild) {
-    const { children: renderChildren, ...rest } = props as { children?: React.ReactNode | Function };
+    // Base UI's equivalent of Radix `asChild`: render the child element with the button's styling/behaviour
     return (
       <ButtonPrimitive
         data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
-        render={(renderChildren || children) as any}
+        render={children as ButtonPrimitive.Props["render"]}
         disabled={isLoading || disabled}
         nativeButton={false}
-        {...rest}
+        {...props}
       />
     )
   }

@@ -7,8 +7,10 @@ import com.billos.api.repository.CustomerRepository;
 import com.billos.api.repository.PurchaseBillRepository;
 import com.billos.api.repository.SalesInvoiceRepository;
 import com.billos.api.repository.SupplierRepository;
+import com.billos.api.tenant.TenantContext;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,7 +34,10 @@ public class DashboardService {
         DashboardSummaryDto summary = new DashboardSummaryDto();
 
         // 1. Outstanding Receivables & Payables
-        BigDecimal totalReceivables = customerRepository.findAll().stream()
+        BigDecimal totalReceivables = customerRepository
+                // Customer has no @TenantId (branch sharing), so findAll() would span every tenant.
+                .findByOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()))
+                .stream()
                 .map(c -> c.getOutstandingBalance() != null ? c.getOutstandingBalance() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         summary.setOutstandingReceivables(totalReceivables);

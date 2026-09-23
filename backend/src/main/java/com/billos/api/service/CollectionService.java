@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class CollectionService {
 
     private final UserRepository userRepository;
-    private final CustomerRepository customerRepository;
     private final UserOrgRoleRepository userOrgRoleRepository;
     private final CollectionQrCodeRepository qrCodeRepository;
     private final CollectionPaymentRepository paymentRepository;
@@ -30,6 +29,7 @@ public class CollectionService {
     private final CollectionLedgerRepository ledgerRepository;
     private final NotificationService notificationService;
     private final OrganizationService organizationService;
+    private final SharedEntityResolver sharedEntityResolver;
 
     // --- QR Code Management ---
 
@@ -86,8 +86,10 @@ public class CollectionService {
 
     @Transactional
     public CollectionQrCodeDto updateQrCode(UUID id, CollectionQrCodeDto dto) {
-        CollectionQrCode qr =
-                qrCodeRepository.findById(id).orElseThrow(() -> new RuntimeException("QR Code not found"));
+        CollectionQrCode qr = sharedEntityResolver.accessibleQrCode(id);
+        if (!sharedEntityResolver.isOwnedByCurrentOrg(qr.getOrganizationId())) {
+            throw new RuntimeException("Branch cannot modify QR codes owned by the Primary Organization.");
+        }
 
         if (dto.getNickname() != null) {
             qr.setNickname(dto.getNickname());
@@ -134,7 +136,7 @@ public class CollectionService {
 
         Customer customer = null;
         if (dto.getCustomerId() != null) {
-            customer = customerRepository.findById(dto.getCustomerId()).orElse(null);
+            customer = sharedEntityResolver.accessibleCustomer(dto.getCustomerId());
         }
 
         CollectionPayment payment = new CollectionPayment();
@@ -233,7 +235,7 @@ public class CollectionService {
                     payment.getId());
 
             // Notify Admins/Owner of rejection
-            List<UserOrgRole> roles = userOrgRoleRepository.findAll();
+            List<UserOrgRole> roles = userOrgRoleRepository.findByOrganizationId(orgId);
             for (UserOrgRole r : roles) {
                 if (r.getOrganizationId().equals(orgId)
                         && ("OWNER".equals(r.getRole()) || "ADMIN".equals(r.getRole()))) {
@@ -299,7 +301,7 @@ public class CollectionService {
             CollectionExpense saved = expenseRepository.save(expense);
 
             // Notify Manager/Admin/Owner
-            List<UserOrgRole> roles = userOrgRoleRepository.findAll();
+            List<UserOrgRole> roles = userOrgRoleRepository.findByOrganizationId(orgId);
             for (UserOrgRole r : roles) {
                 if (r.getOrganizationId().equals(orgId)
                         && ("OWNER".equals(r.getRole())
@@ -410,7 +412,7 @@ public class CollectionService {
         SettlementDeposit saved = depositRepository.save(deposit);
 
         // Notify Admins/Owner
-        List<UserOrgRole> roles = userOrgRoleRepository.findAll();
+        List<UserOrgRole> roles = userOrgRoleRepository.findByOrganizationId(orgId);
         for (UserOrgRole r : roles) {
             if (r.getOrganizationId().equals(orgId)
                     && ("OWNER".equals(r.getRole()) || "ADMIN".equals(r.getRole()) || "MANAGER".equals(r.getRole()))) {

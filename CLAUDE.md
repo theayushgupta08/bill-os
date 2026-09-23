@@ -49,8 +49,8 @@ but no graphs are built yet.
 |----------------|-------------------------------------|--------------------------------------------------------|
 | Backend        | Spring Boot                         | 3.3.1, Java 21                                         |
 | ORM            | Hibernate 6 (Spring Data JPA)       | Discriminator multi-tenancy via `@TenantId`            |
-| Auth (current) | Supabase Auth (GoTrue) + JWT verify | Backend verifies HS256 Supabase JWTs (`jjwt` 0.12.5)   |
-| Migrations     | Flyway                              | `backend/src/main/resources/db/migration/` (V001–V016) |
+| Auth (current) | Supabase Auth (GoTrue) + JWT verify | Spring OAuth2 resource server; ES256 via Supabase JWKS |
+| Migrations     | Flyway                              | `backend/src/main/resources/db/migration/` (V001–V024) |
 | Mapping        | MapStruct 1.5.5.Final               | `componentModel = "spring"`, unmapped targets IGNOREd  |
 | PDF            | openhtmltopdf 1.0.10 + Thymeleaf    | HTML templates → PDF                                   |
 | Email          | Resend (`resend-java` 3.1.0)        | `EmailService`                                         |
@@ -80,23 +80,23 @@ billOS/
 │   └── src/main/java/com/billos/api/
 │       ├── BillOsApplication.java
 │       ├── config/                   # RedisConfig, WebMvcConfig (registers RateLimitInterceptor)
-│       ├── controller/               # 24 REST controllers, all under /api/v1/**
+│       ├── controller/               # 26 REST controllers, all under /api/v1/**
 │       ├── dto/                      # Lombok @Data DTOs (not records — see §6.4)
 │       ├── entity/                   # JPA entities + status/type enums
 │       ├── mapper/                   # MapStruct interfaces
 │       ├── repository/               # Spring Data JPA repositories
-│       ├── security/                 # JWT filter/provider, SecurityConfig, TenantSecurity,
-│       │                             #   UserPrincipal, RateLimitInterceptor/Service
+│       ├── security/                 # SecurityConfig, SupabaseJwtAuthenticationConverter, TenantSecurity,
+│       │                             #   TenantMembershipInterceptor, UserPrincipal, RateLimitInterceptor/Service
 │       ├── service/                  # Business logic
 │       └── tenant/                   # TenantContext, TenantFilter, TenantIdentifierResolver
 │   └── src/main/resources/
 │       ├── application.yml
-│       ├── db/migration/             # Flyway V001..V016
+│       ├── db/migration/             # Flyway V001..V024
 │       └── templates/                # invoice/po/quotation HTML → PDF
 ├── frontend/                         # Next.js (pnpm)
 │   └── src/
 │       ├── app/
-│       │   ├── (auth)/               # login, register, forgot-password
+│       │   ├── (auth)/               # login, register, forgot/reset/change-password
 │       │   ├── (dashboard)/          # thin route pages → delegate to src/features/*
 │       │   ├── (landing)/            # marketing + legal pages
 │       │   ├── (onboarding)/setup/   # org creation
@@ -129,6 +129,13 @@ billOS/
 - `TenantFilter` **always** clears the ThreadLocal in a `finally` block. Any new thread-boundary
   crossing (`@Async`, `CompletableFuture`, scheduled jobs) must propagate/clear the tenant manually —
   ThreadLocals do not inherit.
+- **Membership is enforced centrally.** `TenantMembershipInterceptor` (registered in `WebMvcConfig`, after
+  Spring Security) rejects every tenant-scoped `/api/**` request whose `X-Organization-Id` the caller does
+  not belong to (403), or that has no/invalid header (400). Tenant-agnostic prefixes are `/public`,
+  `/health`, `/users`, `/organizations` — endpoints there address orgs by path and must check access
+  themselves (e.g. `@PreAuthorize("@tenantSecurity.hasRoleIn(#id, 'ADMIN')")`). If you add a new
+  tenant-agnostic route family, add it to both `TENANT_AGNOSTIC_PREFIXES` (backend) and the same list in
+  `frontend/src/lib/api-client.ts`.
 
 **Rules for new code:**
 
@@ -136,7 +143,8 @@ billOS/
 |---|---|
 | Top-level org-scoped aggregate (`SalesInvoice`, `Product`, `Customer`, …) | **Yes, required** |
 | Child/line entity reached only via its parent (`SalesInvoiceLine`, `PurchaseOrderLine`, `JournalEntryLine`, `PaymentAllocation`) | No — no `organization_id` column; isolation comes from the parent |
-| Global entities (`User`, `Organization`) | No |
+| Global entities (`User`, `Organization`, `UserOrgRole`) | No — query `UserOrgRole` with `findByOrganizationId`, **never `findAll()`** |
+| Branch-shareable masters: `Customer`, `Product`, `CollectionQrCode` | **No `@TenantId`** (V020, so a branch can see the parent's `isShared` records). Hibernate does **not** scope them: resolve by id via `SharedEntityResolver` (`accessibleCustomer/Product/QrCode`, `isOwnedByCurrentOrg`) and list via `findByOrganizationId`/`findAccessible*`. A plain `findById`/`findAll` crosses tenants. Edits/deletes only on records the current org owns. |
 | `OrganizationSettings`, `OrganizationInvitation` | Currently **plain `organizationId` column, no `@TenantId`** — you must filter by org explicitly in the repository/service. Treat this as a known inconsistency, not a template. |
 
 - Never write a cross-tenant query without an explicit, commented justification.
@@ -145,27 +153,25 @@ billOS/
 - Unit tests **must** call `TenantContext.setCurrentTenant(UUID.randomUUID().toString())` in
   `@BeforeEach` for any service that touches the tenant.
 
-### 4.2 Authentication — migrating to Supabase Auth (in progress)
-
-**Target state (currently uncommitted work in the tree — treat as the direction to build toward):**
+### 4.2 Authentication — Supabase Auth
 
 1. Frontend authenticates against **Supabase Auth** via `@supabase/ssr`
-   (`src/lib/supabase/client.ts` for browser, `server.ts` for RSC/route handlers).
+   (`src/lib/supabase/client.ts` for browser, `server.ts` for RSC/route handlers). `src/proxy.ts` (Next 16's
+   middleware) refreshes the session and is fail-closed: routes not in `PUBLIC_ROUTES` need a session.
 2. The axios request interceptor pulls `session.access_token` from Supabase and sends it as
    `Authorization: Bearer <token>`. A 401 triggers `supabase.auth.signOut()` + redirect to `/login`.
-3. `JwtTokenProvider` verifies the Supabase HS256 JWT using `SUPABASE_JWT_SECRET`.
-4. `JwtAuthenticationFilter` extracts `sub` (Supabase user UUID) and `email`, then does
-   **JIT user provisioning**: find by `supabaseId` → else link an existing row by `email` → else
-   create a new `User`. Then builds a `UserPrincipal` and sets the `SecurityContext`.
-5. `users.supabase_id` (UUID, unique) added in `V016`; `password_hash` is now nullable.
+3. The backend is a Spring **OAuth2 resource server**: it verifies Supabase's **ES256** tokens against the
+   JWKS at `SUPABASE_JWKS_URL` (`application.yml` → `spring.security.oauth2.resourceserver.jwt`).
+4. `SupabaseJwtAuthenticationConverter` requires `role=authenticated`, a UUID `sub` and an `email`, then
+   **JIT-provisions** the local user via `SupabaseUserProvisioningService` (find by `supabaseId` → link by
+   email → create). Consequence: *any* authenticated request creates a local user — which is why
+   `POST /public/check-user-exists` (used by the OAuth callback to block unknown Google logins) is public and
+   takes the access token in the body, verifying it with `JwtDecoder` and answering only for its own email.
+5. Password reset: `/forgot-password` → `supabase.auth.resetPasswordForEmail` → `/reset-password` (the browser
+   client exchanges the recovery code). The `/reset-password` URL must be in Supabase's allowed Redirect URLs.
+   Owner-created members get a temporary password and `users.must_change_password` → `/change-password`.
 
-**Removed as part of this migration:** `AuthController`, `AuthService`, `CustomUserDetailsService`
-and their tests. Do not reintroduce local password login.
-
-**Leftovers to clean up when you touch auth** (they are inert but misleading): `SecurityConfig` still
-permits `/api/v1/auth/**` and still declares `PasswordEncoder`/`AuthenticationManager` beans;
-`application.yml` still carries `app.security.jwt.*`; `RateLimitInterceptor` still has login/register/
-refresh buckets for routes that no longer exist.
+There is no local password login, `PasswordEncoder` or `AuthenticationManager`; do not reintroduce them.
 
 ### 4.3 Authorization — per-organization roles
 
@@ -174,15 +180,18 @@ refresh buckets for routes that no longer exist.
 - Enforce with SpEL against the `tenantSecurity` bean:
 
 ```java
-@PreAuthorize("@tenantSecurity.hasRole('ADMIN')")   // ADMIN or higher
-@PreAuthorize("@tenantSecurity.isMember()")          // any role in the current org
+@PreAuthorize("@tenantSecurity.hasRole('ADMIN')")          // ADMIN or higher in the X-Organization-Id org
+@PreAuthorize("@tenantSecurity.isMember()")                 // any role in the current org
+@PreAuthorize("@tenantSecurity.hasRoleIn(#id, 'ADMIN')")   // /organizations/{id}/** (tenant-agnostic paths)
 ```
 
 - Hierarchy (most → least privileged): `OWNER > ADMIN > MANAGER > USER > VIEWER`.
   `hasRole(X)` returns true when the user's level is **at least** X.
-- `@EnableMethodSecurity` is on. **New controllers should carry `@PreAuthorize` on every endpoint** —
-  today only `CollectionController`, `TeamController`, and `NotificationController` do, which means
-  most endpoints are merely "authenticated". Closing that gap is expected for any endpoint you add.
+- A role in a parent organization is inherited by its branches (`TenantSecurity.resolveEffectiveRole`).
+- `@EnableMethodSecurity` is on. Membership is already enforced for every tenant-scoped route (§4.1), but
+  **role levels** are only enforced where `@PreAuthorize` is present — today `CollectionController`,
+  `TeamController`, `NotificationController` and `OrganizationController`. Any endpoint that should be
+  limited to ADMIN/MANAGER (deletes, settings, approvals) needs its own `@PreAuthorize`.
 
 ### 4.4 Entity design
 
@@ -224,9 +233,18 @@ which reads/creates a per-org `NumberingSequence` and formats `prefix + zero-pad
 Intra-state vs inter-state is decided by comparing `organization.state` to the counterparty's billing
 state (case-insensitive). Intra-state splits tax into equal `cgstAmount` + `sgstAmount`; inter-state
 puts the whole amount in `igstAmount`. Line totals, `subtotal`, `taxTotal`, `totalAmount` are all
-computed server-side in the service — never trust client-supplied totals. See
+computed server-side in the service — never trust client-supplied totals. All amounts go through
+`TaxMath` (2 dp, HALF_UP; SGST = tax − CGST so the halves always sum exactly). See
 `SalesInvoiceService.createSalesInvoice` as the reference implementation, and `generateEInvoiceJson`
 for the IRP e-invoice payload shape.
+
+### 4.6.1 Invoice / payment lifecycle
+
+- A new invoice may only be `DRAFT` or `ISSUED`. Becoming ISSUED (at create or via `POST /{id}/issue`) runs
+  `postIssuedInvoice`: deduct stock per line and add the total to `customer.outstandingBalance`.
+- `sales_invoices.amount_paid` / `purchase_bills.amount_paid` (V024) accumulate allocations. `PaymentService`
+  accepts payments only against ISSUED/PARTIAL invoices and UNPAID/PARTIAL bills, rejects allocations above
+  the remaining balance or the payment amount, and sets PARTIAL/PAID from the running total.
 
 ### 4.7 Rate limiting
 
@@ -283,8 +301,9 @@ docker-compose up -d       # redis:6379, prometheus:9090, grafana:3001
 ### Environment / secrets
 
 - Backend reads `.env` at `backend/.env` via `spring-dotenv` (`spring.config.import: optional:file:.env`).
-  Keys in use: `SPRING_DATASOURCE_URL/USERNAME/PASSWORD`, `SUPABASE_JWT_SECRET`,
-  `SPRING_REDIS_HOST/PORT/PASSWORD`, Resend API key.
+  Keys in use: `SPRING_DATASOURCE_URL/USERNAME/PASSWORD`, `SUPABASE_URL`, `SUPABASE_JWKS_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `APP_FRONTEND_URL`, `SPRING_REDIS_HOST/PORT/PASSWORD`, Resend API key.
+  Log levels default to INFO; raise with `LOG_LEVEL_SECURITY`, `LOG_LEVEL_CORS`, `LOG_LEVEL_APP` locally.
 - Frontend needs `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - **Never commit real secrets.** `application.yml` holds only dev-safe defaults; keep it that way.
 
@@ -351,7 +370,7 @@ Never hand-write entity↔DTO mapping. Relations and totals are resolved in the 
 
 ### 6.6 Flyway migrations
 
-- `V{nnn}__{snake_case_description}.sql`, zero-padded to three digits. Next free number: **V017**.
+- `V{nnn}__{snake_case_description}.sql`, zero-padded to three digits. Next free number: **V025**.
 - **Immutable once committed.** Fix forward with a new migration; never edit an applied one.
 - Every org-scoped table needs `organization_id UUID NOT NULL` plus an index, and the
   `created_at / updated_at / deleted_at` columns `BaseEntity` expects.
@@ -371,6 +390,10 @@ src/features/collections/hooks/use-collections.ts     ← typed query/mutation h
   goes in `src/features/`.
 - Exported React components are named exports in PascalCase.
 - `"use client"` on anything using hooks, state, or the api client.
+- **Next 16: `params`/`searchParams` are Promises.** In a dynamic route use
+  `async function Page({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; }`
+  (or `use(params)` in a client component). Reading `params.id` directly yields `undefined`, and TypeScript
+  will not catch it if you hand-type `params`.
 
 ### 6.8 Frontend data fetching — the standard
 
@@ -395,6 +418,11 @@ export function useCreateCustomer() {
 
 - Always use the `api` helper from `@/lib/api-client` — it attaches the bearer token and
   `X-Organization-Id` and unwraps `response.data`. Never call `fetch`/raw `axios` against the API.
+- The active org lives in `localStorage.active_org_id`; `api-client` resolves it (first org) when missing and
+  clears it when the backend answers 403 for a stale org. In components get the active org from
+  `useOrganization()` — **never `orgs[0]`** from `/organizations`, which is wrong for branch users.
+- Failed calls reject with `ApiError` (`message` is already the backend's message; `status`/`response`
+  kept). `toast.error(error.message)` is enough.
 - `queryKey` = stable array starting with the resource name. Invalidate every key a mutation affects
   (see `useVerifyPayment`, which invalidates payments, dashboard, ledger, and notifications).
 - Query defaults live in `query-provider.tsx` (`staleTime` 60s, no refetch-on-focus, retry 1).
@@ -428,7 +456,7 @@ export function useCreateCustomer() {
 
 | Suite | Status |
 |---|---|
-| Backend (JUnit 5 + Mockito + AssertJ) | **17 test classes**, services + tenant + security. This is the enforced suite. |
+| Backend (JUnit 5 + Mockito + AssertJ) | **22 test classes / 100 tests**, services + tenant + security. This is the enforced suite. |
 | AI service (pytest) | `tests/test_main.py` only — health endpoint. |
 | Frontend | **No test runner installed.** `pnpm test` does not exist. |
 
@@ -520,6 +548,10 @@ class SalesInvoiceServiceTest {
    `prometheus.yml` only scrapes Prometheus itself, despite `SecurityConfig` permitting `/actuator/**`.
 10. **ThreadLocal tenant across async boundaries** — propagate explicitly.
 11. **React 19 / Next 16 are very new** — verify library compatibility before adding a dependency.
+12. **`findById`/`findAll` on `Customer`, `Product`, `CollectionQrCode`, `UserOrgRole`** — not tenant-scoped;
+    see §4.1.
+13. **Stale incremental builds** — if Mockito reports "class redefinition failed … NestHost", run
+    `mvnw clean test`; an old `.class` from a previous/IDE compile is mismatched.
 
 ---
 
@@ -533,15 +565,19 @@ change and update this list.
   typed exception; a `GlobalExceptionHandler` mapping to 404/400/409 is the highest-value backend fix.
 - **Validation is nearly absent** — only `TeamController` uses `@Valid`, and DTOs carry no
   `jakarta.validation` constraints.
-- **Authorization coverage** — only 3 of 24 controllers use `@PreAuthorize`.
-- **`TenantContext.getCurrentTenant()` is dereferenced without a null check** in many services
-  (`UUID.fromString(null)` → NPE) when the `X-Organization-Id` header is missing.
+- **Role-level authorization coverage** — membership is enforced globally, but only 4 of 26 controllers
+  restrict by role (`@PreAuthorize`); e.g. any VIEWER can delete customers or post journal entries.
+- **Customer/supplier `outstandingBalance` is a single column**, so for a parent's shared customer it mixes
+  the parent's and branches' receivables; dashboard/receivables report count only customers the current org owns.
 - **No JaCoCo** — the "≥80% coverage" target in the PRDs is aspirational, not enforced.
 - **No frontend test infrastructure.**
-- **Duplicate/legacy routes**: `settings/tax` vs `settings/taxes`; `reports/gst` vs
-  `reports/gstr1`/`gstr3b`. Consolidate when you touch them.
+- **Legacy routes**: `settings/tax` only redirects to `settings/taxes`. `reports/gst` (+ `GstReportController`,
+  `GstReportingService`) is an unlinked **mock** returning placeholder data — the real e-invoice payload is
+  `GET /sales-invoices/{id}/e-invoice`. Delete or implement it.
+- **Preferences (language, date format, timezone, currency) are saved but never applied** in the UI. The app
+  is dark-only (`<html class="dark">`, ~700 hard-coded `slate-*` classes); the no-op theme selector was removed.
+- **No UI to void invoices or view a single invoice/order/bill/quotation** (list pages only).
 - **`any` types** in several list components (`customer-list.tsx`, `product-list.tsx`, …).
-- **Auth migration leftovers** — see §4.2.
 - **`AuditLog.userId` never populated.**
 - **`code-review.md` baseline**: `ui-dropdown` is flagged as a god-component with heavy coupling, and
   ~234 symbols read as dead code (mostly unused DTOs/enums).

@@ -96,8 +96,7 @@ class TeamServiceTest {
         role.setUser(user);
         role.setRole("USER");
 
-        when(userOrgRoleRepository.findAll()).thenReturn(List.of(role));
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userOrgRoleRepository.findByOrganizationId(orgId)).thenReturn(List.of(role));
 
         // Act
         List<TeamMemberDto> members = teamService.getTeamMembers();
@@ -309,7 +308,7 @@ class TeamServiceTest {
         role.setOrganizationId(orgId);
 
         when(userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId)).thenReturn(Optional.of(role));
-        when(userOrgRoleRepository.findAll()).thenReturn(List.of(role));
+        when(userOrgRoleRepository.findByOrganizationId(orgId)).thenReturn(List.of(role));
 
         assertThatThrownBy(() -> teamService.removeUser(userId))
                 .isInstanceOf(RuntimeException.class)
@@ -401,9 +400,7 @@ class TeamServiceTest {
         otherRole.setUser(otherUser);
         otherRole.setRole("ADMIN");
 
-        when(userOrgRoleRepository.findAll()).thenReturn(List.of(creatorRole, otherRole));
-        when(userRepository.findById(creatorId)).thenReturn(Optional.of(creatorUser));
-        when(userRepository.findById(otherUserId)).thenReturn(Optional.of(otherUser));
+        when(userOrgRoleRepository.findByOrganizationId(orgId)).thenReturn(List.of(creatorRole, otherRole));
 
         List<TeamMemberDto> members = teamService.getTeamMembers();
 

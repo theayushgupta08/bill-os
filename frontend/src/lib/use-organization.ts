@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
+import { api, resolveActiveOrgId } from "@/lib/api-client";
 
 export interface Organization {
   id: string;
@@ -29,7 +29,7 @@ export interface OrganizationTree {
 
 async function fetchOrganization(): Promise<Organization | null> {
   if (typeof window === "undefined") return null;
-  const orgId = localStorage.getItem("active_org_id");
+  const orgId = await resolveActiveOrgId();
   if (!orgId) return null;
   try {
     const org = await api.get<Organization>(`/organizations/${orgId}`);

@@ -45,71 +45,103 @@ public class PaymentService {
     private PaymentDto processPayment(PaymentDto dto, PaymentType type) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
+        if (dto.getAmount() == null || dto.getAmount().signum() <= 0) {
+            throw new RuntimeException("Payment amount must be greater than zero");
+        }
+
+        // Validate before touching any document so a rejected payment leaves no partial side effects
+        BigDecimal totalAllocated = BigDecimal.ZERO;
+        for (PaymentAllocationDto allocDto : dto.getAllocations()) {
+            if (allocDto.getAllocatedAmount() == null
+                    || allocDto.getAllocatedAmount().signum() <= 0) {
+                throw new RuntimeException("Allocated amount must be greater than zero");
+            }
+            totalAllocated = totalAllocated.add(allocDto.getAllocatedAmount());
+        }
+        if (totalAllocated.compareTo(dto.getAmount()) > 0) {
+            throw new RuntimeException("Total allocated amount exceeds payment amount");
+        }
+
         Payment payment = new Payment();
         payment.setOrganizationId(orgId);
-        payment.setPaymentNumber(sequenceGeneratorService.getNextDocumentNumber(
-                type == PaymentType.RECEIPT ? DocumentType.PAYMENT_RECEIPT : DocumentType.PAYMENT_VOUCHER));
         payment.setPaymentDate(dto.getPaymentDate());
         payment.setPaymentType(type);
         payment.setReferenceNumber(dto.getReferenceNumber());
         payment.setAmount(dto.getAmount());
         payment.setNotes(dto.getNotes());
 
-        BigDecimal totalAllocated = BigDecimal.ZERO;
-
         for (PaymentAllocationDto allocDto : dto.getAllocations()) {
             PaymentAllocation allocation = new PaymentAllocation();
-            allocation.setAllocatedAmount(allocDto.getAllocatedAmount());
+            BigDecimal amount = allocDto.getAllocatedAmount();
+            allocation.setAllocatedAmount(amount);
 
             if (type == PaymentType.RECEIPT && allocDto.getSalesInvoiceId() != null) {
                 SalesInvoice invoice = salesInvoiceRepository
                         .findById(allocDto.getSalesInvoiceId())
                         .orElseThrow(() -> new RuntimeException("Invoice not found"));
-                allocation.setSalesInvoice(invoice);
-
-                // Update Customer balance
-                Customer customer = invoice.getCustomer();
-                customer.setOutstandingBalance(
-                        customer.getOutstandingBalance().subtract(allocDto.getAllocatedAmount()));
-                customerRepository.save(customer);
-
-                // Ideally we'd sum all previous allocations, but for V1 simple mockup:
-                // Assuming this single allocation clears the invoice or makes it partial
-                if (allocDto.getAllocatedAmount().compareTo(invoice.getTotalAmount()) >= 0) {
-                    invoice.setStatus(SalesInvoiceStatus.PAID);
-                } else {
-                    invoice.setStatus(SalesInvoiceStatus.PARTIAL);
+                if (invoice.getStatus() != SalesInvoiceStatus.ISSUED
+                        && invoice.getStatus() != SalesInvoiceStatus.PARTIAL) {
+                    throw new RuntimeException("Cannot record a payment against a " + invoice.getStatus() + " invoice ("
+                            + invoice.getInvoiceNumber() + ")");
                 }
+
+                BigDecimal newPaid = invoice.getAmountPaid().add(amount);
+                if (newPaid.compareTo(invoice.getTotalAmount()) > 0) {
+                    throw new RuntimeException("Payment of " + amount + " exceeds the balance due of "
+                            + invoice.getTotalAmount().subtract(invoice.getAmountPaid()) + " on invoice "
+                            + invoice.getInvoiceNumber());
+                }
+                invoice.setAmountPaid(newPaid);
+                invoice.setStatus(
+                        newPaid.compareTo(invoice.getTotalAmount()) >= 0
+                                ? SalesInvoiceStatus.PAID
+                                : SalesInvoiceStatus.PARTIAL);
+                allocation.setSalesInvoice(invoice);
                 salesInvoiceRepository.save(invoice);
+
+                Customer customer = invoice.getCustomer();
+                customer.setOutstandingBalance(customer.getOutstandingBalance().subtract(amount));
+                customerRepository.save(customer);
 
             } else if (type == PaymentType.PAYMENT && allocDto.getPurchaseBillId() != null) {
                 PurchaseBill bill = purchaseBillRepository
                         .findById(allocDto.getPurchaseBillId())
                         .orElseThrow(() -> new RuntimeException("Bill not found"));
-                allocation.setPurchaseBill(bill);
-
-                // Update Supplier balance
-                Supplier supplier = bill.getSupplier();
-                supplier.setOutstandingBalance(
-                        supplier.getOutstandingBalance().subtract(allocDto.getAllocatedAmount()));
-                supplierRepository.save(supplier);
-
-                if (allocDto.getAllocatedAmount().compareTo(bill.getTotalAmount()) >= 0) {
-                    bill.setStatus(PurchaseBillStatus.PAID);
-                } else {
-                    bill.setStatus(PurchaseBillStatus.PARTIAL);
+                if (bill.getStatus() != PurchaseBillStatus.UNPAID && bill.getStatus() != PurchaseBillStatus.PARTIAL) {
+                    throw new RuntimeException("Cannot record a payment against a " + bill.getStatus() + " bill ("
+                            + bill.getBillNumber() + ")");
                 }
+
+                BigDecimal newPaid = bill.getAmountPaid().add(amount);
+                if (newPaid.compareTo(bill.getTotalAmount()) > 0) {
+                    throw new RuntimeException("Payment of " + amount + " exceeds the balance due of "
+                            + bill.getTotalAmount().subtract(bill.getAmountPaid()) + " on bill "
+                            + bill.getBillNumber());
+                }
+                bill.setAmountPaid(newPaid);
+                bill.setStatus(
+                        newPaid.compareTo(bill.getTotalAmount()) >= 0
+                                ? PurchaseBillStatus.PAID
+                                : PurchaseBillStatus.PARTIAL);
+                allocation.setPurchaseBill(bill);
                 purchaseBillRepository.save(bill);
+
+                Supplier supplier = bill.getSupplier();
+                supplier.setOutstandingBalance(supplier.getOutstandingBalance().subtract(amount));
+                supplierRepository.save(supplier);
+            } else {
+                throw new RuntimeException(
+                        type == PaymentType.RECEIPT
+                                ? "Receipt allocations must reference a sales invoice"
+                                : "Payment allocations must reference a purchase bill");
             }
 
-            totalAllocated = totalAllocated.add(allocDto.getAllocatedAmount());
             payment.addAllocation(allocation);
         }
 
-        // Validate allocation total doesn't exceed payment amount
-        if (totalAllocated.compareTo(payment.getAmount()) > 0) {
-            throw new RuntimeException("Total allocated amount exceeds payment amount");
-        }
+        // Number the payment only once it is known to be valid, so rejected payments don't burn numbers
+        payment.setPaymentNumber(sequenceGeneratorService.getNextDocumentNumber(
+                type == PaymentType.RECEIPT ? DocumentType.PAYMENT_RECEIPT : DocumentType.PAYMENT_VOUCHER));
 
         Payment saved = paymentRepository.save(payment);
         return paymentMapper.toDto(saved);

@@ -50,6 +50,9 @@ class PurchaseBillServiceTest {
     @Mock
     private PurchaseBillMapper purchaseBillMapper;
 
+    @Mock
+    private SharedEntityResolver sharedEntityResolver;
+
     @InjectMocks
     private PurchaseBillService purchaseBillService;
 
@@ -89,7 +92,7 @@ class PurchaseBillServiceTest {
 
         when(organizationRepository.findById(any())).thenReturn(Optional.of(org));
         when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(supplier));
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(product);
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
         when(purchaseBillRepository.save(any(PurchaseBill.class))).thenAnswer(i -> i.getArguments()[0]);
         when(purchaseBillMapper.toDto(any(PurchaseBill.class))).thenReturn(new PurchaseBillDto());

@@ -107,7 +107,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             return new RateLimitConfig("rl:ai-forecast:" + tenantKey, LIMIT_AI_FORECAST);
         } else if (path.startsWith("/api/v1/files")) {
             return new RateLimitConfig("rl:files:" + tenantKey, LIMIT_FILES);
-        } else if (path.contains("/search") || path.contains("?query=")) {
+        } else if (path.contains("/search") || request.getParameter("query") != null) {
+            // getRequestURI() never includes the query string, so check the parameter itself
             return new RateLimitConfig("rl:search:" + userKey, LIMIT_SEARCH);
         }
 

@@ -21,16 +21,7 @@ import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-interface PurchaseBill {
-  id: string;
-  billNumber: string;
-  billDate: string;
-  totalAmount: number;
-  status: string;
-  supplier?: { name: string };
-  supplierName?: string;
-}
-
+import { PurchaseBill, balanceDue } from "@/types";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function PurchaseBillList() {
@@ -47,26 +38,24 @@ export function PurchaseBillList() {
 
   const payMutation = useMutation({
     mutationFn: (bill: PurchaseBill) => {
+      // Settle only what is still owed — a partly-paid bill must not be paid its full total again
+      const due = balanceDue(bill);
       const payload = {
         paymentDate: new Date().toISOString().split('T')[0],
-        amount: bill.totalAmount,
-        notes: "Auto-recorded full payment to supplier",
-        allocations: [
-          {
-            purchaseBillId: bill.id,
-            allocatedAmount: bill.totalAmount
-          }
-        ]
+        amount: due,
+        notes: "Recorded balance payment to supplier",
+        allocations: [{ purchaseBillId: bill.id, allocatedAmount: due }],
       };
       return api.post("/payments/vouchers", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-bills"] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
       toast.success("Payment recorded successfully!");
     },
-    onError: (error) => {
-      console.error("Failed to record payment", error);
-      toast.error("Failed to record payment");
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to record payment");
     }
   });
 
@@ -75,6 +64,7 @@ export function PurchaseBillList() {
       case 'UNPAID': return <Badge variant="destructive">Unpaid</Badge>;
       case 'PARTIAL': return <Badge className="bg-yellow-500">Partial</Badge>;
       case 'PAID': return <Badge className="bg-green-500">Paid</Badge>;
+      case 'VOID': return <Badge variant="outline">Void</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
@@ -93,7 +83,6 @@ export function PurchaseBillList() {
     searchFields: [
       "billNumber",
       "supplierName",
-      (b) => b.supplier?.name,
     ],
     filterFn: (b) => {
       if (statusFilter === "ALL") return true;
@@ -174,11 +163,11 @@ export function PurchaseBillList() {
                 <TableRow key={bill.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                   <TableCell className="font-medium">{bill.billNumber}</TableCell>
                   <TableCell>{bill.billDate}</TableCell>
-                  <TableCell>{bill.supplierName || bill.supplier?.name || "-"}</TableCell>
+                  <TableCell>{bill.supplierName || "-"}</TableCell>
                   <TableCell>{getStatusBadge(bill.status)}</TableCell>
                   <TableCell className="text-right font-medium">₹{bill.totalAmount?.toFixed(2)}</TableCell>
                   <TableCell className="text-right">
-                    {bill.status !== 'PAID' && (
+                    {(bill.status === 'UNPAID' || bill.status === 'PARTIAL') && (
                       <Button variant="outline" size="sm" onClick={() => payMutation.mutate(bill)} disabled={payMutation.isPending}>
                         Record Payment
                       </Button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
+import { useOrganization } from "@/lib/use-organization";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +43,6 @@ function parseTerms(raw: string | undefined | null): string[] {
 
 export function InvoiceSettingsForm() {
   const queryClient = useQueryClient();
-  const [orgId, setOrgId] = useState<string | null>(null);
   const [settings, setSettings] = useState<InvoiceSettings | null>(null);
   const [termsList, setTermsList] = useState<string[]>([]);
   const [newTermInput, setNewTermInput] = useState("");
@@ -55,13 +55,9 @@ export function InvoiceSettingsForm() {
     bankAddress: "",
   });
 
-  const { data: orgs, isLoading: loadingOrgs } = useQuery({
-    queryKey: ["organizations"],
-    queryFn: async () => {
-      const res = await api.get<Organization[]>(`/organizations`);
-      return res;
-    }
-  });
+  // Settings belong to the active organization (branch-aware), not simply the first one the user can see
+  const { data: activeOrg, isLoading: loadingOrgs } = useOrganization();
+  const orgId = activeOrg?.id ?? null;
 
   const { data: invoiceSettings, isLoading: loadingSettings } = useQuery({
     queryKey: ["invoiceSettings", orgId],
@@ -72,13 +68,6 @@ export function InvoiceSettingsForm() {
     },
     enabled: !!orgId
   });
-
-  useEffect(() => {
-    if (orgs && orgs.length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOrgId(orgs[0].id);
-    }
-  }, [orgs]);
 
   useEffect(() => {
     if (invoiceSettings) {
@@ -128,7 +117,7 @@ export function InvoiceSettingsForm() {
     e.preventDefault();
     if (!orgId || !settings) return;
 
-    let finalTerms = [...termsList];
+    const finalTerms = [...termsList];
     if (newTermInput.trim()) {
       finalTerms.push(newTermInput.trim());
       setTermsList(finalTerms);

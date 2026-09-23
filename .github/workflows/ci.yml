@@ -76,6 +76,8 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
+          # No requirements.txt in the repo — key the cache on the project file instead
+          cache-dependency-path: ai-service/pyproject.toml
 
       # Install AI Dependencies
       - name: Install AI Dependencies

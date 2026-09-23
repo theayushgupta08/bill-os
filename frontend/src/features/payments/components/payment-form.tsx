@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
@@ -20,7 +19,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Invoice, PurchaseOrder } from "@/types";
+import { Invoice, PurchaseBill, balanceDue } from "@/types";
 import { PageLoader } from "@/components/ui/loader";
 
 export function PaymentForm() {
@@ -36,19 +35,20 @@ export function PaymentForm() {
     allocatedDocumentId: "", // ID of Sales Invoice or Purchase Bill
   });
 
+  // Only documents the backend will accept a payment against (see PaymentService.processPayment)
   const { data: invoices = [] as Invoice[], isLoading: loadingInvoices } = useQuery({
     queryKey: ["sales-invoices-unpaid"],
     queryFn: async () => {
-      const res = await api.get<Invoice[]>("/invoices?status=SENT,PARTIAL");
-      return res.filter((i: Invoice) => i.status !== 'PAID');
+      const res = await api.get<Invoice[]>("/sales-invoices");
+      return res.filter((i) => i.status === "ISSUED" || i.status === "PARTIAL");
     }
   });
 
-  const { data: bills = [] as PurchaseOrder[], isLoading: loadingBills } = useQuery({
+  const { data: bills = [] as PurchaseBill[], isLoading: loadingBills } = useQuery({
     queryKey: ["purchase-bills-unpaid"],
     queryFn: async () => {
-      const res = await api.get<PurchaseOrder[]>("/purchase-bills?status=PENDING,PARTIAL");
-      return res.filter((b: PurchaseOrder) => b.status !== 'PAID');
+      const res = await api.get<PurchaseBill[]>("/purchase-bills");
+      return res.filter((b) => b.status === "UNPAID" || b.status === "PARTIAL");
     }
   });
 
@@ -56,18 +56,14 @@ export function PaymentForm() {
 
   const handleDocumentChange = (docId: string | null) => {
     if (!docId) return;
-    setFormData(prev => ({ ...prev, allocatedDocumentId: docId }));
-    
-    if (formData.paymentType === "RECEIPT") {
-      const inv = invoices.find((i: Invoice) => i.id === docId);
-      if (inv) {
-        setFormData(prev => ({ ...prev, amount: inv.totalAmount.toString() }));
-      }
-    } else {
-      const bill = bills.find((b: PurchaseOrder) => b.id === docId);
-      if (bill) {
-        setFormData(prev => ({ ...prev, amount: bill.totalAmount.toString() }));
-      }
+    // "none" is the "No specific document" option — it must not be sent as a document id
+    setFormData(prev => ({ ...prev, allocatedDocumentId: docId === "none" ? "" : docId }));
+
+    const doc = formData.paymentType === "RECEIPT"
+      ? invoices.find((i) => i.id === docId)
+      : bills.find((b) => b.id === docId);
+    if (doc) {
+      setFormData(prev => ({ ...prev, amount: balanceDue(doc).toString() }));
     }
   };
 
@@ -84,10 +80,8 @@ export function PaymentForm() {
       router.push("/payments");
       router.refresh();
     },
-    onError: (error: unknown) => {
-      console.error(error);
-      const err = error as AxiosError<{message: string}>;
-      toast.error(err.response?.data?.message || "Failed to record payment");
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to record payment");
     }
   });
 
@@ -162,7 +156,7 @@ export function PaymentForm() {
             <div className="space-y-2">
               <Label>Allocate to {formData.paymentType === "RECEIPT" ? "Sales Invoice" : "Purchase Bill"}</Label>
               <Select 
-                value={formData.allocatedDocumentId} 
+                value={formData.allocatedDocumentId || "none"}
                 onValueChange={handleDocumentChange}
               >
                 <SelectTrigger>
@@ -171,14 +165,14 @@ export function PaymentForm() {
                 <SelectContent>
                   <SelectItem value="none">No specific document</SelectItem>
                   {formData.paymentType === "RECEIPT" 
-                    ? invoices.map((i: any) => (
+                    ? invoices.map((i) => (
                         <SelectItem key={i.id} value={i.id}>
-                          {i.invoiceNumber} - {i.customerName} (₹{i.totalAmount})
+                          {i.invoiceNumber} - {i.customerName} (₹{balanceDue(i)} due)
                         </SelectItem>
                       ))
-                    : bills.map((b: any) => (
+                    : bills.map((b) => (
                         <SelectItem key={b.id} value={b.id}>
-                          {b.billNumber} - {b.supplierName} (₹{b.totalAmount})
+                          {b.billNumber} - {b.supplierName} (₹{balanceDue(b)} due)
                         </SelectItem>
                       ))
                   }

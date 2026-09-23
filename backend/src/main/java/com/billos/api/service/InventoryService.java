@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InventoryService {
 
     private final InventoryLevelRepository inventoryLevelRepository;
+    private final SharedEntityResolver sharedEntityResolver;
     private final StockMovementRepository stockMovementRepository;
     private final WarehouseRepository warehouseRepository;
     private final ProductRepository productRepository;
@@ -50,9 +51,7 @@ public class InventoryService {
         Warehouse warehouse = warehouseRepository
                 .findById(request.getWarehouseId())
                 .orElseThrow(() -> new RuntimeException("Warehouse not found"));
-        Product product = productRepository
-                .findById(request.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = sharedEntityResolver.accessibleProduct(request.getProductId());
 
         // 1. Get or create InventoryLevel
         InventoryLevel level = inventoryLevelRepository

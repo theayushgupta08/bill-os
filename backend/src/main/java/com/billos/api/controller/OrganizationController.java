@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,20 +70,22 @@ public class OrganizationController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@tenantSecurity.hasRoleIn(#id, 'ADMIN')")
     public ResponseEntity<Organization> updateOrganization(
             @PathVariable java.util.UUID id, @Valid @RequestBody Organization organization) {
-        // Assume security handles authorization (e.g. only OWNER/ADMIN can update)
         Organization updatedOrg = organizationService.updateOrganization(id, organization);
         return ResponseEntity.ok(updatedOrg);
     }
 
     @GetMapping("/{id}/settings")
+    @PreAuthorize("@tenantSecurity.isMemberOf(#id)")
     public ResponseEntity<OrganizationSettingsDto> getOrganizationSettings(@PathVariable java.util.UUID id) {
         OrganizationSettingsDto settings = organizationService.getOrganizationSettings(id);
         return ResponseEntity.ok(settings);
     }
 
     @PutMapping("/{id}/settings")
+    @PreAuthorize("@tenantSecurity.hasRoleIn(#id, 'ADMIN')")
     public ResponseEntity<OrganizationSettingsDto> updateOrganizationSettings(
             @PathVariable java.util.UUID id, @RequestBody OrganizationSettingsDto dto) {
         OrganizationSettingsDto updatedSettings = organizationService.updateOrganizationSettings(id, dto);

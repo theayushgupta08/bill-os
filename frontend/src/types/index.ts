@@ -214,9 +214,31 @@ export interface Invoice extends BaseEntity {
   dueDate?: string;
   status: string;
   totalAmount: number;
+  amountPaid?: number;
   notes?: string;
   terms?: string;
   customer?: Customer;
+}
+
+export interface PurchaseBill extends BaseEntity {
+  billNumber: string;
+  supplierId: string;
+  supplierName?: string;
+  poId?: string;
+  poNumber?: string;
+  billDate: string;
+  dueDate?: string;
+  status: string;
+  subtotal?: number;
+  taxTotal?: number;
+  totalAmount: number;
+  amountPaid?: number;
+  notes?: string;
+}
+
+/** Amount still owed on an invoice or bill. */
+export function balanceDue(doc: { totalAmount: number; amountPaid?: number }): number {
+  return Math.max(0, Number(doc.totalAmount || 0) - Number(doc.amountPaid || 0));
 }
 
 export interface PurchaseOrder extends BaseEntity {

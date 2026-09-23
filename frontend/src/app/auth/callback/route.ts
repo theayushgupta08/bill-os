@@ -64,10 +64,13 @@ export async function GET(request: NextRequest) {
     // Option C: If signing in via Google from the login page, verify user exists in billOS
     if (source === "login" && sessionUser?.email) {
       try {
-        const checkRes = await fetch(
-          `${apiUrl}/public/check-user-exists?email=${encodeURIComponent(sessionUser.email.trim().toLowerCase())}`,
-          { cache: "no-store" }
-        );
+        // Sends the token (not a bare email) so the backend only answers for the caller's own verified email.
+        const checkRes = await fetch(`${apiUrl}/public/check-user-exists`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accessToken }),
+          cache: "no-store",
+        });
         if (checkRes.ok) {
           const checkData = await checkRes.json();
           if (!checkData?.exists) {

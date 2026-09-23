@@ -16,7 +16,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * Stateless security. Credentials live in Supabase Auth; this application only verifies the access
- * token Supabase issued and maps it onto a local user (see {@link JwtAuthenticationFilter}).
+ * token Supabase issued and maps it onto a local user (see {@link SupabaseJwtAuthenticationConverter}).
  *
  * <p>There is deliberately no {@code PasswordEncoder} or {@code AuthenticationManager} — billOS
  * never sees a password, and reintroducing local login would fork the source of truth for identity.

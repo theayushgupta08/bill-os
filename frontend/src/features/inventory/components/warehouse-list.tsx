@@ -28,7 +28,7 @@ export function WarehouseList() {
   const { data: warehouses = [] as Warehouse[], isLoading } = useQuery({
     queryKey: ["warehouses"],
     queryFn: async () => {
-      const res = await api.get<Warehouse[]>("/inventory/warehouses");
+      const res = await api.get<Warehouse[]>("/warehouses");
       return res;
     },
   });

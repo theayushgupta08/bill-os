@@ -1,7 +1,10 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { createClient } from './supabase/client';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+
+/** Message TenantMembershipInterceptor returns when X-Organization-Id names an org the caller isn't in. */
+const ORG_ACCESS_DENIED = 'You do not have access to this organization';
 
 // Create a centralized Axios instance
 const apiClient = axios.create({
@@ -11,12 +14,45 @@ const apiClient = axios.create({
   },
 });
 
+export const ACTIVE_ORG_KEY = 'active_org_id';
+
+/** Endpoints the backend does not scope to X-Organization-Id (mirrors TenantMembershipInterceptor). */
+const TENANT_AGNOSTIC_PREFIXES = ['/organizations', '/users', '/public', '/health'];
+
+function isTenantAgnostic(url = ''): boolean {
+  return TENANT_AGNOSTIC_PREFIXES.some(
+    (p) => url === p || url.startsWith(`${p}/`) || url.startsWith(`${p}?`)
+  );
+}
+
+let pendingOrgResolution: Promise<string | null> | null = null;
+
+/**
+ * The active organization for tenant-scoped calls. Falls back to the user's first organization when none is
+ * stored yet (e.g. a fresh tab), sharing one in-flight lookup between concurrent requests.
+ */
+export async function resolveActiveOrgId(): Promise<string | null> {
+  const stored = localStorage.getItem(ACTIVE_ORG_KEY);
+  if (stored) return stored;
+
+  // '/organizations' is tenant-agnostic, so this goes through apiClient without re-entering the resolver
+  pendingOrgResolution ??= (apiClient.get('/organizations') as unknown as Promise<{ id: string }[]>)
+    .then((orgs) => {
+      const id = orgs?.[0]?.id ?? null;
+      if (id) localStorage.setItem(ACTIVE_ORG_KEY, id);
+      return id;
+    })
+    .catch(() => null)
+    .finally(() => {
+      pendingOrgResolution = null;
+    });
+  return pendingOrgResolution;
+}
+
 // Request interceptor to attach tokens and organization ID
 apiClient.interceptors.request.use(
   async (config) => {
     if (typeof window !== 'undefined') {
-      const orgId = localStorage.getItem('active_org_id');
-
       // Fetch the active session from Supabase
       const supabase = createClient();
       let { data: { session } } = await supabase.auth.getSession();
@@ -35,6 +71,10 @@ apiClient.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+
+      const orgId = isTenantAgnostic(config.url)
+        ? localStorage.getItem(ACTIVE_ORG_KEY)
+        : await resolveActiveOrgId();
       if (orgId) {
         config.headers['X-Organization-Id'] = orgId;
       }
@@ -65,17 +105,41 @@ apiClient.interceptors.response.use(
         pathname.startsWith('/auth');
 
       if (!isOnboardingOrAuth) {
+        // Don't let the next user on this browser inherit this user's organization
+        localStorage.removeItem(ACTIVE_ORG_KEY);
         const supabase = createClient();
         await supabase.auth.signOut();
         window.location.href = '/login';
       }
     }
 
-    // Standardize the error message
+    // The stored organization is one this user no longer belongs to (removed from the team, or another user's
+    // leftover). Forget it so the next request resolves a valid one instead of failing forever.
+    if (error.response?.status === 403 && error.response?.data?.message === ORG_ACCESS_DENIED
+        && typeof window !== 'undefined') {
+      localStorage.removeItem(ACTIVE_ORG_KEY);
+    }
+
+    // Standardize the error message, but keep status/response so callers can still branch on them
     const message = error.response?.data?.message || error.message || 'API request failed';
-    return Promise.reject(new Error(message));
+    return Promise.reject(new ApiError(message, error.response?.status, error.response));
   }
 );
+
+/**
+ * Error thrown by every failed API call. `message` is already the backend's message when it sent one, so
+ * `toast.error(err.message)` is enough; `status` and `response` are kept for callers that need them.
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+    public readonly response?: AxiosResponse<{ message?: string }>
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 /**
  * Downloads a PDF from the API using the Axios instance.

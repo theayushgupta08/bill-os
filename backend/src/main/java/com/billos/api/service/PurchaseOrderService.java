@@ -4,7 +4,6 @@ import com.billos.api.dto.PurchaseOrderDto;
 import com.billos.api.dto.PurchaseOrderLineDto;
 import com.billos.api.entity.*;
 import com.billos.api.mapper.PurchaseOrderMapper;
-import com.billos.api.repository.ProductRepository;
 import com.billos.api.repository.PurchaseOrderRepository;
 import com.billos.api.repository.SupplierRepository;
 import com.billos.api.repository.TaxRateRepository;
@@ -23,8 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PurchaseOrderService {
 
     private final PurchaseOrderRepository purchaseOrderRepository;
+    private final SharedEntityResolver sharedEntityResolver;
     private final SupplierRepository supplierRepository;
-    private final ProductRepository productRepository;
     private final TaxRateRepository taxRateRepository;
     private final PurchaseOrderMapper purchaseOrderMapper;
 
@@ -64,9 +63,7 @@ public class PurchaseOrderService {
         BigDecimal taxTotal = BigDecimal.ZERO;
 
         for (PurchaseOrderLineDto lineDto : dto.getLines()) {
-            Product product = productRepository
-                    .findById(lineDto.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
+            Product product = sharedEntityResolver.accessibleProduct(lineDto.getProductId());
 
             TaxRate taxRate = null;
             if (lineDto.getTaxRateId() != null) {
@@ -82,11 +79,11 @@ public class PurchaseOrderService {
             line.setUnitPrice(lineDto.getUnitPrice());
 
             // Re-calculate totals on backend for safety
-            BigDecimal lineBase = line.getQuantity().multiply(line.getUnitPrice());
+            BigDecimal lineBase = TaxMath.money(line.getQuantity().multiply(line.getUnitPrice()));
             subtotal = subtotal.add(lineBase);
 
             if (taxRate != null) {
-                BigDecimal lineTax = lineBase.multiply(taxRate.getRate()).divide(new BigDecimal("100"));
+                BigDecimal lineTax = TaxMath.percentOf(lineBase, taxRate.getRate());
                 line.setTaxAmount(lineTax);
                 taxTotal = taxTotal.add(lineTax);
                 line.setLineTotal(lineBase.add(lineTax));

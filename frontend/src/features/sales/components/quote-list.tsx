@@ -90,7 +90,6 @@ export function QuoteList() {
               <SelectItem value="SENT" className="text-xs">Sent</SelectItem>
               <SelectItem value="ACCEPTED" className="text-xs">Accepted</SelectItem>
               <SelectItem value="REJECTED" className="text-xs">Rejected</SelectItem>
-              <SelectItem value="EXPIRED" className="text-xs">Expired</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -56,7 +56,8 @@ function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, string> = {
     PAID: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
     UNPAID: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    OVERDUE: "bg-red-500/10 text-red-400 border-red-500/20",
+    ISSUED: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    VOID: "bg-red-500/10 text-red-400 border-red-500/20",
     DRAFT: "bg-slate-500/10 text-slate-400 border-slate-500/20",
     PARTIAL: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   };
@@ -365,7 +366,7 @@ export function DashboardContent() {
               variant="ghost"
               size="sm"
               className="text-xs text-muted-foreground h-7 px-2 hover:text-foreground"
-              onClick={() => router.push("/purchases")}
+              onClick={() => router.push("/purchases/bills")}
             >
               View all →
             </Button>

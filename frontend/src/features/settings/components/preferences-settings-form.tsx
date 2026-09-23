@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
+import { useOrganization } from "@/lib/use-organization";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -16,16 +17,11 @@ import { PreferencesSettings, Organization } from "@/types";
 
 export function PreferencesSettingsForm() {
   const queryClient = useQueryClient();
-  const [orgId, setOrgId] = useState<string | null>(null);
   const [settings, setSettings] = useState<PreferencesSettings | null>(null);
 
-  const { data: orgs, isLoading: loadingOrgs } = useQuery({
-    queryKey: ["organizations"],
-    queryFn: async () => {
-      const res = await api.get<Organization[]>(`/organizations`);
-      return res;
-    }
-  });
+  // Settings belong to the active organization (branch-aware), not simply the first one the user can see
+  const { data: activeOrg, isLoading: loadingOrgs } = useOrganization();
+  const orgId = activeOrg?.id ?? null;
 
   const { data: prefSettings, isLoading: loadingSettings } = useQuery({
     queryKey: ["prefSettings", orgId],
@@ -36,13 +32,6 @@ export function PreferencesSettingsForm() {
     },
     enabled: !!orgId
   });
-
-  useEffect(() => {
-    if (orgs && orgs.length > 0) {
-      // eslint-disable-next-line
-      setOrgId(orgs[0].id);
-    }
-  }, [orgs]);
 
   useEffect(() => {
     if (prefSettings) {
@@ -69,7 +58,7 @@ export function PreferencesSettingsForm() {
     updateMutation.mutate(settings);
   };
 
-  const handleSelectChange = (name: keyof PreferencesSettings | "theme", value: string) => {
+  const handleSelectChange = (name: keyof PreferencesSettings, value: string) => {
     setSettings((prev: PreferencesSettings | null) => prev ? ({ ...prev, [name]: value }) : prev);
   };
 
@@ -97,7 +86,7 @@ export function PreferencesSettingsForm() {
             Preferences
             <PageHelpTooltip
               title="System & UI Preferences"
-              description="Customize currency formats, decimal precision, date formats, and theme appearance across your store."
+              description="Customize currency formats, decimal precision, and date formats across your store."
             />
           </h2>
           <p className="text-sm text-slate-400">Customize how BillOS looks and formats data for your organization.</p>
@@ -112,25 +101,6 @@ export function PreferencesSettingsForm() {
           </CardHeader>
           <CardContent className="space-y-6">
             
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <Label htmlFor="theme">Theme</Label>
-                <HelpTooltip text="Choose the appearance theme for your billOS interface (Light, Dark, or sync with System preferences)." />
-              </div>
-              <Select 
-                value={(settings as PreferencesSettings).theme || "light"} 
-                onValueChange={(val: string | null) => val && handleSelectChange("theme", val)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a theme" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">Light</SelectItem>
-                  <SelectItem value="dark">Dark</SelectItem>
-                  <SelectItem value="system">System (Auto)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             <div className="space-y-2">
               <div className="flex items-center">

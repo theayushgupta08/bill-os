@@ -2,6 +2,7 @@ package com.billos.api.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.billos.api.dto.DashboardSummaryDto;
@@ -58,11 +59,22 @@ class DashboardServiceTest {
     @InjectMocks
     private DashboardService dashboardService;
 
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        com.billos.api.tenant.TenantContext.setCurrentTenant(
+                java.util.UUID.randomUUID().toString());
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        com.billos.api.tenant.TenantContext.clear();
+    }
+
     @Test
     void testGetSummary() {
         Customer c1 = new Customer();
         c1.setOutstandingBalance(new BigDecimal("100.00"));
-        when(customerRepository.findAll()).thenReturn(List.of(c1));
+        when(customerRepository.findByOrganizationId(any())).thenReturn(List.of(c1));
 
         Supplier s1 = new Supplier();
         s1.setOutstandingBalance(new BigDecimal("50.00"));

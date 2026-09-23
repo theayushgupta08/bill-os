@@ -64,7 +64,8 @@ export default function RootLayout({
         <Providers>
           <AuthInterceptor />
           {children}
-          <Toaster />
+          {/* The app is dark-only (see <html className="dark">); without a ThemeProvider sonner would follow the OS */}
+          <Toaster theme="dark" />
           <ScrollToTop />
         </Providers>
       </body>

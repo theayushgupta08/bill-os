@@ -51,42 +51,58 @@ public class TeamService {
         UUID creatorId = resolveOrganizationCreator(org);
         List<TeamMemberDto> team = new ArrayList<>();
 
-        List<UserOrgRole> roles = userOrgRoleRepository.findAll();
+        // UserOrgRole has no @TenantId, so query by org explicitly (findAll() would load every tenant's roles)
+        List<UserOrgRole> roles = userOrgRoleRepository.findByOrganizationId(orgId);
+        java.util.Map<UUID, java.time.OffsetDateTime> lastSignIns = fetchLastSignIns(roles.stream()
+                .map(UserOrgRole::getUser)
+                .filter(u -> u != null && u.getSupabaseId() != null)
+                .map(User::getSupabaseId)
+                .toList());
+
         for (UserOrgRole role : roles) {
-            if (role.getOrganizationId().equals(orgId)) {
-                User user = userRepository.findById(role.getUser().getId()).orElse(null);
-                if (user != null) {
-                    boolean isCreator = creatorId != null && creatorId.equals(user.getId());
-                    java.time.OffsetDateTime lastActive =
-                            user.getUpdatedAt() != null ? user.getUpdatedAt() : user.getCreatedAt();
-                    if (user.getSupabaseId() != null && jdbcTemplate != null) {
-                        try {
-                            List<java.time.OffsetDateTime> logins = jdbcTemplate.query(
-                                    "SELECT last_sign_in_at FROM auth.users WHERE id = ? AND last_sign_in_at IS NOT NULL",
-                                    (rs, rowNum) -> rs.getObject("last_sign_in_at", java.time.OffsetDateTime.class),
-                                    user.getSupabaseId());
-                            if (!logins.isEmpty() && logins.get(0) != null) {
-                                lastActive = logins.get(0);
-                            }
-                        } catch (Exception ignored) {
-                            // Supabase auth schema may not exist in test environments
-                        }
-                    }
-                    team.add(TeamMemberDto.builder()
-                            .userId(user.getId())
-                            .email(user.getEmail())
-                            .firstName(user.getFirstName())
-                            .lastName(user.getLastName())
-                            .role(role.getRole())
-                            .status(Boolean.TRUE.equals(user.getIsActive()) ? "ACTIVE" : "INACTIVE")
-                            .lastActiveAt(lastActive)
-                            .isCreator(isCreator)
-                            .build());
-                }
+            User user = role.getUser();
+            if (user == null) {
+                continue;
             }
+            boolean isCreator = creatorId != null && creatorId.equals(user.getId());
+            java.time.OffsetDateTime lastActive = lastSignIns.getOrDefault(
+                    user.getSupabaseId(), user.getUpdatedAt() != null ? user.getUpdatedAt() : user.getCreatedAt());
+            team.add(TeamMemberDto.builder()
+                    .userId(user.getId())
+                    .email(user.getEmail())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .role(role.getRole())
+                    .status(Boolean.TRUE.equals(user.getIsActive()) ? "ACTIVE" : "INACTIVE")
+                    .lastActiveAt(lastActive)
+                    .isCreator(isCreator)
+                    .build());
         }
 
         return team;
+    }
+
+    /** Last Supabase sign-in per auth user id, in one query rather than one per team member. */
+    private java.util.Map<UUID, java.time.OffsetDateTime> fetchLastSignIns(List<UUID> supabaseIds) {
+        java.util.Map<UUID, java.time.OffsetDateTime> result = new java.util.HashMap<>();
+        if (supabaseIds.isEmpty() || jdbcTemplate == null) {
+            return result;
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(supabaseIds.size(), "?"));
+        try {
+            jdbcTemplate.query(
+                    "SELECT id, last_sign_in_at FROM auth.users WHERE last_sign_in_at IS NOT NULL AND id IN ("
+                            + placeholders + ")",
+                    rs -> {
+                        result.put(
+                                rs.getObject("id", UUID.class),
+                                rs.getObject("last_sign_in_at", java.time.OffsetDateTime.class));
+                    },
+                    supabaseIds.toArray());
+        } catch (Exception ignored) {
+            // Supabase auth schema may not exist in test environments
+        }
+        return result;
     }
 
     // ─── Create Member (Owner-Created Account) ──────────────────────
@@ -219,8 +235,8 @@ public class TeamService {
                 .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
 
         if ("OWNER".equals(role.getRole()) && !"OWNER".equals(newRole)) {
-            long ownerCount = userOrgRoleRepository.findAll().stream()
-                    .filter(r -> r.getOrganizationId().equals(orgId) && "OWNER".equals(r.getRole()))
+            long ownerCount = userOrgRoleRepository.findByOrganizationId(orgId).stream()
+                    .filter(r -> "OWNER".equals(r.getRole()))
                     .count();
             if (ownerCount <= 1) {
                 throw new RuntimeException("Cannot change role of the last owner");
@@ -248,8 +264,8 @@ public class TeamService {
                 .orElseThrow(() -> new RuntimeException("User is not a member of this organization"));
 
         if ("OWNER".equals(role.getRole())) {
-            long ownerCount = userOrgRoleRepository.findAll().stream()
-                    .filter(r -> r.getOrganizationId().equals(orgId) && "OWNER".equals(r.getRole()))
+            long ownerCount = userOrgRoleRepository.findByOrganizationId(orgId).stream()
+                    .filter(r -> "OWNER".equals(r.getRole()))
                     .count();
             if (ownerCount <= 1) {
                 throw new RuntimeException("Cannot remove the last owner of the organization");

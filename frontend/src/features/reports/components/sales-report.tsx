@@ -33,10 +33,12 @@ export function SalesReport() {
     switch (status?.toUpperCase()) {
       case "PAID":
         return <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 font-semibold">PAID</Badge>;
-      case "UNPAID":
-        return <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/25 font-semibold">UNPAID</Badge>;
-      case "OVERDUE":
-        return <Badge className="bg-rose-500/10 text-rose-400 border border-rose-500/25 font-semibold">OVERDUE</Badge>;
+      case "ISSUED":
+        return <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/25 font-semibold">ISSUED</Badge>;
+      case "PARTIAL":
+        return <Badge className="bg-blue-500/10 text-blue-400 border border-blue-500/25 font-semibold">PARTIAL</Badge>;
+      case "VOID":
+        return <Badge className="bg-rose-500/10 text-rose-400 border border-rose-500/25 font-semibold">VOID</Badge>;
       default:
         return <Badge className="bg-slate-500/10 text-slate-400 border border-slate-500/25 font-semibold">{status}</Badge>;
     }

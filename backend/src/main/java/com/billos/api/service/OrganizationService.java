@@ -37,11 +37,14 @@ public class OrganizationService {
         User currentUser =
                 userRepository.findById(principal.getId()).orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (orgDetails.getParentOrganizationId() == null) {
-            orgDetails.setIsPrimary(true);
-        } else if (orgDetails.getIsPrimary() == null) {
-            orgDetails.setIsPrimary(false);
-        }
+        // The body is bound straight onto the entity, so neutralise fields a caller must never control:
+        // a client-supplied id would make saveAndFlush merge over an existing organization, and a
+        // parentOrganizationId would attach this org as a branch of someone else's (inheriting its shared
+        // customers/products). Branches are created only via createBranch, which checks the parent role.
+        orgDetails.setId(null);
+        orgDetails.setParentOrganizationId(null);
+        orgDetails.setIsPrimary(true);
+        orgDetails.setDeletedAt(null);
         orgDetails.setCreatedBy(currentUser.getId());
 
         // Save and flush Organization immediately so it's visible to the seeder's new transaction
@@ -292,7 +295,6 @@ public class OrganizationService {
         if (updatedDetails.getLogoUrl() != null) org.setLogoUrl(updatedDetails.getLogoUrl());
         if (updatedDetails.getWebsite() != null) org.setWebsite(updatedDetails.getWebsite());
         if (updatedDetails.getBranchCode() != null) org.setBranchCode(updatedDetails.getBranchCode());
-        if (updatedDetails.getIsPrimary() != null) org.setIsPrimary(updatedDetails.getIsPrimary());
         if (updatedDetails.getSecondaryPhones() != null) org.setSecondaryPhones(updatedDetails.getSecondaryPhones());
 
         if (updatedDetails.getEmailSuffix() != null

@@ -18,9 +18,11 @@ import com.billos.api.repository.CustomerRepository;
 import com.billos.api.repository.PurchaseBillRepository;
 import com.billos.api.repository.SalesInvoiceRepository;
 import com.billos.api.repository.SupplierRepository;
+import com.billos.api.tenant.TenantContext;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -87,7 +89,10 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public List<CustomerDto> getOutstandingReceivables() {
-        return customerRepository.findAll().stream()
+        return customerRepository
+                // Customer has no @TenantId (branch sharing), so findAll() would span every tenant.
+                .findByOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()))
+                .stream()
                 .filter(c -> c.getOutstandingBalance() != null
                         && c.getOutstandingBalance().compareTo(BigDecimal.ZERO) > 0)
                 .map(customerMapper::toDto)

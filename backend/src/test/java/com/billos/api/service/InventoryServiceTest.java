@@ -40,6 +40,9 @@ class InventoryServiceTest {
     @Mock
     private InventoryMapper inventoryMapper;
 
+    @Mock
+    private SharedEntityResolver sharedEntityResolver;
+
     @InjectMocks
     private InventoryService inventoryService;
 
@@ -71,7 +74,7 @@ class InventoryServiceTest {
         product.setBasePrice(BigDecimal.ZERO);
 
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(product);
         when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId))
                 .thenReturn(Optional.empty());
 
@@ -109,7 +112,7 @@ class InventoryServiceTest {
         existingLevel.setQuantity(new BigDecimal("10")); // 10 existing items
 
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(product);
         when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId))
                 .thenReturn(Optional.of(existingLevel));
 

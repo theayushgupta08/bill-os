@@ -20,9 +20,17 @@ import {
 import { useDataTable } from "@/hooks/use-data-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Invoice } from "@/types";
+import { Invoice, balanceDue } from "@/types";
 
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
+
+const STATUS_BADGE: Record<string, string> = {
+  DRAFT: "bg-slate-500",
+  ISSUED: "bg-blue-500",
+  PARTIAL: "bg-amber-500",
+  PAID: "bg-green-500",
+  VOID: "bg-red-500",
+};
 
 export function InvoiceList() {
   const queryClient = useQueryClient();
@@ -36,28 +44,44 @@ export function InvoiceList() {
     },
   });
 
+  // Receivables and stock both change when an invoice is issued or paid
+  const invalidateAffected = () => {
+    queryClient.invalidateQueries({ queryKey: ["sales-invoices"] });
+    queryClient.invalidateQueries({ queryKey: ["payments"] });
+    queryClient.invalidateQueries({ queryKey: ["customers"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+  };
+
   const payMutation = useMutation({
     mutationFn: (inv: Invoice) => {
+      // Settle only what is still owed — a partly-paid invoice must not be charged its full total again
+      const due = balanceDue(inv);
       const payload = {
         paymentDate: new Date().toISOString().split('T')[0],
-        amount: inv.totalAmount,
-        notes: "Auto-recorded full payment",
-        allocations: [
-          {
-            salesInvoiceId: inv.id,
-            allocatedAmount: inv.totalAmount
-          }
-        ]
+        amount: due,
+        notes: "Recorded balance payment",
+        allocations: [{ salesInvoiceId: inv.id, allocatedAmount: due }],
       };
       return api.post("/payments/receipts", payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sales-invoices"] });
+      invalidateAffected();
       toast.success("Payment recorded successfully!");
     },
-    onError: (error) => {
-      console.error("Failed to record payment", error);
-      toast.error("Failed to record payment");
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to record payment");
+    }
+  });
+
+  const issueMutation = useMutation({
+    mutationFn: (inv: Invoice) => api.post(`/sales-invoices/${inv.id}/issue`),
+    onSuccess: () => {
+      invalidateAffected();
+      queryClient.invalidateQueries({ queryKey: ["inventory-levels"] });
+      toast.success("Invoice issued — stock deducted and receivable recorded.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to issue invoice");
     }
   });
 
@@ -75,6 +99,7 @@ export function InvoiceList() {
     searchFields: ["invoiceNumber", "customerName"],
     filterFn: (inv) => {
       if (statusFilter === "ALL") return true;
+      if (statusFilter === "UNPAID") return inv.status === "ISSUED" || inv.status === "PARTIAL";
       return inv.status?.toUpperCase() === statusFilter;
     },
   });
@@ -114,10 +139,11 @@ export function InvoiceList() {
             </SelectTrigger>
             <SelectContent className="rounded-lg border border-slate-800 bg-slate-900/95 backdrop-blur-xl shadow-xl text-slate-200">
               <SelectItem value="ALL" className="text-xs">All Statuses</SelectItem>
-              <SelectItem value="PAID" className="text-xs">Paid</SelectItem>
-              <SelectItem value="UNPAID" className="text-xs">Unpaid</SelectItem>
-              <SelectItem value="OVERDUE" className="text-xs">Overdue</SelectItem>
               <SelectItem value="DRAFT" className="text-xs">Draft</SelectItem>
+              <SelectItem value="UNPAID" className="text-xs">Unpaid (issued / partial)</SelectItem>
+              <SelectItem value="PARTIAL" className="text-xs">Partially paid</SelectItem>
+              <SelectItem value="PAID" className="text-xs">Paid</SelectItem>
+              <SelectItem value="VOID" className="text-xs">Void</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -155,7 +181,7 @@ export function InvoiceList() {
                   <TableCell>{inv.invoiceDate}</TableCell>
                   <TableCell>{inv.customerName}</TableCell>
                   <TableCell>
-                    <Badge variant="default" className={inv.status === 'PAID' ? "bg-green-500" : "bg-blue-500"}>
+                    <Badge variant="default" className={STATUS_BADGE[inv.status] ?? "bg-blue-500"}>
                       {inv.status}
                     </Badge>
                   </TableCell>
@@ -164,7 +190,12 @@ export function InvoiceList() {
                     <Button variant="outline" size="sm" onClick={() => downloadPdf(`/sales-invoices/${inv.id}/pdf`, `Invoice-${inv.invoiceNumber}.pdf`)}>
                       PDF
                     </Button>
-                    {inv.status !== 'PAID' && (
+                    {inv.status === "DRAFT" && (
+                      <Button variant="outline" size="sm" onClick={() => issueMutation.mutate(inv)} disabled={issueMutation.isPending}>
+                        Issue
+                      </Button>
+                    )}
+                    {(inv.status === "ISSUED" || inv.status === "PARTIAL") && (
                       <Button variant="outline" size="sm" onClick={() => payMutation.mutate(inv)} disabled={payMutation.isPending}>
                         Record Payment
                       </Button>

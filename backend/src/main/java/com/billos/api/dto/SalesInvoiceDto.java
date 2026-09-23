@@ -21,6 +21,7 @@ public class SalesInvoiceDto {
     private BigDecimal subtotal;
     private BigDecimal taxTotal;
     private BigDecimal totalAmount;
+    private BigDecimal amountPaid;
     private String notes;
     private List<SalesInvoiceLineDto> lines = new ArrayList<>();
 }
