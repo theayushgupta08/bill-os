@@ -92,7 +92,13 @@ Inputs are 16px so iOS never zooms on focus. Headings use `text-balance`, body `
 Logo, Reveal, StatusPill · `site-header` · `site-footer` · `page-intro` · `product-panels`
 (role="img" app screens) · `modules` (single source for tour + /features) · `plan-cards` +
 `content/plans.ts` (single source for prices) · `comparison-table` · `faq-list` (Base UI
-Accordion) · `contact-form` · `document-layout` + `document-heading` · `cta-band`.
+Accordion) · `contact-form` · `document-layout` + `document-heading` · `cta-band` · `home/testimonials`
+(scrolling `TestimonialsColumn` from `components/ui/testimonials-columns-1`, fed by `content/testimonials.ts`).
+
+Testimonials are real customer quotes only, used with permission. Until there are any, the section shows the
+invented `sampleTestimonials` in development (labelled "Sample quotes") and renders nothing in production. Its
+infinite scroll is the one exception to "no decorative infinite animation": it moves content rather than
+decoration, pauses on hover and with a Pause button (WCAG 2.2.2), and stands still under reduced motion.
 
 ## Anti-patterns (don't)
 
