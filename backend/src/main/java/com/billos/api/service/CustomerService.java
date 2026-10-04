@@ -57,8 +57,7 @@ public class CustomerService {
 
         CustomerDto customerDto = customerMapper.toDto(customer);
 
-        String sql =
-                """
+        String sql = """
             SELECT si.id, si.invoice_date AS tx_date, 'INVOICE' AS tx_type, si.invoice_number AS doc_num,
                    si.organization_id, org.name AS branch_name, org.gstin AS branch_gstin, org.branch_code,
                    si.total_amount AS debit, 0.00 AS credit, si.notes

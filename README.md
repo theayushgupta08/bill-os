@@ -1,7 +1,7 @@
 # 📘 billOS
 
 **billOS** is a modern, multi-tenant billing and invoicing SaaS application built with a premium tech stack:
-- **Backend**: Spring Boot 3.3.x (Java 21) with Spring Security & JPA
+- **Backend**: Spring Boot 3.5.x (Java 25) with Spring Security & JPA
 - **Frontend**: Next.js 14 (App Router) with Tailwind CSS, shadcn/ui, and pnpm
 - **AI Service**: Python FastAPI with LangGraph
 - **Database**: PostgreSQL (via Supabase) with Flyway migrations
@@ -12,7 +12,7 @@
 ## 🚀 Prerequisites
 
 Ensure you have the following installed on your machine:
-- **Java 21** (JDK)
+- **Java 25** (JDK)
 - **Node.js 20+** & **pnpm** (Package Manager)
 - **Python 3.12+** (For the AI Service)
 - **Docker & Docker Compose** (For Redis and monitoring infrastructure)

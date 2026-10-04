@@ -37,7 +37,7 @@ The MVP delivers the **core billing and compliance loop**: a business owner can 
 | API | RESTful, versioned (`/api/v1/`), OpenAPI 3.0 documented |
 | Database | Supabase PostgreSQL, Flyway migrations, UUID primary keys |
 | Frontend | Next.js 14+ App Router, TypeScript strict mode, shadcn/ui |
-| Backend | Java 21 + Spring Boot 3.3+, Spring Security 6, Spring Data JPA |
+| Backend | Java 25 + Spring Boot 3.5+, Spring Security 6, Spring Data JPA |
 | Deployment | Docker Compose (local dev), Vercel (frontend), Railway/Render (backend) |
 
 ---

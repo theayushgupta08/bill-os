@@ -321,7 +321,7 @@ ci(deploy): add staging deployment workflow
 | **Non-root user** | `USER 1001:1001` in Dockerfile |
 | **Health checks** | `HEALTHCHECK CMD curl -f http://localhost:8080/actuator/health` |
 | **.dockerignore** | Exclude `.git`, `node_modules`, `target/`, `__pycache__/` |
-| **Pin versions** | `FROM eclipse-temurin:21-jre-jammy` (not `latest`) |
+| **Pin versions** | `FROM eclipse-temurin:25-jre-jammy` (not `latest`) |
 | **Layer caching** | Copy dependency files first, then source code |
 | **Read-only filesystem** | `--read-only` flag + `tmpfs` for temp dirs |
 | **Resource limits** | `deploy.resources.limits: memory: 512M` in Compose |
@@ -331,7 +331,7 @@ ci(deploy): add staging deployment workflow
 
 ```dockerfile
 # Build stage
-FROM eclipse-temurin:21-jdk-jammy AS build
+FROM eclipse-temurin:25-jdk-jammy AS build
 WORKDIR /app
 COPY pom.xml .
 COPY .mvn .mvn
@@ -341,7 +341,7 @@ COPY src ./src
 RUN ./mvnw package -DskipTests -B
 
 # Runtime stage
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-jammy
 RUN groupadd -r billos && useradd -r -g billos billos
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar

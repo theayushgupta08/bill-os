@@ -47,7 +47,7 @@ but no graphs are built yet.
 
 | Layer          | Technology                          | Version / Notes                                        |
 |----------------|-------------------------------------|--------------------------------------------------------|
-| Backend        | Spring Boot                         | 3.3.1, Java 21                                         |
+| Backend        | Spring Boot                         | 3.5.16, Java 25                                        |
 | ORM            | Hibernate 6 (Spring Data JPA)       | Discriminator multi-tenancy via `@TenantId`            |
 | Auth (current) | Supabase Auth (GoTrue) + JWT verify | Spring OAuth2 resource server; ES256 via Supabase JWKS |
 | Migrations     | Flyway                              | `backend/src/main/resources/db/migration/` (V001–V024) |
