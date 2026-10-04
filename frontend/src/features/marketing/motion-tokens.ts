@@ -6,11 +6,6 @@ export const DURATION = {
   fast: 0.18,
   /** Panels, tab content, menus */
   base: 0.32,
-  /** Scroll reveals */
-  reveal: 0.5,
-  /** Number count-ups */
-  count: 0.9,
 } as const;
 
-/** Distance (px) content travels while revealing. Small on purpose: it should feel settled, not flown in. */
-export const REVEAL_OFFSET = 14;
+// Scroll reveals are CSS, not Motion: see `.reveal` in globals.css and primitives/reveal.tsx.
