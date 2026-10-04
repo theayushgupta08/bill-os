@@ -14,6 +14,8 @@ import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.repository.OrganizationRepository;
 import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.repository.UserRepository;
+import com.billos.api.security.Roles;
+import com.billos.api.security.TenantSecurity;
 import com.billos.api.security.UserPrincipal;
 import com.billos.api.tenant.TenantContext;
 import java.security.SecureRandom;
@@ -38,6 +40,7 @@ public class TeamService {
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
     private final SupabaseAdminService supabaseAdminService;
+    private final TenantSecurity tenantSecurity;
     private final JdbcTemplate jdbcTemplate;
 
     @Value("${app.email.base-domain:billos.app}")
@@ -78,7 +81,10 @@ public class TeamService {
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
                     .role(role.getRole())
-                    .status(Boolean.TRUE.equals(user.getIsActive()) ? "ACTIVE" : "INACTIVE")
+                    .status(
+                            role.isActiveMembership() && Boolean.TRUE.equals(user.getIsActive())
+                                    ? "ACTIVE"
+                                    : "INACTIVE")
                     .lastActiveAt(lastActive)
                     .isCreator(isCreator)
                     .build());
@@ -116,6 +122,7 @@ public class TeamService {
     @Audited(entity = "TeamMember", action = "CREATE")
     public CreateMemberResponse createMember(CreateMemberRequest request) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        requireAssignable(callerRole(orgId), request.getRole());
 
         // Resolve the email suffix — use primary org's suffix (branches inherit)
         Organization org = organizationRepository
@@ -176,6 +183,7 @@ public class TeamService {
         role.setUser(user);
         role.setOrganizationId(orgId);
         role.setRole(request.getRole());
+        role.setIsActive(true);
         userOrgRoleRepository.save(role);
 
         log.info("Created member {} ({}) in org {} with role {}", user.getId(), email, orgId, request.getRole());
@@ -199,15 +207,20 @@ public class TeamService {
 
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        UserOrgRole callerRole = userOrgRoleRepository
-                .findByUserIdAndOrganizationId(principal.getId(), orgId)
-                .orElseThrow(() -> new ForbiddenException("Caller is not a member of this organization"));
-        if (!"OWNER".equals(callerRole.getRole()) && !"ADMIN".equals(callerRole.getRole())) {
+        String callerRole = callerRole(orgId);
+        if (!Roles.satisfies(callerRole, Roles.ADMIN)) {
             throw new ForbiddenException("Only OWNER or ADMIN can reset passwords");
         }
 
         if (principal.getId().equals(targetUserId)) {
             throw new BadRequestException("Use the change-password flow to change your own password");
+        }
+
+        // The password comes back in the response, so this must only ever reach a member of this organization
+        // whom the caller outranks — otherwise it is an account takeover of any user whose id is known.
+        UserOrgRole targetRole = membership(targetUserId, orgId);
+        if (!Roles.outranks(callerRole, targetRole.getRole())) {
+            throw new ForbiddenException("You can only reset passwords for members below your own role");
         }
 
         User target = userRepository
@@ -232,6 +245,11 @@ public class TeamService {
     @Audited(entity = "TeamMember", action = "CHANGE_ROLE")
     public void updateUserRole(UUID userId, String newRole) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        if (currentUserId().equals(userId)) {
+            throw new BadRequestException("You can't change your own role");
+        }
+        String callerRole = callerRole(orgId);
+        requireAssignable(callerRole, newRole);
 
         Organization org = organizationRepository.findById(orgId).orElse(null);
         UUID creatorId = resolveOrganizationCreator(org);
@@ -240,9 +258,8 @@ public class TeamService {
                     "Cannot change role of the organization creator. The creator must remain OWNER.");
         }
 
-        UserOrgRole role = userOrgRoleRepository
-                .findByUserIdAndOrganizationId(userId, orgId)
-                .orElseThrow(() -> new BadRequestException("User is not a member of this organization"));
+        UserOrgRole role = membership(userId, orgId);
+        requireManageable(callerRole, role.getRole());
 
         if ("OWNER".equals(role.getRole()) && !"OWNER".equals(newRole)) {
             long ownerCount = userOrgRoleRepository.findByOrganizationId(orgId).stream()
@@ -263,6 +280,10 @@ public class TeamService {
     @Audited(entity = "TeamMember", action = "REMOVE")
     public void removeUser(UUID userId) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        if (currentUserId().equals(userId)) {
+            throw new BadRequestException("You can't remove yourself from the organization");
+        }
+        String callerRole = callerRole(orgId);
 
         Organization org = organizationRepository.findById(orgId).orElse(null);
         UUID creatorId = resolveOrganizationCreator(org);
@@ -270,9 +291,8 @@ public class TeamService {
             throw new ConflictException("Cannot remove the organization creator from the organization.");
         }
 
-        UserOrgRole role = userOrgRoleRepository
-                .findByUserIdAndOrganizationId(userId, orgId)
-                .orElseThrow(() -> new BadRequestException("User is not a member of this organization"));
+        UserOrgRole role = membership(userId, orgId);
+        requireManageable(callerRole, role.getRole());
 
         if ("OWNER".equals(role.getRole())) {
             long ownerCount = userOrgRoleRepository.findByOrganizationId(orgId).stream()
@@ -299,49 +319,45 @@ public class TeamService {
                     "Cannot change status of the organization creator. The creator cannot be made inactive.");
         }
 
-        UserPrincipal principal = (UserPrincipal)
-                SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        UUID callerId = principal.getId();
-
-        UserOrgRole callerOrgRole = userOrgRoleRepository
-                .findByUserIdAndOrganizationId(callerId, orgId)
-                .orElseThrow(() -> new ForbiddenException("Caller is not a member of this organization"));
-
-        UserOrgRole targetOrgRole = userOrgRoleRepository
-                .findByUserIdAndOrganizationId(targetUserId, orgId)
-                .orElseThrow(() -> new BadRequestException("Target user is not a member of this organization"));
-
-        List<String> hierarchy = List.of("OWNER", "ADMIN", "MANAGER", "USER", "VIEWER");
-
-        String callerRoleStr = callerOrgRole.getRole();
-        String targetRole = targetOrgRole.getRole();
-
-        int callerLevel = hierarchy.indexOf(callerRoleStr);
-        int targetLevel = hierarchy.indexOf(targetRole);
-
-        if (callerLevel == -1 || targetLevel == -1) {
-            throw new RuntimeException("Invalid role found");
-        }
-
-        if (callerId.equals(targetUserId)) {
+        if (currentUserId().equals(targetUserId)) {
             throw new BadRequestException("You cannot change the status of your own account");
         }
 
-        if (!"OWNER".equals(callerRoleStr) && !"ADMIN".equals(callerRoleStr)) {
+        String callerRole = callerRole(orgId);
+        if (!Roles.satisfies(callerRole, Roles.ADMIN)) {
             throw new ForbiddenException("Only Owner and Admin have permission to toggle user status");
         }
 
-        if (callerLevel >= targetLevel) {
+        UserOrgRole targetOrgRole = membership(targetUserId, orgId);
+        if (!Roles.outranks(callerRole, targetOrgRole.getRole())) {
             throw new ForbiddenException(
                     "You do not have permission to change status of user with equal or higher role");
         }
 
+        // Status is per membership: deactivating someone here never locks them out of their other organizations.
+        targetOrgRole.setIsActive(active);
+        userOrgRoleRepository.save(targetOrgRole);
+
         User targetUser = userRepository
                 .findById(targetUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        boolean activeElsewhere = userOrgRoleRepository.findByUserId(targetUserId).stream()
+                .anyMatch(r -> !orgId.equals(r.getOrganizationId()) && r.isActiveMembership());
 
-        targetUser.setIsActive(active);
+        if (!active && !activeElsewhere) {
+            // This was their last active membership, so disable the account and its sign-in as well
+            targetUser.setIsActive(false);
+            setSupabaseSignIn(targetUser, false);
+            userRepository.save(targetUser);
+        } else if (active && !Boolean.TRUE.equals(targetUser.getIsActive())) {
+            targetUser.setIsActive(true);
+            setSupabaseSignIn(targetUser, true);
+            userRepository.save(targetUser);
+        }
+    }
 
+    /** Bans (and signs out) or un-bans the user's Supabase Auth account. Best effort: the local flag is authoritative. */
+    private void setSupabaseSignIn(User targetUser, boolean enabled) {
         UUID supabaseId = targetUser.getSupabaseId();
         if (supabaseId == null && targetUser.getEmail() != null) {
             try {
@@ -357,35 +373,67 @@ public class TeamService {
                 log.warn("Could not lookup Supabase ID by email for {}: {}", targetUser.getEmail(), e.getMessage());
             }
         }
-
-        if (supabaseId != null) {
-            if (!active) {
-                try {
-                    jdbcTemplate.update("DELETE FROM auth.sessions WHERE user_id = ?", supabaseId);
-                    jdbcTemplate.update("DELETE FROM auth.refresh_tokens WHERE user_id = ?", supabaseId);
-                    jdbcTemplate.update(
-                            "UPDATE auth.users SET banned_until = '2999-12-31 23:59:59+00' WHERE id = ?", supabaseId);
-                    log.info(
-                            "Terminated all sessions and banned Supabase user {} ({})",
-                            supabaseId,
-                            targetUser.getEmail());
-                } catch (Exception e) {
-                    log.error("Failed to revoke Supabase sessions or ban user {}: {}", supabaseId, e.getMessage());
-                }
-            } else {
-                try {
-                    jdbcTemplate.update("UPDATE auth.users SET banned_until = NULL WHERE id = ?", supabaseId);
-                    log.info("Lifted Supabase ban for user {} ({})", supabaseId, targetUser.getEmail());
-                } catch (Exception e) {
-                    log.error("Failed to clear Supabase ban for user {}: {}", supabaseId, e.getMessage());
-                }
-            }
+        if (supabaseId == null) {
+            return;
         }
 
-        userRepository.save(targetUser);
+        if (!enabled) {
+            try {
+                jdbcTemplate.update("DELETE FROM auth.sessions WHERE user_id = ?", supabaseId);
+                jdbcTemplate.update("DELETE FROM auth.refresh_tokens WHERE user_id = ?", supabaseId);
+                jdbcTemplate.update(
+                        "UPDATE auth.users SET banned_until = '2999-12-31 23:59:59+00' WHERE id = ?", supabaseId);
+                log.info("Terminated all sessions and banned Supabase user {} ({})", supabaseId, targetUser.getEmail());
+            } catch (Exception e) {
+                log.error("Failed to revoke Supabase sessions or ban user {}: {}", supabaseId, e.getMessage());
+            }
+        } else {
+            try {
+                jdbcTemplate.update("UPDATE auth.users SET banned_until = NULL WHERE id = ?", supabaseId);
+                log.info("Lifted Supabase ban for user {} ({})", supabaseId, targetUser.getEmail());
+            } catch (Exception e) {
+                log.error("Failed to clear Supabase ban for user {}: {}", supabaseId, e.getMessage());
+            }
+        }
     }
 
     // ─── Private Helpers ────────────────────────────────────────────
+
+    private UUID currentUserId() {
+        UserPrincipal principal = (UserPrincipal)
+                SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return principal.getId();
+    }
+
+    /** The caller's effective role here (direct or inherited from the parent) — the same one @PreAuthorize saw. */
+    private String callerRole(UUID orgId) {
+        return tenantSecurity
+                .currentRoleIn(orgId)
+                .orElseThrow(() -> new ForbiddenException("You are not a member of this organization"));
+    }
+
+    private UserOrgRole membership(UUID userId, UUID orgId) {
+        return userOrgRoleRepository
+                .findByUserIdAndOrganizationId(userId, orgId)
+                .orElseThrow(() -> new BadRequestException("User is not a member of this organization"));
+    }
+
+    /** Owners may grant any role; everyone else only roles below their own. */
+    private void requireAssignable(String callerRole, String role) {
+        if (!Roles.isValid(role)) {
+            throw new BadRequestException("Role must be one of " + String.join(", ", Roles.HIERARCHY));
+        }
+        if (!Roles.OWNER.equals(callerRole) && !Roles.outranks(callerRole, role)) {
+            throw new ForbiddenException("You can only assign roles below your own");
+        }
+    }
+
+    /** Owners may manage any member (creator and last-owner rules still apply); others only members they outrank. */
+    private void requireManageable(String callerRole, String targetRole) {
+        if (!Roles.OWNER.equals(callerRole) && !Roles.outranks(callerRole, targetRole)) {
+            throw new ForbiddenException("You can only manage members below your own role");
+        }
+    }
 
     private String generateUniqueEmail(String firstName, String lastName, String suffix) {
         String normalizedFirst = normalize(firstName);

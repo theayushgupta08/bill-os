@@ -195,9 +195,13 @@ public class SalesInvoiceService {
             inventoryService.adjustStock(movement);
         }
 
+        // The balance column is the owning organization's ledger; a branch invoicing a customer its parent shares
+        // tracks what it is owed through its own invoices instead (CustomerBalanceService)
         Customer customer = invoice.getCustomer();
-        customer.setOutstandingBalance(customer.getOutstandingBalance().add(invoice.getTotalAmount()));
-        customerRepository.save(customer);
+        if (sharedEntityResolver.isOwnedByCurrentOrg(customer.getOrganizationId())) {
+            customer.setOutstandingBalance(customer.getOutstandingBalance().add(invoice.getTotalAmount()));
+            customerRepository.save(customer);
+        }
     }
 
     @Transactional(readOnly = true)

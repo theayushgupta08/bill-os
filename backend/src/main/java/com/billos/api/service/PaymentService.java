@@ -30,6 +30,7 @@ public class PaymentService {
     private final SupplierRepository supplierRepository;
     private final PaymentMapper paymentMapper;
     private final SequenceGeneratorService sequenceGeneratorService;
+    private final SharedEntityResolver sharedEntityResolver;
 
     @Transactional(readOnly = true)
     public List<PaymentDto> getAllPayments() {
@@ -105,9 +106,13 @@ public class PaymentService {
                 allocation.setSalesInvoice(invoice);
                 salesInvoiceRepository.save(invoice);
 
+                // Only the owning organization's ledger lives in the balance column (see CustomerBalanceService)
                 Customer customer = invoice.getCustomer();
-                customer.setOutstandingBalance(customer.getOutstandingBalance().subtract(amount));
-                customerRepository.save(customer);
+                if (sharedEntityResolver.isOwnedByCurrentOrg(customer.getOrganizationId())) {
+                    customer.setOutstandingBalance(
+                            customer.getOutstandingBalance().subtract(amount));
+                    customerRepository.save(customer);
+                }
 
             } else if (type == PaymentType.PAYMENT && allocDto.getPurchaseBillId() != null) {
                 PurchaseBill bill = purchaseBillRepository

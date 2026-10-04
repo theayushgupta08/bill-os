@@ -8,5 +8,8 @@ import org.mapstruct.Mapper;
 public interface TaxRateMapper {
     TaxRateDto toDto(TaxRate entity);
 
+    @org.mapstruct.Mapping(
+            target = "id",
+            ignore = true) // never taken from the request: a client id would merge over an existing row
     TaxRate toEntity(TaxRateDto dto);
 }

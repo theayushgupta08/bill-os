@@ -79,7 +79,15 @@ public class InventoryService {
                 || "OPENING_STOCK".equals(request.getReferenceType())
                 || "PURCHASE_RETURN".equals(request.getReferenceType());
 
-        if (request.getMovementType() == MovementType.IN && request.getUnitCost() != null && isValuationTransaction) {
+        //    Only the organization that owns the product maintains its cost: a branch buying a product its parent
+        //    shares must not rewrite the parent's row (and its stock, which this average is built from, is the
+        //    branch's own).
+        boolean ownsProduct = sharedEntityResolver.isOwnedByCurrentOrg(product.getOrganizationId());
+
+        if (request.getMovementType() == MovementType.IN
+                && request.getUnitCost() != null
+                && isValuationTransaction
+                && ownsProduct) {
             BigDecimal stockOnHand = inventoryLevelRepository.findByProductId(product.getId()).stream()
                     .map(InventoryLevel::getQuantity)
                     .reduce(BigDecimal.ZERO, BigDecimal::add)

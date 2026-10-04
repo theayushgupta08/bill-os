@@ -1,6 +1,7 @@
 package com.billos.api.service;
 
 import com.billos.api.entity.User;
+import com.billos.api.exception.ConflictException;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.SupabaseIdentity;
 import java.util.Objects;
@@ -45,14 +46,32 @@ public class SupabaseUserProvisioningService {
             return syncProfile(bySupabaseId.get(), identity);
         }
 
-        // A row may already exist from before Supabase Auth. Link it.
+        // A row may already exist from before Supabase Auth. Linking hands that user (and every organization they
+        // belong to) to whoever holds this login, so it is allowed only for a row that has never been linked, and
+        // only once Supabase has verified the email address.
         Optional<User> byEmail = userRepository.findByEmail(identity.email());
         if (byEmail.isPresent()) {
-            log.info("Linking existing user {} to Supabase id {}", byEmail.get().getId(), identity.supabaseId());
-            return syncProfile(byEmail.get(), identity);
+            return linkByEmail(byEmail.get(), identity);
         }
 
         return createUser(identity);
+    }
+
+    private User linkByEmail(User existing, SupabaseIdentity identity) {
+        if (existing.getSupabaseId() != null) {
+            log.warn(
+                    "Refused Supabase id {}: email {} already belongs to user {} with a different login",
+                    identity.supabaseId(),
+                    identity.email(),
+                    existing.getId());
+            throw new ConflictException("This email address is already linked to a different sign-in");
+        }
+        if (!identity.emailVerified()) {
+            log.warn("Refused to link unverified email {} to existing user {}", identity.email(), existing.getId());
+            throw new ConflictException("Verify your email address before signing in to this account");
+        }
+        log.info("Linking existing user {} to Supabase id {}", existing.getId(), identity.supabaseId());
+        return syncProfile(existing, identity);
     }
 
     private User createUser(SupabaseIdentity identity) {
@@ -82,17 +101,16 @@ public class SupabaseUserProvisioningService {
             return saved;
         } catch (DataIntegrityViolationException ex) {
             log.debug("Provisioning race for Supabase id {}, re-reading", identity.supabaseId());
-            return userRepository
-                    .findBySupabaseId(identity.supabaseId())
-                    .or(() -> userRepository.findByEmail(identity.email()))
-                    .orElseThrow(() -> ex);
+            // Only a concurrent request for this same login is a benign race; an email clash with another user is not
+            return userRepository.findBySupabaseId(identity.supabaseId()).orElseThrow(() -> ex);
         }
     }
 
     private User syncProfile(User user, SupabaseIdentity identity) {
         boolean changed = false;
 
-        if (!Objects.equals(user.getSupabaseId(), identity.supabaseId())) {
+        // Set once when linking; never re-pointed to a different login
+        if (user.getSupabaseId() == null) {
             user.setSupabaseId(identity.supabaseId());
             changed = true;
         }

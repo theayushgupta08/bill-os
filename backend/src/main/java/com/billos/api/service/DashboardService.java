@@ -25,6 +25,8 @@ public class DashboardService {
     private final PurchaseBillRepository purchaseBillRepository;
     private final CustomerRepository customerRepository;
     private final SupplierRepository supplierRepository;
+    private final CustomerBalanceService customerBalanceService;
+    private final OrganizationService organizationService;
 
     private final SalesInvoiceMapper salesInvoiceMapper;
     private final PurchaseBillMapper purchaseBillMapper;
@@ -34,12 +36,16 @@ public class DashboardService {
         DashboardSummaryDto summary = new DashboardSummaryDto();
 
         // 1. Outstanding Receivables & Payables
-        BigDecimal totalReceivables = customerRepository
-                // Customer has no @TenantId (branch sharing), so findAll() would span every tenant.
-                .findByOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()))
-                .stream()
-                .map(c -> c.getOutstandingBalance() != null ? c.getOutstandingBalance() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Customer has no @TenantId (branch sharing), so list the ones this org can see and take what each owes
+        // this org (its own ledger for customers it owns, its own invoices for customers its parent shares)
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        var balance = customerBalanceService.forCurrentOrg();
+        BigDecimal totalReceivables =
+                customerRepository
+                        .findAccessibleCustomers(orgId, organizationService.resolvePrimaryOrgId(orgId))
+                        .stream()
+                        .map(balance)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
         summary.setOutstandingReceivables(totalReceivables);
 
         BigDecimal totalPayables = supplierRepository.findAll().stream()

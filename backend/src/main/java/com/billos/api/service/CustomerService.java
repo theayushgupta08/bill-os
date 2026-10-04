@@ -28,6 +28,7 @@ public class CustomerService {
     private final CustomerMapper customerMapper;
     private final OrganizationService organizationService;
     private final SharedEntityResolver sharedEntityResolver;
+    private final CustomerBalanceService customerBalanceService;
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional(readOnly = true)
@@ -40,22 +41,27 @@ public class CustomerService {
         UUID primaryOrgId = organizationService.resolvePrimaryOrgId(currentOrgId);
 
         List<Customer> customers = customerRepository.findAccessibleCustomers(currentOrgId, primaryOrgId);
-        return customers.stream().map(customerMapper::toDto).collect(Collectors.toList());
+        var balance = customerBalanceService.forCurrentOrg();
+        return customers.stream().map(c -> toDto(c, balance)).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public CustomerDto getCustomerById(UUID id) {
         Customer customer = sharedEntityResolver.accessibleCustomer(id);
 
-        return customerMapper.toDto(customer);
+        return toDto(customer, customerBalanceService.forCurrentOrg());
     }
 
     @Transactional(readOnly = true)
     public ConsolidatedCustomerLedgerDto getConsolidatedLedger(UUID customerId) {
         Customer customer = sharedEntityResolver.accessibleCustomer(customerId);
-        UUID primaryOrgId = organizationService.resolvePrimaryOrgId(sharedEntityResolver.currentOrgId());
+        UUID currentOrgId = sharedEntityResolver.currentOrgId();
+        UUID primaryOrgId = organizationService.resolvePrimaryOrgId(currentOrgId);
+        // Roles flow down from a parent to its branches, never up or sideways: the parent organization sees the
+        // whole family's ledger for this customer, a branch only its own documents.
+        boolean includeBranches = currentOrgId.equals(primaryOrgId);
 
-        CustomerDto customerDto = customerMapper.toDto(customer);
+        CustomerDto customerDto = toDto(customer, customerBalanceService.forCurrentOrg());
 
         String sql = """
             SELECT si.id, si.invoice_date AS tx_date, 'INVOICE' AS tx_type, si.invoice_number AS doc_num,
@@ -64,7 +70,7 @@ public class CustomerService {
             FROM sales_invoices si
             JOIN organizations org ON si.organization_id = org.id
             WHERE si.customer_id = ?
-              AND (org.id = ? OR org.parent_organization_id = ?)
+              AND (org.id = ? OR (? AND org.parent_organization_id = ?))
               AND si.deleted_at IS NULL
             UNION ALL
             SELECT p.id, p.payment_date AS tx_date, 'PAYMENT' AS tx_type, p.payment_number AS doc_num,
@@ -75,7 +81,7 @@ public class CustomerService {
             JOIN sales_invoices si ON pa.sales_invoice_id = si.id
             JOIN organizations org ON p.organization_id = org.id
             WHERE si.customer_id = ?
-              AND (org.id = ? OR org.parent_organization_id = ?)
+              AND (org.id = ? OR (? AND org.parent_organization_id = ?))
               AND p.deleted_at IS NULL
             ORDER BY tx_date ASC
             """;
@@ -96,11 +102,13 @@ public class CustomerService {
                         .notes(rs.getString("notes"))
                         .build(),
                 customerId,
-                primaryOrgId,
-                primaryOrgId,
+                currentOrgId,
+                includeBranches,
+                currentOrgId,
                 customerId,
-                primaryOrgId,
-                primaryOrgId);
+                currentOrgId,
+                includeBranches,
+                currentOrgId);
 
         BigDecimal totalInvoiced = BigDecimal.ZERO;
         BigDecimal totalPaid = BigDecimal.ZERO;
@@ -226,6 +234,13 @@ public class CustomerService {
     public void deleteCustomer(UUID id) {
         Customer customer = ownedCustomer(id, "delete");
         customerRepository.delete(customer);
+    }
+
+    /** The customer as this organization sees it: its balance is what the customer owes this organization. */
+    private CustomerDto toDto(Customer customer, java.util.function.Function<Customer, java.math.BigDecimal> balance) {
+        CustomerDto dto = customerMapper.toDto(customer);
+        dto.setOutstandingBalance(balance.apply(customer));
+        return dto;
     }
 
     private Customer ownedCustomer(UUID id, String action) {

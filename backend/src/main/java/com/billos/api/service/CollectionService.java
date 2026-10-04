@@ -78,6 +78,7 @@ public class CollectionService {
 
         userOrgRoleRepository
                 .findByUserIdAndOrganizationId(user.getId(), orgId)
+                .filter(UserOrgRole::isActiveMembership)
                 .orElseThrow(() -> new BadRequestException("Selected user does not belong to this organization"));
 
         CollectionQrCode qr = new CollectionQrCode();
@@ -114,6 +115,7 @@ public class CollectionService {
                     .orElseThrow(() -> new ResourceNotFoundException("Selected user not found"));
             userOrgRoleRepository
                     .findByUserIdAndOrganizationId(user.getId(), orgId)
+                    .filter(UserOrgRole::isActiveMembership)
                     .orElseThrow(() -> new BadRequestException("Selected user does not belong to this organization"));
             qr.setUser(user);
         }
@@ -247,7 +249,8 @@ public class CollectionService {
             // Notify Admins/Owner of rejection
             List<UserOrgRole> roles = userOrgRoleRepository.findByOrganizationId(orgId);
             for (UserOrgRole r : roles) {
-                if (r.getOrganizationId().equals(orgId)
+                if (r.isActiveMembership()
+                        && r.getOrganizationId().equals(orgId)
                         && ("OWNER".equals(r.getRole()) || "ADMIN".equals(r.getRole()))) {
                     notificationService.sendNotification(
                             r.getUser().getId(),
@@ -314,7 +317,8 @@ public class CollectionService {
             // Notify Manager/Admin/Owner
             List<UserOrgRole> roles = userOrgRoleRepository.findByOrganizationId(orgId);
             for (UserOrgRole r : roles) {
-                if (r.getOrganizationId().equals(orgId)
+                if (r.isActiveMembership()
+                        && r.getOrganizationId().equals(orgId)
                         && ("OWNER".equals(r.getRole())
                                 || "ADMIN".equals(r.getRole())
                                 || "MANAGER".equals(r.getRole()))) {
@@ -428,7 +432,8 @@ public class CollectionService {
         // Notify Admins/Owner
         List<UserOrgRole> roles = userOrgRoleRepository.findByOrganizationId(orgId);
         for (UserOrgRole r : roles) {
-            if (r.getOrganizationId().equals(orgId)
+            if (r.isActiveMembership()
+                    && r.getOrganizationId().equals(orgId)
                     && ("OWNER".equals(r.getRole()) || "ADMIN".equals(r.getRole()) || "MANAGER".equals(r.getRole()))) {
                 notificationService.sendNotification(
                         r.getUser().getId(),

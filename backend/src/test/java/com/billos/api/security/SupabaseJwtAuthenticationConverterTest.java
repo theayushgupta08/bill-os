@@ -3,9 +3,12 @@ package com.billos.api.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.billos.api.entity.User;
+import com.billos.api.exception.ConflictException;
 import com.billos.api.service.SupabaseUserProvisioningService;
 import java.time.Instant;
 import java.util.Map;
@@ -136,5 +139,31 @@ class SupabaseJwtAuthenticationConverterTest {
         assertThatThrownBy(() -> converter.convert(jwt))
                 .isInstanceOf(DisabledException.class)
                 .hasMessageContaining("deactivated");
+    }
+
+    @Test
+    @DisplayName("should reject the login with the refusal message when the account link is refused")
+    void shouldRejectWhenAccountLinkRefused() {
+        Jwt jwt = createJwt("authenticated", SUPABASE_ID.toString(), "user@example.com", null, null);
+
+        when(provisioningService.resolveUser(any()))
+                .thenThrow(new ConflictException("This email address is already linked to a different sign-in"));
+
+        assertThatThrownBy(() -> converter.convert(jwt))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage("This email address is already linked to a different sign-in");
+    }
+
+    @Test
+    @DisplayName("should pass the email_verified flag from user_metadata to provisioning")
+    void shouldPassEmailVerifiedFlag() {
+        when(provisioningService.resolveUser(any())).thenReturn(testUser);
+
+        converter.convert(createJwt(
+                "authenticated", SUPABASE_ID.toString(), "user@example.com", Map.of("email_verified", true), null));
+        verify(provisioningService).resolveUser(argThat(SupabaseIdentity::emailVerified));
+
+        converter.convert(createJwt("authenticated", SUPABASE_ID.toString(), "user@example.com", null, null));
+        verify(provisioningService).resolveUser(argThat(identity -> !identity.emailVerified()));
     }
 }

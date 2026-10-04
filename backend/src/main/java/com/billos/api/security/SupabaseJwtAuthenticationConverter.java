@@ -1,6 +1,7 @@
 package com.billos.api.security;
 
 import com.billos.api.entity.User;
+import com.billos.api.exception.ConflictException;
 import com.billos.api.service.SupabaseUserProvisioningService;
 import java.util.Map;
 import java.util.UUID;
@@ -51,11 +52,19 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
         }
 
         SupabaseIdentity identity = new SupabaseIdentity(
-                supabaseId, email, firstNameFrom(metadata, email), lastNameFrom(metadata), phoneFrom(metadata, jwt));
+                supabaseId,
+                email,
+                firstNameFrom(metadata, email),
+                lastNameFrom(metadata),
+                phoneFrom(metadata, jwt),
+                isEmailVerified(metadata));
 
         User user;
         try {
             user = userProvisioningService.resolveUser(identity);
+        } catch (ConflictException ex) {
+            // Refused account link (already logged by the provisioning service) — a rejection, not a failure
+            throw new BadCredentialsException(ex.getMessage(), ex);
         } catch (RuntimeException ex) {
             log.error("Failed to provision local user for Supabase id {}", identity.supabaseId(), ex);
             throw new BadCredentialsException("Failed to provision local user: " + ex.getMessage(), ex);
@@ -68,6 +77,11 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
 
         UserPrincipal principal = UserPrincipal.create(user);
         return new UsernamePasswordAuthenticationToken(principal, jwt, principal.getAuthorities());
+    }
+
+    private boolean isEmailVerified(Map<String, Object> metadata) {
+        Object verified = metadata.get("email_verified");
+        return Boolean.TRUE.equals(verified) || "true".equalsIgnoreCase(String.valueOf(verified));
     }
 
     private String firstNameFrom(Map<String, Object> metadata, String email) {

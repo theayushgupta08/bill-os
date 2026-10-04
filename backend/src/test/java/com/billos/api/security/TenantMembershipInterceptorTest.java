@@ -96,6 +96,34 @@ class TenantMembershipInterceptorTest {
     }
 
     @Test
+    void shouldDropForgedHeader_onTenantAgnosticPath() throws Exception {
+        // These routes still run with whatever tenant the header names; a caller naming an organization they
+        // don't belong to must end up with no tenant at all, not that organization's.
+        UUID foreignOrg = UUID.randomUUID();
+        TenantContext.setCurrentTenant(foreignOrg.toString());
+        when(tenantSecurity.isMemberOf(foreignOrg)).thenReturn(false);
+
+        boolean proceed = interceptor.preHandle(
+                new MockHttpServletRequest("GET", "/api/v1/organizations/tree"), response, new Object());
+
+        assertThat(proceed).isTrue();
+        assertThat(TenantContext.getCurrentTenant()).isNull();
+    }
+
+    @Test
+    void shouldKeepMembersHeader_onTenantAgnosticPath() throws Exception {
+        UUID orgId = UUID.randomUUID();
+        TenantContext.setCurrentTenant(orgId.toString());
+        when(tenantSecurity.isMemberOf(orgId)).thenReturn(true);
+
+        boolean proceed =
+                interceptor.preHandle(new MockHttpServletRequest("PUT", "/api/v1/users/me"), response, new Object());
+
+        assertThat(proceed).isTrue();
+        assertThat(TenantContext.getCurrentTenant()).isEqualTo(orgId.toString());
+    }
+
+    @Test
     void shouldNotTreatSimilarPrefixAsTenantAgnostic() throws Exception {
         boolean proceed = interceptor.preHandle(
                 new MockHttpServletRequest("GET", "/api/v1/usersettings"), response, new Object());

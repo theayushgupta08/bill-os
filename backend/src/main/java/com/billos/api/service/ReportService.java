@@ -44,6 +44,8 @@ public class ReportService {
     private final PurchaseBillMapper purchaseBillMapper;
     private final CustomerMapper customerMapper;
     private final SupplierMapper supplierMapper;
+    private final CustomerBalanceService customerBalanceService;
+    private final OrganizationService organizationService;
 
     @Transactional(readOnly = true)
     public List<SalesInvoiceDto> getSalesRegister(LocalDate startDate, LocalDate endDate) {
@@ -95,13 +97,18 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public List<CustomerDto> getOutstandingReceivables() {
+        // Customer has no @TenantId (branch sharing): list the ones this org can see, with what each owes this org
+        UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        var balance = customerBalanceService.forCurrentOrg();
         return customerRepository
-                // Customer has no @TenantId (branch sharing), so findAll() would span every tenant.
-                .findByOrganizationId(UUID.fromString(TenantContext.getCurrentTenant()))
+                .findAccessibleCustomers(orgId, organizationService.resolvePrimaryOrgId(orgId))
                 .stream()
-                .filter(c -> c.getOutstandingBalance() != null
-                        && c.getOutstandingBalance().compareTo(BigDecimal.ZERO) > 0)
-                .map(customerMapper::toDto)
+                .map(c -> {
+                    CustomerDto dto = customerMapper.toDto(c);
+                    dto.setOutstandingBalance(balance.apply(c));
+                    return dto;
+                })
+                .filter(dto -> dto.getOutstandingBalance().compareTo(BigDecimal.ZERO) > 0)
                 .collect(Collectors.toList());
     }
 

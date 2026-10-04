@@ -14,5 +14,7 @@ import java.util.UUID;
  * @param firstName resolved from {@code user_metadata}, never null (falls back to the email prefix)
  * @param lastName resolved from {@code user_metadata}, never null (may be empty)
  * @param phone resolved from {@code user_metadata} or the {@code phone} claim, may be null
+ * @param emailVerified {@code user_metadata.email_verified}: Supabase has confirmed the address belongs to this login
  */
-public record SupabaseIdentity(UUID supabaseId, String email, String firstName, String lastName, String phone) {}
+public record SupabaseIdentity(
+        UUID supabaseId, String email, String firstName, String lastName, String phone, boolean emailVerified) {}

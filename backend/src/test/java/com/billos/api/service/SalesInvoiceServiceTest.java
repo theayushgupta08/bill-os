@@ -127,6 +127,7 @@ class SalesInvoiceServiceTest {
         customer.setOutstandingBalance(new BigDecimal("100.00"));
 
         stubLineLookups(customer, customerId, productId, warehouseId);
+        when(sharedEntityResolver.isOwnedByCurrentOrg(any())).thenReturn(true);
         when(salesInvoiceRepository.save(any(SalesInvoice.class))).thenAnswer(i -> i.getArguments()[0]);
         when(salesInvoiceMapper.toDto(any(SalesInvoice.class))).thenReturn(new SalesInvoiceDto());
 
@@ -135,6 +136,29 @@ class SalesInvoiceServiceTest {
         // 5 x 200 = 1000 added on top of the existing 100
         assertThat(customer.getOutstandingBalance()).isEqualByComparingTo("1100.00");
         verify(customerRepository).save(customer);
+    }
+
+    @Test
+    void createSalesInvoice_asIssued_toSharedCustomer_leavesOwnersBalanceAlone() {
+        // Regression: a branch invoicing a customer its parent shares added the amount to the parent's single
+        // balance column, so the parent and every sibling branch saw the branch's receivables.
+        UUID customerId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        UUID warehouseId = UUID.randomUUID();
+        UUID parentOrg = UUID.randomUUID();
+        Customer shared = new Customer();
+        shared.setOrganizationId(parentOrg);
+        shared.setOutstandingBalance(new BigDecimal("100.00"));
+
+        stubLineLookups(shared, customerId, productId, warehouseId);
+        when(sharedEntityResolver.isOwnedByCurrentOrg(parentOrg)).thenReturn(false);
+        when(salesInvoiceRepository.save(any(SalesInvoice.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(salesInvoiceMapper.toDto(any(SalesInvoice.class))).thenReturn(new SalesInvoiceDto());
+
+        salesInvoiceService.createSalesInvoice(request(customerId, productId, warehouseId, SalesInvoiceStatus.ISSUED));
+
+        assertThat(shared.getOutstandingBalance()).isEqualByComparingTo("100.00");
+        verify(customerRepository, never()).save(any());
     }
 
     @Test

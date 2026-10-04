@@ -77,6 +77,7 @@ class InventoryServiceTest {
 
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
         when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(product);
+        when(sharedEntityResolver.isOwnedByCurrentOrg(any())).thenReturn(true);
         when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId))
                 .thenReturn(Optional.empty());
 
@@ -118,6 +119,7 @@ class InventoryServiceTest {
 
         when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
         when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(product);
+        when(sharedEntityResolver.isOwnedByCurrentOrg(any())).thenReturn(true);
         when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId))
                 .thenReturn(Optional.of(existingLevel));
         when(inventoryLevelRepository.findByProductId(productId)).thenReturn(List.of(existingLevel));
@@ -135,6 +137,43 @@ class InventoryServiceTest {
 
         // Verify inventory level quantity is set to 20
         verify(inventoryLevelRepository).save(argThat(l -> l.getQuantity().compareTo(new BigDecimal("20")) == 0));
+    }
+
+    @Test
+    void adjustStock_branchPurchaseOfSharedProduct_leavesParentCostAlone() {
+        // Regression: a branch buying a product its parent shares rewrote the parent's cost_price, averaged over the
+        // branch's own stock only.
+        UUID parentOrg = UUID.randomUUID();
+        StockMovementDto request = new StockMovementDto();
+        request.setWarehouseId(warehouseId);
+        request.setProductId(productId);
+        request.setMovementType(MovementType.IN);
+        request.setQuantity(new BigDecimal("10"));
+        request.setUnitCost(new BigDecimal("150.00"));
+        request.setReferenceType("PURCHASE_BILL");
+
+        Warehouse warehouse = new Warehouse();
+        warehouse.setId(warehouseId);
+        Product shared = new Product();
+        shared.setId(productId);
+        shared.setOrganizationId(parentOrg);
+        shared.setCostPrice(new BigDecimal("100.00"));
+
+        when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
+        when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(shared);
+        when(sharedEntityResolver.isOwnedByCurrentOrg(parentOrg)).thenReturn(false);
+        when(inventoryLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId))
+                .thenReturn(Optional.empty());
+        when(inventoryLevelRepository.save(any(InventoryLevel.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(stockMovementRepository.save(any(StockMovement.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(inventoryMapper.toMovementDto(any(StockMovement.class))).thenReturn(new StockMovementDto());
+
+        inventoryService.adjustStock(request);
+
+        assertThat(shared.getCostPrice()).isEqualByComparingTo("100.00");
+        verify(productRepository, never()).save(any());
+        // The branch's stock still moves
+        verify(inventoryLevelRepository).save(argThat(l -> l.getQuantity().compareTo(new BigDecimal("10")) == 0));
     }
 
     private InventoryLevel stubLevel(String quantity) {

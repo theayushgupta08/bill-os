@@ -9,8 +9,14 @@ import org.mapstruct.MappingTarget;
 public interface SupplierMapper {
     SupplierDto toDto(Supplier supplier);
 
+    @org.mapstruct.Mapping(
+            target = "id",
+            ignore = true) // never taken from the request: a client id would merge over an existing row
     Supplier toEntity(SupplierDto supplierDto);
 
     @org.mapstruct.Mapping(target = "outstandingBalance", ignore = true)
+    @org.mapstruct.Mapping(
+            target = "id",
+            ignore = true) // never taken from the request: a client id would merge over an existing row
     void updateEntityFromDto(SupplierDto dto, @MappingTarget Supplier entity);
 }

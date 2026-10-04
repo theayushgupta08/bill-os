@@ -14,6 +14,7 @@ public interface JournalEntryMapper {
     JournalEntryDto toDto(JournalEntry entity);
 
     @Mapping(target = "lines", ignore = true) // Handled in service
+    @Mapping(target = "id", ignore = true) // never taken from the request: a client id would merge over an existing row
     JournalEntry toEntity(JournalEntryDto dto);
 
     @Mapping(source = "account.id", target = "accountId")
@@ -22,6 +23,7 @@ public interface JournalEntryMapper {
 
     @Mapping(target = "journalEntry", ignore = true)
     @Mapping(target = "account", ignore = true) // Handled in service
+    @Mapping(target = "id", ignore = true) // never taken from the request: a client id would merge over an existing row
     JournalEntryLine lineToEntity(JournalEntryLineDto dto);
 
     List<JournalEntryLineDto> linesToDtos(List<JournalEntryLine> lines);
