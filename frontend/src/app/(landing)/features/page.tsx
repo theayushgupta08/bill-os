@@ -1,190 +1,110 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
+import { Check } from "lucide-react";
 import { siteConfig } from "@/lib/config";
-import {
-  FileText,
-  Package,
-  BrainCircuit,
-  Workflow,
-  CheckCircle2,
-  ArrowRight,
-} from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { CtaBand } from "@/features/marketing/components/cta-band";
+import { productModules } from "@/features/marketing/components/modules";
+import { PageIntro } from "@/features/marketing/components/page-intro";
+import { ArrowLink } from "@/features/marketing/components/primitives/button-link";
+import { Container, Eyebrow } from "@/features/marketing/components/primitives/layout";
+import { Reveal } from "@/features/marketing/components/primitives/reveal";
 
 export const metadata: Metadata = {
   title: `Features | ${siteConfig.name}`,
-  description: "Explore the powerful features of BillOS including GST Billing, Inventory, AI Assistant, and Integrations.",
+  description:
+    "GST billing, stock and purchases, field collections, reports and team roles — what BillOS does today, module by module.",
 };
 
 export default function FeaturesPage() {
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
-      <section className="pt-32 pb-16 md:pt-48 md:pb-32 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px] pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none" />
-        
-        <div className="mx-auto max-w-4xl text-center relative z-10">
-          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary mb-6">
-            <span className="flex h-2 w-2 rounded-full bg-primary mr-2"></span>
-            The All-in-One Platform
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
-            Everything you need to <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">
-              run your business
-            </span>
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-            From automated GST compliance to AI-driven insights, {siteConfig.name} provides the most complete toolkit for modern enterprises.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="rounded-full h-12 px-8 w-full sm:w-auto text-base">
-              Start Free Trial
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full h-12 px-8 w-full sm:w-auto text-base">
-              Book a Demo
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature 1: GST Billing */}
-      <section id="billing" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/30 scroll-mt-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="order-2 md:order-1 relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-3xl blur-3xl" />
-              <div className="relative bg-background border border-border/50 rounded-3xl p-8 shadow-2xl h-[400px] flex flex-col justify-center items-center text-center">
-                {/* Placeholder for actual UI screenshot */}
-                <FileText className="w-24 h-24 text-primary/40 mb-6" />
-                <h3 className="text-xl font-bold text-foreground mb-2">Beautiful Invoices</h3>
-                <p className="text-muted-foreground max-w-sm">Generate professional, tax-compliant invoices in under 10 seconds.</p>
-              </div>
-            </div>
-            <div className="order-1 md:order-2">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
-                <FileText className="w-6 h-6" />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">GST Billing & e-Invoicing</h2>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Stay 100% compliant with our automated tax engine. Generate e-invoices, calculate CGST/SGST instantly, and file returns with a single click.
-              </p>
-              <ul className="space-y-4 mb-8">
-                {["Automated tax rate calculation", "Customizable invoice templates", "Recurring billing & subscriptions", "One-click e-way bill generation"].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-muted-foreground">
-                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature 2: Inventory */}
-      <section id="inventory" className="py-24 px-4 sm:px-6 lg:px-8 scroll-mt-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
-                <Package className="w-6 h-6" />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">Smart Inventory Management</h2>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Never run out of stock again. Track your inventory across multiple warehouses in real-time and get predictive restock alerts.
-              </p>
-              <ul className="space-y-4 mb-8">
-                {["Multi-warehouse tracking", "Low stock threshold alerts", "Barcode scanning support", "Batch tracking & expiry management"].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-muted-foreground">
-                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-bl from-blue-500/20 to-transparent rounded-3xl blur-3xl" />
-              <div className="relative bg-background border border-border/50 rounded-3xl p-8 shadow-2xl h-[400px] flex flex-col justify-center items-center text-center">
-                <Package className="w-24 h-24 text-blue-500/40 mb-6" />
-                <h3 className="text-xl font-bold text-foreground mb-2">Real-time Tracking</h3>
-                <p className="text-muted-foreground max-w-sm">Watch your stock levels update instantly as sales are made.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature 3: AI Assistant */}
-      <section id="ai" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/30 scroll-mt-20 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-        <div className="mx-auto max-w-7xl relative z-10">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="order-2 md:order-1 relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-transparent rounded-3xl blur-3xl" />
-              <div className="relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl h-[400px] flex flex-col justify-center items-center text-center">
-                <BrainCircuit className="w-24 h-24 text-primary mb-6 animate-pulse" />
-                <h3 className="text-xl font-bold text-white mb-2">Ask your data anything</h3>
-                <p className="text-white/70 max-w-sm">&quot;What were our top selling products last month across all branches?&quot;</p>
-              </div>
-            </div>
-            <div className="order-1 md:order-2">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20 text-primary mb-6">
-                <BrainCircuit className="w-6 h-6" />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">BillOS AI Assistant</h2>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Your personal financial analyst. Our secure, private AI automatically categorizes expenses, matches bank transactions, and predicts cash flow.
-              </p>
-              <ul className="space-y-4 mb-8">
-                {["Automated expense categorization", "Predictive cash flow forecasting", "Natural language financial queries", "Smart receipt scanning & OCR"].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-muted-foreground">
-                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature 4: Integrations */}
-      <section id="integrations" className="py-24 px-4 sm:px-6 lg:px-8 scroll-mt-20">
-        <div className="mx-auto max-w-7xl text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6 mx-auto">
-            <Workflow className="w-6 h-6" />
-          </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">Seamless Integrations</h2>
-          <p className="text-lg text-muted-foreground mb-16 max-w-2xl mx-auto leading-relaxed">
-            Connect {siteConfig.name} with the tools you already use. Our API and native integrations keep your data synchronized everywhere.
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {["Razorpay", "Stripe", "WhatsApp", "Tally", "Slack", "Shopify", "Zoho", "AWS"].map((integration, i) => (
-              <div key={i} className="flex flex-col items-center justify-center p-8 rounded-2xl border border-border/50 bg-muted/20 hover:bg-muted/50 transition-colors">
-                <div className="w-16 h-16 rounded-full bg-background border border-border shadow-sm flex items-center justify-center mb-4 text-foreground/50 font-bold">
-                  {/* Placeholder for logo */}
-                  {integration[0]}
-                </div>
-                <h4 className="font-semibold">{integration}</h4>
-              </div>
+    <>
+      <PageIntro
+        eyebrow="Features"
+        title="One set of books for the whole business."
+        lead={`Here's what ${siteConfig.name} does today, module by module. If it's on this page, it's in the product.`}
+      >
+        <nav aria-label="Modules" className="-mx-5 mt-10 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:px-0">
+          <ul className="flex w-max gap-2">
+            {productModules.map((module) => (
+              <li key={module.id}>
+                <a
+                  href={`#${module.id}`}
+                  className="inline-flex h-10 items-center rounded-full border border-input bg-card px-4 text-sm font-medium whitespace-nowrap text-foreground transition-colors hover:border-rule-strong hover:bg-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  {module.tab}
+                </a>
+              </li>
             ))}
+          </ul>
+        </nav>
+      </PageIntro>
+
+      {productModules.map((module, index) => {
+        const flipped = index % 2 === 1;
+        return (
+          <section
+            key={module.id}
+            id={module.id}
+            aria-labelledby={`${module.id}-title`}
+            className={cn("py-20 sm:py-24 lg:py-28", flipped && "bg-sunken")}
+          >
+            <Container className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+              <div className={cn("lg:col-span-5", flipped && "lg:order-last")}>
+                <Eyebrow>
+                  0{index + 1} · {module.tab}
+                </Eyebrow>
+                <h2
+                  id={`${module.id}-title`}
+                  className="mt-5 font-display text-[clamp(2rem,1.5rem+1.8vw,2.75rem)] leading-[1.08] font-normal tracking-[-0.018em] text-balance text-foreground"
+                >
+                  {module.title}
+                </h2>
+                <p className="mt-5 text-lg leading-relaxed text-muted-foreground">{module.summary}</p>
+                <ul className="mt-8 space-y-3.5">
+                  {module.details.map((detail) => (
+                    <li key={detail} className="flex gap-3 text-foreground">
+                      <Check aria-hidden className="mt-1 size-4 shrink-0 text-positive" />
+                      {detail}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <Reveal className="lg:col-span-7">
+                <module.Panel />
+              </Reveal>
+            </Container>
+          </section>
+        );
+      })}
+
+      <section aria-labelledby="next-title" className="border-t border-border py-20 sm:py-24">
+        <Container>
+          <div className="grid gap-8 rounded-[14px] border border-dashed border-rule-strong p-6 sm:p-10 lg:grid-cols-12 lg:items-center lg:gap-12">
+            <div className="lg:col-span-8">
+              <p className="inline-flex items-center gap-2 rounded-full bg-warning-tint px-2.5 py-1 text-xs font-medium text-warning">
+                <span aria-hidden className="size-1.5 rounded-full bg-current" />
+                In development · not available yet
+              </p>
+              <h2
+                id="next-title"
+                className="mt-5 font-display text-[clamp(1.75rem,1.4rem+1.4vw,2.375rem)] leading-tight font-normal tracking-[-0.015em] text-foreground"
+              >
+                An assistant that knows your books.
+              </h2>
+              <p className="mt-4 max-w-[60ch] leading-relaxed text-muted-foreground">
+                Ask &ldquo;who owes me the most this month?&rdquo; or &ldquo;what sold best in Pune?&rdquo; in plain
+                language and get the answer from your own data. We&apos;re building it now, and we&apos;ll say so
+                here when you can use it.
+              </p>
+            </div>
+            <div className="lg:col-span-4 lg:justify-self-end">
+              <ArrowLink href="/contact">Ask for early access</ArrowLink>
+            </div>
           </div>
-        </div>
+        </Container>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-primary text-primary-foreground text-center">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="text-3xl md:text-5xl font-bold mb-6">Ready to transform your business?</h2>
-          <p className="text-xl opacity-90 mb-10">Join thousands of companies using {siteConfig.name} to grow faster.</p>
-          <Button size="lg" variant="secondary" className="rounded-full h-14 px-10 text-lg font-semibold">
-            Start your free trial <ArrowRight className="ml-2 w-5 h-5" />
-          </Button>
-        </div>
-      </section>
-    </div>
+      <CtaBand />
+    </>
   );
 }
