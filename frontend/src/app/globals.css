@@ -259,6 +259,37 @@ html:has(.site-light) {
 }
 
 @layer components {
+  /* Scroll reveal (marketing <Reveal>). Progressive enhancement: content is visible by default, and the
+     fade only runs on a viewport that is actually scrolling. A view() timeline with no fill applies
+     nothing before the element starts entering, so print, full-page captures and crawlers see the
+     content; unsupported browsers and reduced-motion users simply get no animation. */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal {
+        animation-name: reveal;
+        animation-duration: auto;
+        animation-timing-function: var(--ease-ledger);
+        animation-fill-mode: none;
+        animation-timeline: view();
+        animation-range: entry var(--reveal-start, 0px) entry calc(var(--reveal-start, 0px) + 160px);
+      }
+    }
+  }
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      translate: 0 14px;
+    }
+  }
+  /* Printed pages show every element at rest, whatever the entrance animation's state */
+  @media print {
+    .reveal,
+    .animate-rise,
+    .animate-fade {
+      animation: none !important;
+    }
+  }
+
   /* Long-form copy on the security and legal pages */
   .doc-prose {
     color: var(--muted-foreground);

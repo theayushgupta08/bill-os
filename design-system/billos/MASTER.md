@@ -79,6 +79,10 @@ Inputs are 16px so iOS never zooms on focus. Headings use `text-balance`, body `
 - Tokens (`motion-tokens.ts`): ease `[0.22, 1, 0.36, 1]`; fast 0.18s, base 0.32s, reveal 0.5s;
   exits ~60% of enters. No overshoot, no infinite loops.
 - Above-the-fold entrances are CSS (`animate-rise`, `animate-fade`) so they run before hydration.
+- Scroll reveals are CSS too: `<Reveal>` / `.reveal` is a `view()` scroll-driven fade (opacity + 14px)
+  over the first 160px of entry, with **no fill**, inside `@supports` and
+  `prefers-reduced-motion: no-preference`. Before an element starts entering nothing applies, so
+  content is never hidden at rest; print turns entrances off. `delay` becomes a start offset (~40px per 0.1).
 - Every animation explains something: place-of-supply toggle (CGST+SGST ⇄ IGST), Draft → Issued
   with the stock deduction, the scroll-drawn document flow, tab and price transitions.
 
@@ -93,6 +97,8 @@ Accordion) · `contact-form` · `document-layout` + `document-heading` · `cta-b
 ## Anti-patterns (don't)
 
 - Gradient text, glow blobs, glassmorphism, emoji icons, decorative infinite animation.
+- Content that starts at `opacity: 0` and waits for JS or a scroll to appear (e.g. Motion `whileInView`):
+  QA found 18 home-page blocks blank in non-scrolling renders before `<Reveal>` moved to CSS.
 - Invented social proof (logos, counts, testimonials) or features the product doesn't ship.
 - Repeated identical icon-cards; prefer ruled lists and real product content.
 - Raw hex in components — use the semantic tokens so the ink tone keeps working.

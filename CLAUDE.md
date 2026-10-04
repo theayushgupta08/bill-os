@@ -511,7 +511,9 @@ The public website has its own light "Ledger" theme; the spec is `design-system/
 - **Motion**: import `* as m from "motion/react-m"` (never `motion.*` — `LazyMotion strict` throws) and
   tokens from `motion-tokens.ts`. Animate named transforms (`y`, `scaleX`): `reducedMotion="user"` doesn't
   cover a `transform` string. Above-the-fold entrances use CSS (`animate-rise`), not JS, so they don't wait
-  for hydration.
+  for hydration. Scroll reveals use `<Reveal>` (a CSS `view()` scroll-driven animation with no fill), **never**
+  Motion `whileInView` from `opacity: 0`: content must stay visible when nothing scrolls (print, full-page
+  captures, crawlers, unsupported browsers, reduced motion).
 - **Copy must match the product.** `modules.tsx` (tour + /features), `content/plans.ts` (every price) and
   `content/faqs.ts` are single sources; don't list a capability until it ships, and no invented social proof.
 - Server components by default; client islands only for interaction (invoice demo, tabs, plans, FAQ, form).
