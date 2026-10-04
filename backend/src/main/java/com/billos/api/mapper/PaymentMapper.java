@@ -20,5 +20,6 @@ public interface PaymentMapper {
     PaymentAllocationDto toDto(PaymentAllocation allocation);
 
     @Mapping(target = "allocations", ignore = true)
+    @Mapping(target = "id", ignore = true) // never taken from the request: a client id would merge over an existing row
     Payment toEntity(PaymentDto dto);
 }

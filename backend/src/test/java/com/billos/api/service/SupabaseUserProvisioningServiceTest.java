@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.billos.api.entity.User;
+import com.billos.api.exception.ConflictException;
 import com.billos.api.repository.UserRepository;
 import com.billos.api.security.SupabaseIdentity;
 import java.util.Optional;
@@ -34,7 +36,7 @@ class SupabaseUserProvisioningServiceTest {
     private static final UUID SUPABASE_ID = UUID.randomUUID();
 
     private SupabaseIdentity identity() {
-        return new SupabaseIdentity(SUPABASE_ID, "ada@example.com", "Ada", "Lovelace", "+919876543210");
+        return new SupabaseIdentity(SUPABASE_ID, "ada@example.com", "Ada", "Lovelace", "+919876543210", true);
     }
 
     @Test
@@ -69,7 +71,8 @@ class SupabaseUserProvisioningServiceTest {
         when(userRepository.findByEmail("ada@example.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        SupabaseIdentity oauthIdentity = new SupabaseIdentity(SUPABASE_ID, "ada@example.com", "Ada", "Lovelace", "");
+        SupabaseIdentity oauthIdentity =
+                new SupabaseIdentity(SUPABASE_ID, "ada@example.com", "Ada", "Lovelace", "", true);
         User result = provisioningService.resolveUser(oauthIdentity);
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
@@ -106,6 +109,52 @@ class SupabaseUserProvisioningServiceTest {
 
         assertThat(result.getSupabaseId()).isEqualTo(SUPABASE_ID);
         assertThat(result.getId()).isEqualTo(legacy.getId());
+    }
+
+    @Test
+    @DisplayName("should refuse to hand an existing user to a different login that shares their email")
+    void shouldRefuseLink_whenEmailBelongsToAnotherLogin() {
+        // Regression: linking by email used to overwrite supabase_id, so any login with the victim's email (e.g. a
+        // re-registered address) took over the user and every organization they belong to.
+        UUID victimLogin = UUID.randomUUID();
+        User victim = user("ada@example.com", "Ada", "Lovelace", "+919876543210");
+        victim.setSupabaseId(victimLogin);
+        when(userRepository.findBySupabaseId(SUPABASE_ID)).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("ada@example.com")).thenReturn(Optional.of(victim));
+
+        assertThatThrownBy(() -> provisioningService.resolveUser(identity())).isInstanceOf(ConflictException.class);
+
+        assertThat(victim.getSupabaseId()).isEqualTo(victimLogin);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("should not link a pre-Supabase row to a login whose email isn't verified")
+    void shouldRefuseLink_whenEmailIsNotVerified() {
+        User legacy = user("ada@example.com", "Ada", "Lovelace", "+919876543210");
+        legacy.setSupabaseId(null);
+        when(userRepository.findBySupabaseId(SUPABASE_ID)).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("ada@example.com")).thenReturn(Optional.of(legacy));
+        SupabaseIdentity unverified =
+                new SupabaseIdentity(SUPABASE_ID, "ada@example.com", "Ada", "Lovelace", "+919876543210", false);
+
+        assertThatThrownBy(() -> provisioningService.resolveUser(unverified)).isInstanceOf(ConflictException.class);
+
+        assertThat(legacy.getSupabaseId()).isNull();
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("should rethrow, not fall back to another user's row, when an insert clashes on email")
+    void shouldNotFallBackToEmail_whenInsertClashes() {
+        // Another user already owns this email; the clash must not be "recovered" by returning their row
+        when(userRepository.findBySupabaseId(SUPABASE_ID)).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("ada@example.com")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenThrow(new DataIntegrityViolationException("duplicate email"));
+
+        assertThatThrownBy(() -> provisioningService.resolveUser(identity()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        verify(userRepository, times(1)).findByEmail("ada@example.com");
     }
 
     @Test

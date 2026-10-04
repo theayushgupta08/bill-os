@@ -8,5 +8,8 @@ import org.mapstruct.Mapper;
 public interface AuditLogMapper {
     AuditLogDto toDto(AuditLog entity);
 
+    @org.mapstruct.Mapping(
+            target = "id",
+            ignore = true) // never taken from the request: a client id would merge over an existing row
     AuditLog toEntity(AuditLogDto dto);
 }

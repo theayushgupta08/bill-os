@@ -49,6 +49,13 @@ public class TenantMembershipInterceptor implements HandlerInterceptor {
 
         String path = request.getRequestURI().substring(request.getContextPath().length());
         if (isTenantAgnostic(path)) {
+            // These routes don't need a tenant, but a header still scopes Hibernate (and auditing) if it is set.
+            // Keep it only when the caller really belongs to that organization, so that a forged header can never
+            // point one of these endpoints at another tenant's data.
+            String tenant = TenantContext.getCurrentTenant();
+            if (tenant != null && !isMemberOfOrg(tenant)) {
+                TenantContext.clear();
+            }
             return true;
         }
 
@@ -70,6 +77,14 @@ public class TenantMembershipInterceptor implements HandlerInterceptor {
         }
 
         return true;
+    }
+
+    private boolean isMemberOfOrg(String tenant) {
+        try {
+            return tenantSecurity.isMemberOf(UUID.fromString(tenant));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private boolean isTenantAgnostic(String path) {

@@ -148,8 +148,9 @@ public class OrganizationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Primary parent organization not found"));
 
         // Validate user is authorized on parent organization
-        java.util.Optional<UserOrgRole> parentRoleOpt =
-                userOrgRoleRepository.findByUserIdAndOrganizationId(currentUser.getId(), parentOrgId);
+        java.util.Optional<UserOrgRole> parentRoleOpt = userOrgRoleRepository
+                .findByUserIdAndOrganizationId(currentUser.getId(), parentOrgId)
+                .filter(UserOrgRole::isActiveMembership);
         if (parentRoleOpt.isEmpty()
                 || (!"OWNER".equalsIgnoreCase(parentRoleOpt.get().getRole())
                         && !"ADMIN".equalsIgnoreCase(parentRoleOpt.get().getRole()))) {
@@ -209,16 +210,26 @@ public class OrganizationService {
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        List<UserOrgRole> roles = userOrgRoleRepository.findByUserId(principal.getId());
+        // Memberships are global (no @TenantId), so this sees every organization the user belongs to
+        List<UserOrgRole> memberships = userOrgRoleRepository.findByUserId(principal.getId());
+        java.util.Set<UUID> deactivatedIn = memberships.stream()
+                .filter(r -> !r.isActiveMembership())
+                .map(UserOrgRole::getOrganizationId)
+                .collect(java.util.stream.Collectors.toSet());
 
         java.util.Map<UUID, Organization> orgMap = new java.util.LinkedHashMap<>();
-        for (UserOrgRole role : roles) {
+        for (UserOrgRole role : memberships) {
+            if (!role.isActiveMembership()) {
+                continue;
+            }
             organizationRepository.findById(role.getOrganizationId()).ifPresent(org -> {
                 orgMap.put(org.getId(), org);
-                // If this is a primary org or has branches, include its branches automatically
+                // A parent role reaches its branches too, unless the user was deactivated in that branch
                 List<Organization> branches = organizationRepository.findByParentOrganizationId(org.getId());
                 for (Organization branch : branches) {
-                    orgMap.put(branch.getId(), branch);
+                    if (!deactivatedIn.contains(branch.getId())) {
+                        orgMap.put(branch.getId(), branch);
+                    }
                 }
             });
         }

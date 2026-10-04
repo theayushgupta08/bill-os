@@ -24,5 +24,6 @@ public interface SalesInvoiceMapper {
 
     @Mapping(target = "customer", ignore = true)
     @Mapping(target = "lines", ignore = true)
+    @Mapping(target = "id", ignore = true) // never taken from the request: a client id would merge over an existing row
     SalesInvoice toEntity(SalesInvoiceDto dto);
 }

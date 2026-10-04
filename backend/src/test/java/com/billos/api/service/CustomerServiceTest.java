@@ -9,6 +9,8 @@ import com.billos.api.entity.Customer;
 import com.billos.api.mapper.CustomerMapper;
 import com.billos.api.repository.CustomerRepository;
 import com.billos.api.tenant.TenantContext;
+import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +39,9 @@ class CustomerServiceTest {
 
     @Mock
     private SharedEntityResolver sharedEntityResolver;
+
+    @Mock
+    private CustomerBalanceService customerBalanceService;
 
     @InjectMocks
     private CustomerService customerService;
@@ -98,12 +103,59 @@ class CustomerServiceTest {
 
         when(sharedEntityResolver.accessibleCustomer(customerId)).thenReturn(customer);
         when(customerMapper.toDto(customer)).thenReturn(dto);
+        when(customerBalanceService.forCurrentOrg()).thenReturn(c -> new BigDecimal("42.00"));
 
         // Act
         CustomerDto result = customerService.getCustomerById(customerId);
 
         // Assert
         assertThat(result.getId()).isEqualTo(customerId);
+        // The balance shown is what the customer owes this organization, not the shared column
+        assertThat(result.getOutstandingBalance()).isEqualByComparingTo("42.00");
+    }
+
+    @Test
+    @DisplayName("getConsolidatedLedger - a branch sees only its own documents, not its parent's or siblings'")
+    void getConsolidatedLedger_shouldScopeBranchToItself() {
+        UUID customerId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        UUID parentId = UUID.randomUUID();
+        stubLedger(customerId, branchId, parentId);
+
+        customerService.getConsolidatedLedger(customerId);
+
+        assertThat(ledgerQueryParameters())
+                .containsExactly(customerId, branchId, false, branchId, customerId, branchId, false, branchId);
+    }
+
+    @Test
+    @DisplayName("getConsolidatedLedger - the parent organization sees the whole family")
+    void getConsolidatedLedger_shouldGiveParentTheFamily() {
+        UUID customerId = UUID.randomUUID();
+        UUID parentId = UUID.randomUUID();
+        stubLedger(customerId, parentId, parentId);
+
+        customerService.getConsolidatedLedger(customerId);
+
+        assertThat(ledgerQueryParameters())
+                .containsExactly(customerId, parentId, true, parentId, customerId, parentId, true, parentId);
+    }
+
+    private void stubLedger(UUID customerId, UUID currentOrg, UUID primaryOrg) {
+        Customer customer = new Customer();
+        customer.setId(customerId);
+        when(sharedEntityResolver.accessibleCustomer(customerId)).thenReturn(customer);
+        when(sharedEntityResolver.currentOrgId()).thenReturn(currentOrg);
+        when(organizationService.resolvePrimaryOrgId(currentOrg)).thenReturn(primaryOrg);
+        when(customerMapper.toDto(customer)).thenReturn(new CustomerDto());
+        when(customerBalanceService.forCurrentOrg()).thenReturn(c -> BigDecimal.ZERO);
+    }
+
+    /** The bind parameters of the single ledger query (after the SQL and the row mapper). */
+    private Object[] ledgerQueryParameters() {
+        Object[] args =
+                mockingDetails(jdbcTemplate).getInvocations().iterator().next().getArguments();
+        return Arrays.copyOfRange(args, 2, args.length);
     }
 
     @Test

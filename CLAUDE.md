@@ -50,7 +50,7 @@ but no graphs are built yet.
 | Backend        | Spring Boot                         | 3.5.16, Java 25                                        |
 | ORM            | Hibernate 6 (Spring Data JPA)       | Discriminator multi-tenancy via `@TenantId`            |
 | Auth (current) | Supabase Auth (GoTrue) + JWT verify | Spring OAuth2 resource server; ES256 via Supabase JWKS |
-| Migrations     | Flyway                              | `backend/src/main/resources/db/migration/` (V001–V024) |
+| Migrations     | Flyway                              | `backend/src/main/resources/db/migration/` (V001–V028) |
 | Mapping        | MapStruct 1.5.5.Final               | `componentModel = "spring"`, unmapped targets IGNOREd  |
 | PDF            | openhtmltopdf 1.0.10 + Thymeleaf    | HTML templates → PDF                                   |
 | AOP            | spring-boot-starter-aop             | `@Audited` → `AuditAspect` (§4.8)                      |
@@ -91,7 +91,7 @@ billOS/
 │       └── tenant/                   # TenantContext, TenantFilter, TenantIdentifierResolver
 │   └── src/main/resources/
 │       ├── application.yml
-│       ├── db/migration/             # Flyway V001..V024
+│       ├── db/migration/             # Flyway V001..V028 + afterMigrate.sql callback
 │       └── templates/                # invoice/po/quotation HTML → PDF
 ├── frontend/                         # Next.js (pnpm)
 │   └── src/
@@ -137,7 +137,9 @@ billOS/
   `/health`, `/users`, `/organizations` — endpoints there address orgs by path and must check access
   themselves (e.g. `@PreAuthorize("@tenantSecurity.hasRoleIn(#id, 'ADMIN')")`). If you add a new
   tenant-agnostic route family, add it to both `TENANT_AGNOSTIC_PREFIXES` (backend) and the same list in
-  `frontend/src/lib/api-client.ts`.
+  `frontend/src/lib/api-client.ts`. On those paths the interceptor **clears the tenant** when the caller isn't
+  a member of the header's org, so a forged header can't steer `TenantContext` (members keep it, which
+  `AuditAspect` relies on for org-level audits).
 
 **Rules for new code:**
 
@@ -145,8 +147,8 @@ billOS/
 |---|---|
 | Top-level org-scoped aggregate (`SalesInvoice`, `Product`, `Customer`, …) | **Yes, required** |
 | Child/line entity reached only via its parent (`SalesInvoiceLine`, `PurchaseOrderLine`, `JournalEntryLine`, `PaymentAllocation`) | No — no `organization_id` column; isolation comes from the parent |
-| Global entities (`User`, `Organization`, `UserOrgRole`) | No — query `UserOrgRole` with `findByOrganizationId`, **never `findAll()`** |
-| Branch-shareable masters: `Customer`, `Product`, `CollectionQrCode` | **No `@TenantId`** (V020, so a branch can see the parent's `isShared` records). Hibernate does **not** scope them: resolve by id via `SharedEntityResolver` (`accessibleCustomer/Product/QrCode`, `isOwnedByCurrentOrg`) and list via `findByOrganizationId`/`findAccessible*`. A plain `findById`/`findAll` crosses tenants. Edits/deletes only on records the current org owns. |
+| Global entities (`User`, `Organization`, `UserOrgRole`) | No — always query `UserOrgRole` with an explicit org (`findByUserIdAndOrganizationId`, `findByOrganizationId`), **never `findAll()`**, and honour `isActiveMembership()` (V027) |
+| Branch-shareable masters: `Customer`, `Product`, `CollectionQrCode` | **No `@TenantId`** (V020, so a branch can see the parent's `isShared` records). Hibernate does **not** scope them: resolve by id via `SharedEntityResolver` (`accessibleCustomer/Product/QrCode`, `isOwnedByCurrentOrg`) and list via `findByOrganizationId`/`findAccessible*`. A plain `findById`/`findAll` crosses tenants. Edits/deletes only on records the current org owns. Cached figures on them (`outstandingBalance`, `costPrice`) are the **owner's** — only the owning org updates them; a branch sees a computed balance via `CustomerBalanceService.forCurrentOrg()`. |
 | `OrganizationSettings`, `OrganizationInvitation` | Currently **plain `organizationId` column, no `@TenantId`** — you must filter by org explicitly in the repository/service. Treat this as a known inconsistency, not a template. |
 
 - Never write a cross-tenant query without an explicit, commented justification.
@@ -154,6 +156,13 @@ billOS/
   established idiom — but see [Known Gaps](#known-gaps--tech-debt) about the missing null guard).
 - Unit tests **must** call `TenantContext.setCurrentTenant(UUID.randomUUID().toString())` in
   `@BeforeEach` for any service that touches the tenant.
+- **The database is reachable only through the backend.** Supabase's Data API (PostgREST, callable with the
+  anon key the frontend ships) would bypass all of the above, so V028 revoked every `anon`/`authenticated`
+  privilege on the public schema and enabled deny-all RLS on every table; the Flyway callback
+  `afterMigrate.sql` re-applies both after each migrate, so new tables are covered automatically. Don't add
+  grants or RLS policies for those roles, and don't query tables from the frontend with `supabase.from(...)`.
+  (`supabase_admin`'s own default ACL still grants them on objects *it* creates — only a superuser can change
+  that; Flyway creates objects as `postgres`, so it doesn't apply to migrations.)
 
 ### 4.2 Authentication — Supabase Auth
 
@@ -166,7 +175,9 @@ billOS/
    JWKS at `SUPABASE_JWKS_URL` (`application.yml` → `spring.security.oauth2.resourceserver.jwt`).
 4. `SupabaseJwtAuthenticationConverter` requires `role=authenticated`, a UUID `sub` and an `email`, then
    **JIT-provisions** the local user via `SupabaseUserProvisioningService` (find by `supabaseId` → link by
-   email → create). Consequence: *any* authenticated request creates a local user — which is why
+   email → create). Linking by email is refused (`ConflictException` → 401 with its message) when the local user
+   is already linked to another Supabase id or the token's `user_metadata.email_verified` isn't true, so a
+   second sign-in method can't take over an existing account. Consequence: *any* authenticated request creates a local user — which is why
    `POST /public/check-user-exists` (used by the OAuth callback to block unknown Google logins) is public and
    takes the access token in the body, verifying it with `JwtDecoder` and answering only for its own email.
 5. Password reset: `/forgot-password` → `supabase.auth.resetPasswordForEmail` → `/reset-password` (the browser
@@ -178,7 +189,11 @@ There is no local password login, `PasswordEncoder` or `AuthenticationManager`; 
 ### 4.3 Authorization — per-organization roles
 
 - Roles are **not** global. `UserPrincipal.getAuthorities()` is intentionally empty.
-- Membership + role lives in `UserOrgRole (userId, organizationId, role)`.
+- Membership + role lives in `UserOrgRole (userId, organizationId, role, isActive)`. Deactivating a member is
+  **per organization** (`user_org_roles.is_active`, V027); the global `users.is_active` flag (and the Supabase
+  ban) is only set when the person has no active membership left anywhere.
+- Role order and rank checks live in `security/Roles` (`satisfies`, `outranks`, `higherOf`) — don't redeclare
+  the hierarchy.
 - Enforce with SpEL against the `tenantSecurity` bean:
 
 ```java
@@ -189,7 +204,13 @@ There is no local password login, `PasswordEncoder` or `AuthenticationManager`; 
 
 - Hierarchy (most → least privileged): `OWNER > ADMIN > MANAGER > USER > VIEWER`.
   `hasRole(X)` returns true when the user's level is **at least** X.
-- A role in a parent organization is inherited by its branches (`TenantSecurity.resolveEffectiveRole`).
+- A role in a parent organization is inherited by its branches (`TenantSecurity.resolveEffectiveRole`): the
+  effective role is the higher of the two, unless the user was deactivated in the branch itself (no access) or
+  in the parent (nothing inherited). `TenantSecurity.currentRoleIn(orgId)` returns it.
+- Team management (`TeamService`) is rank-based: nobody changes their own role, removes or deactivates
+  themselves; ADMINs can only assign roles below their own and only manage/reset passwords of members they
+  strictly outrank; only an OWNER can grant OWNER or manage another OWNER; the creator and the last owner are
+  protected.
 - `@EnableMethodSecurity` is on. **Every endpoint of a tenant-scoped controller declares its minimum role**
   with `@PreAuthorize`; `ControllerAuthorizationTest` fails the build if one is missing, if a write is open to
   bare membership, or if a DELETE is allowed below MANAGER. The policy:
@@ -416,13 +437,23 @@ public interface SalesInvoiceMapper {
 
 Never hand-write entity↔DTO mapping. Relations and totals are resolved in the service, not the mapper.
 
+**Every DTO→entity method ignores `id`** (`@Mapping(target = "id", ignore = true)`): `save()` on an entity with
+a client-supplied id *merges over that row*, which for the un-scoped shared masters meant overwriting another
+organization's record. Shared masters (`CustomerMapper`, `ProductMapper`) also ignore `organizationId`
+(and `originatingOrgId`); the service sets them. `RequestFieldMappingTest` pins this — extend it for new mappers.
+
 ### 6.6 Flyway migrations
 
-- `V{nnn}__{snake_case_description}.sql`, zero-padded to three digits. Next free number: **V027**.
+- `V{nnn}__{snake_case_description}.sql`, zero-padded to three digits. Next free number: **V029**.
 - **Immutable once committed.** Fix forward with a new migration; never edit an applied one.
 - Every org-scoped table needs `organization_id UUID NOT NULL` plus an index, and the
   `created_at / updated_at / deleted_at` columns `BaseEntity` expects.
 - Run the backend after adding one — `ddl-auto: validate` is your schema test.
+- `afterMigrate.sql` (same folder) is a Flyway callback that runs after every migrate, even with nothing
+  pending; keep it idempotent and cheap.
+- Don't `ALTER` `flyway_schema_history` from a migration or callback — Flyway holds it on another connection, so
+  the statement waits out Supabase's 2-minute statement timeout. Set `SET LOCAL lock_timeout` in migrations that
+  take table locks so a busy table fails fast.
 
 ### 6.7 Frontend structure
 
@@ -535,7 +566,7 @@ The public website has its own light "Ledger" theme; the spec is `design-system/
 
 | Suite | Status |
 |---|---|
-| Backend (JUnit 5 + Mockito + AssertJ) | **30 test classes / 131 tests**, services + tenant + security + exception handling + auditing + an authorization architecture test. This is the enforced suite. |
+| Backend (JUnit 5 + Mockito + AssertJ) | **32 test classes / 167 tests**, services + tenant + security + exception handling + auditing + an authorization architecture test. This is the enforced suite. |
 | AI service (pytest) | `tests/test_main.py` only — health endpoint. |
 | Frontend | **No test runner installed.** `pnpm test` does not exist. |
 
@@ -634,6 +665,8 @@ class SalesInvoiceServiceTest {
 14. **`boolean isX` in `@Data` DTOs** — serialises as `"x"`; see §6.4.
 15. **Soft-deleting something other rows reference** (accounts, tax rates, …) leaves those rows pointing at a
     hidden record that then fails to load. Guard deletes with a usage check and offer "deactivate" instead.
+16. **Letting a request choose an `id` or `organizationId`** — MapStruct copies same-named fields, and `save()`
+    merges by id. Ignore both in DTO→entity mappings (§6.5).
 
 ---
 
@@ -647,8 +680,11 @@ change and update this list.
 - **The frontend does not hide actions by role** — a VIEWER still sees Create/Delete buttons and gets a 403
   toast ("Your role in this organization does not allow this action.") when using them.
 - **Phone verification is a demo stub** — `/phone` accepts any 6-digit OTP; no SMS provider is wired.
-- **Customer/supplier `outstandingBalance` is a single column**, so for a parent's shared customer it mixes
-  the parent's and branches' receivables; dashboard/receivables report count only customers the current org owns.
+- **A shared customer's `outstandingBalance` column is the owner's ledger only** (it also holds the opening
+  balance). Branches never write it; their figure is computed from their own ISSUED/PARTIAL invoices
+  (`CustomerBalanceService`), so a branch can't record an opening balance for a parent's shared customer.
+- **A branch's purchases of a parent's shared product don't move `cost_price`** — the parent's weighted average
+  applies everywhere; there is no per-org cost yet.
 - **No JaCoCo** — the "≥80% coverage" target in the PRDs is aspirational, not enforced.
 - **No frontend test infrastructure.**
 - **Legacy route**: `settings/tax` only redirects to `settings/taxes`. (`reports/gst` is the HSN summary.)

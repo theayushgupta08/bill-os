@@ -5,7 +5,6 @@ import com.billos.api.entity.UserOrgRole;
 import com.billos.api.repository.OrganizationRepository;
 import com.billos.api.repository.UserOrgRoleRepository;
 import com.billos.api.tenant.TenantContext;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +23,6 @@ public class TenantSecurity {
 
     private static final String ROLE_CACHE_ATTRIBUTE = TenantSecurity.class.getName() + ".role:";
     private static final String NO_ROLE = "";
-
-    private static final List<String> ROLE_HIERARCHY = List.of("OWNER", "ADMIN", "MANAGER", "USER", "VIEWER");
 
     /** True when the current user holds at least {@code requiredRole} in the org named by X-Organization-Id. */
     public boolean hasRole(String requiredRole) {
@@ -58,20 +55,19 @@ public class TenantSecurity {
             return false;
         }
 
-        String userRole = effectiveRoleForRequest(userId.get(), orgId);
-        if (userRole == null) {
-            return false;
+        return Roles.satisfies(effectiveRoleForRequest(userId.get(), orgId), requiredRole);
+    }
+
+    /**
+     * The current user's effective role in {@code orgId} (direct, or inherited from the parent organization), or
+     * empty when they have none. It's the role {@code @PreAuthorize} sees, so services comparing the caller with
+     * another member should use this rather than re-reading memberships.
+     */
+    public Optional<String> currentRoleIn(UUID orgId) {
+        if (orgId == null) {
+            return Optional.empty();
         }
-
-        // Check hierarchy (lower index means higher privilege)
-        int requiredLevel = ROLE_HIERARCHY.indexOf(requiredRole);
-        int userLevel = ROLE_HIERARCHY.indexOf(userRole);
-
-        if (requiredLevel == -1 || userLevel == -1) {
-            return false;
-        }
-
-        return userLevel <= requiredLevel;
+        return currentUserId().map(userId -> effectiveRoleForRequest(userId, orgId));
     }
 
     public boolean isMemberOf(UUID orgId) {
@@ -107,31 +103,24 @@ public class TenantSecurity {
     }
 
     private String resolveEffectiveRole(UUID userId, UUID orgId) {
-        String userRole = userOrgRoleRepository
-                .findByUserIdAndOrganizationId(userId, orgId)
+        Optional<UserOrgRole> direct = userOrgRoleRepository.findByUserIdAndOrganizationId(userId, orgId);
+        // Someone deactivated in this organization has no access to it, whatever the parent would grant
+        if (direct.isPresent() && !direct.get().isActiveMembership()) {
+            return null;
+        }
+        String userRole = direct.map(UserOrgRole::getRole).orElse(null);
+        if (Roles.OWNER.equals(userRole)) {
+            return userRole;
+        }
+
+        // Unified team & permissions: a branch inherits roles from its parent organization; the higher one applies
+        String parentRole = organizationRepository
+                .findById(orgId)
+                .map(Organization::getParentOrganizationId)
+                .flatMap(parentId -> userOrgRoleRepository.findByUserIdAndOrganizationId(userId, parentId))
+                .filter(UserOrgRole::isActiveMembership)
                 .map(UserOrgRole::getRole)
                 .orElse(null);
-
-        // Unified team & permissions: inherit role from parent organization if current org is a branch
-        if (userRole == null || !"OWNER".equalsIgnoreCase(userRole)) {
-            Optional<Organization> orgOpt = organizationRepository.findById(orgId);
-            if (orgOpt.isPresent() && orgOpt.get().getParentOrganizationId() != null) {
-                Optional<UserOrgRole> parentRoleOpt = userOrgRoleRepository.findByUserIdAndOrganizationId(
-                        userId, orgOpt.get().getParentOrganizationId());
-                if (parentRoleOpt.isPresent()) {
-                    String parentRole = parentRoleOpt.get().getRole();
-                    if (userRole == null) {
-                        userRole = parentRole;
-                    } else {
-                        int directLevel = ROLE_HIERARCHY.indexOf(userRole);
-                        int parentLevel = ROLE_HIERARCHY.indexOf(parentRole);
-                        if (parentLevel != -1 && (directLevel == -1 || parentLevel < directLevel)) {
-                            userRole = parentRole;
-                        }
-                    }
-                }
-            }
-        }
-        return userRole;
+        return Roles.higherOf(userRole, parentRole);
     }
 }

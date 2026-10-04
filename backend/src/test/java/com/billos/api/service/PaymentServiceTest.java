@@ -43,12 +43,51 @@ class PaymentServiceTest {
     @Mock
     private PaymentMapper paymentMapper;
 
+    @Mock
+    private SharedEntityResolver sharedEntityResolver;
+
     @InjectMocks
     private PaymentService paymentService;
 
     @BeforeEach
     void setUp() {
         TenantContext.setCurrentTenant(UUID.randomUUID().toString());
+        // Customers in these tests belong to the current organization unless a test says otherwise
+        lenient().when(sharedEntityResolver.isOwnedByCurrentOrg(any())).thenReturn(true);
+    }
+
+    @Test
+    void recordReceipt_forSharedCustomer_leavesOwnersBalanceAlone() {
+        // Regression: a branch's receipt against a customer its parent shares reduced the parent's balance column
+        UUID invoiceId = UUID.randomUUID();
+        UUID parentOrg = UUID.randomUUID();
+        Customer shared = new Customer();
+        shared.setOrganizationId(parentOrg);
+        shared.setOutstandingBalance(new BigDecimal("500"));
+        SalesInvoice invoice = new SalesInvoice();
+        invoice.setId(invoiceId);
+        invoice.setCustomer(shared);
+        invoice.setTotalAmount(new BigDecimal("100"));
+        invoice.setStatus(SalesInvoiceStatus.ISSUED);
+        PaymentDto requestDto = new PaymentDto();
+        requestDto.setAmount(new BigDecimal("100"));
+        PaymentAllocationDto alloc = new PaymentAllocationDto();
+        alloc.setSalesInvoiceId(invoiceId);
+        alloc.setAllocatedAmount(new BigDecimal("100"));
+        requestDto.setAllocations(List.of(alloc));
+
+        when(sharedEntityResolver.isOwnedByCurrentOrg(parentOrg)).thenReturn(false);
+        when(sequenceGeneratorService.getNextDocumentNumber(DocumentType.PAYMENT_RECEIPT))
+                .thenReturn("REC-002");
+        when(salesInvoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(paymentMapper.toDto(any(Payment.class))).thenReturn(new PaymentDto());
+
+        paymentService.recordReceipt(requestDto);
+
+        assertEquals(SalesInvoiceStatus.PAID, invoice.getStatus()); // the branch's own invoice is still settled
+        assertEquals(new BigDecimal("500"), shared.getOutstandingBalance());
+        verify(customerRepository, never()).save(any());
     }
 
     @Test

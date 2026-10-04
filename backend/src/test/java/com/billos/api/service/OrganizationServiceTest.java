@@ -185,6 +185,42 @@ class OrganizationServiceTest {
     }
 
     @Test
+    @DisplayName("getMyOrganizations - leaves out organizations (and branches) the user was deactivated in")
+    void getMyOrganizations_shouldSkipDeactivatedMemberships() {
+        UUID parentId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        UUID otherId = UUID.randomUUID();
+
+        UserOrgRole parentRole = new UserOrgRole();
+        parentRole.setOrganizationId(parentId);
+        parentRole.setRole("ADMIN");
+        UserOrgRole deactivatedInBranch = new UserOrgRole();
+        deactivatedInBranch.setOrganizationId(branchId);
+        deactivatedInBranch.setRole("USER");
+        deactivatedInBranch.setIsActive(false);
+        UserOrgRole deactivatedElsewhere = new UserOrgRole();
+        deactivatedElsewhere.setOrganizationId(otherId);
+        deactivatedElsewhere.setRole("OWNER");
+        deactivatedElsewhere.setIsActive(false);
+
+        Organization parent = new Organization();
+        parent.setId(parentId);
+        Organization branch = new Organization();
+        branch.setId(branchId);
+        branch.setParentOrganizationId(parentId);
+
+        when(userOrgRoleRepository.findByUserId(userId))
+                .thenReturn(List.of(parentRole, deactivatedInBranch, deactivatedElsewhere));
+        when(organizationRepository.findById(parentId)).thenReturn(Optional.of(parent));
+        when(organizationRepository.findByParentOrganizationId(parentId)).thenReturn(List.of(branch));
+
+        List<Organization> result = organizationService.getMyOrganizations();
+
+        assertThat(result).extracting(Organization::getId).containsExactly(parentId);
+        verify(organizationRepository, never()).findById(otherId);
+    }
+
+    @Test
     @DisplayName("getMyOrganizations - should return empty list when user has no orgs")
     void getMyOrganizations_shouldReturnEmptyWhenNoOrgs() {
         // Arrange

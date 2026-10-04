@@ -56,6 +56,12 @@ class DashboardServiceTest {
     @Mock
     private ProductMapper productMapper;
 
+    @Mock
+    private CustomerBalanceService customerBalanceService;
+
+    @Mock
+    private OrganizationService organizationService;
+
     @InjectMocks
     private DashboardService dashboardService;
 
@@ -72,9 +78,14 @@ class DashboardServiceTest {
 
     @Test
     void testGetSummary() {
-        Customer c1 = new Customer();
-        c1.setOutstandingBalance(new BigDecimal("100.00"));
-        when(customerRepository.findByOrganizationId(any())).thenReturn(List.of(c1));
+        Customer owned = new Customer();
+        owned.setOutstandingBalance(new BigDecimal("100.00"));
+        Customer sharedByParent = new Customer();
+        sharedByParent.setOutstandingBalance(new BigDecimal("9999.00")); // the parent's figure — must not leak in
+        when(customerRepository.findAccessibleCustomers(any(), any())).thenReturn(List.of(owned, sharedByParent));
+        // What each customer owes this organization: its own ledger, and 25.00 on its own invoices to the shared one
+        when(customerBalanceService.forCurrentOrg())
+                .thenReturn(c -> c == owned ? c.getOutstandingBalance() : new BigDecimal("25.00"));
 
         Supplier s1 = new Supplier();
         s1.setOutstandingBalance(new BigDecimal("50.00"));
@@ -97,7 +108,7 @@ class DashboardServiceTest {
         DashboardSummaryDto result = dashboardService.getSummary();
 
         assertNotNull(result);
-        assertEquals(new BigDecimal("100.00"), result.getOutstandingReceivables());
+        assertEquals(new BigDecimal("125.00"), result.getOutstandingReceivables());
         assertEquals(new BigDecimal("50.00"), result.getOutstandingPayables());
         assertEquals(new BigDecimal("200.00"), result.getTotalRevenueMtd());
         assertEquals(new BigDecimal("80.00"), result.getTotalExpensesMtd());
