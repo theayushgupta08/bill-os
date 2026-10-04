@@ -98,7 +98,6 @@ export function Header() {
   const userEmail = currentUser?.email ?? "";
   const userAvatar = currentUser?.avatarUrl ?? "";
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  const supabase = createClient();
 
   const orgInitials = getOrgInitials(org?.name);
   const orgGradient = getOrgGradient(org?.name);
@@ -129,7 +128,8 @@ export function Header() {
   const handleLogout = async () => {
     localStorage.removeItem("token");
     localStorage.removeItem("active_org_id");
-    await supabase.auth.signOut();
+    // Created on demand, not during render: prerendering at build time has no Supabase env
+    await createClient().auth.signOut();
     // Drop every cached query so the next person to sign in on this tab never sees this user's data
     queryClient.clear();
     router.push("/login");

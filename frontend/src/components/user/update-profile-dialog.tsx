@@ -34,7 +34,6 @@ export function UpdateProfileDialog({
   onProfileUpdated,
 }: UpdateProfileDialogProps) {
   const queryClient = useQueryClient();
-  const supabase = createClient();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -66,7 +65,8 @@ export function UpdateProfileDialog({
     onSuccess: async (updated) => {
       // Sync Supabase user metadata
       try {
-        await supabase.auth.updateUser({
+        // Created on demand, not during render: prerendering at build time has no Supabase env
+        await createClient().auth.updateUser({
           data: {
             first_name: updated.firstName,
             last_name: updated.lastName,
