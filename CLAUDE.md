@@ -63,7 +63,7 @@ but no graphs are built yet.
 | UI primitives  | **@base-ui/react** 1.6 + shadcn 4   | Base UI, *not* Radix. Components in `components/ui/`   |
 | Styling        | Tailwind CSS 4                      | PostCSS pipeline, `tw-animate-css`, `next-themes`      |
 | Icons / toasts | lucide-react / sonner               |                                                        |
-| Motion         | framer-motion 12                    | Landing pages mostly                                   |
+| Motion         | motion 12 (`motion/react`)          | Marketing site only; `LazyMotion` + `m` (§6.10). Never `framer-motion` |
 | Package mgr    | pnpm                                | **Never npm/yarn** (a stray `package-lock.json` exists — delete it, don't feed it) |
 | AI Service     | FastAPI + LangGraph + LangChain     | Python ≥ 3.12, hatchling, ruff + strict mypy           |
 | Database       | PostgreSQL (Supabase-hosted)        | Remote; local fallback `localhost:5432/postgres`       |
@@ -103,12 +103,14 @@ billOS/
 │       │   └── accept-invite/
 │       ├── components/
 │       │   ├── ui/                   # shadcn/Base UI primitives — do not hand-edit casually
-│       │   ├── layout/ landing/ settings/ team/
+│       │   ├── layout/ settings/ team/
 │       ├── features/<domain>/        # components/ + hooks/  ← the real feature code lives here
+│       │   └── marketing/            # public website: tokens-driven components, content/, motion setup
 │       ├── lib/                      # api-client, config, use-organization, utils, supabase/
 │       └── providers/query-provider.tsx
 ├── ai-service/                       # FastAPI (stub)
 ├── docs/                             # 18 PRDs + code-review.md
+├── design-system/billos/MASTER.md    # marketing-site design system (UI UX Pro Max format)
 ├── prometheus/prometheus.yml
 ├── docker-compose.yml                # Redis, Prometheus, Grafana
 ├── Makefile                          # Windows-oriented task runner (see §5)
@@ -496,7 +498,26 @@ export function useCreateCustomer() {
 - Toasts via `sonner`. Icons via `lucide-react`.
 - React 19: no `forwardRef` needed (`ref` is a normal prop); no `React.FC`.
 
-### 6.10 AI service
+### 6.10 Marketing site (`app/(landing)`, `features/marketing/`)
+
+The public website has its own light "Ledger" theme; the spec is `design-system/billos/MASTER.md`.
+
+- **Theme is scoped, not global.** `(landing)/layout.tsx` wraps pages in `.site-light`, which re-points the
+  shadcn tokens (`--background`, `--primary`, …) to paper/ink values in `globals.css`. The `dark:` variant
+  excludes `.site-light` subtrees (zero specificity, so the dashboard cascade is unchanged). `.tone-inverse`
+  inside it gives navy bands/app screenshots. Portaled UI (the mobile menu) must re-apply `site-light`.
+- **Use semantic tokens only** (`bg-card`, `text-muted-foreground`, `text-subtle`, `text-link`, `bg-sunken`,
+  `text-positive`…) — no raw hex — so components work on both paper and ink.
+- **Motion**: import `* as m from "motion/react-m"` (never `motion.*` — `LazyMotion strict` throws) and
+  tokens from `motion-tokens.ts`. Animate named transforms (`y`, `scaleX`): `reducedMotion="user"` doesn't
+  cover a `transform` string. Above-the-fold entrances use CSS (`animate-rise`), not JS, so they don't wait
+  for hydration.
+- **Copy must match the product.** `modules.tsx` (tour + /features), `content/plans.ts` (every price) and
+  `content/faqs.ts` are single sources; don't list a capability until it ships, and no invented social proof.
+- Server components by default; client islands only for interaction (invoice demo, tabs, plans, FAQ, form).
+- The contact form composes a `mailto:` (there's no contact endpoint) and says so on the button.
+
+### 6.11 AI service
 
 - Strict `mypy` and `ruff`, line length 100, target py312.
 - Pydantic v2 models for every request/response; annotate return types (strict mode enforces it).
@@ -637,7 +658,7 @@ change and update this list.
 - **`organization_invitations` table is unused** (the invitation code was removed; the table was kept to
   avoid dropping data).
 - **The app is dark-only** (`<html class="dark">`, ~700 hard-coded `slate-*` classes); the no-op theme selector
-  was removed. The stored `language` setting only selects the number format — there are no UI translations.
+  was removed. Only the marketing site is light (scoped via `.site-light`, §6.10). The stored `language` setting only selects the number format — there are no UI translations.
 - **No UI to void invoices or view a single invoice/order/bill/quotation** (list pages only).
 - **`code-review.md` baseline**: `ui-dropdown` is flagged as a god-component with heavy coupling, and
   ~234 symbols read as dead code (mostly unused DTOs/enums).

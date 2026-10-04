@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { siteConfig } from "@/lib/config";
-import { DocumentLayout, DocumentSection } from "@/components/layout/DocumentLayout";
-import { DocumentHeading } from "@/components/layout/DocumentHeading";
+import { DocumentLayout, DocumentSection } from "@/features/marketing/components/document-layout";
+import { DocumentHeading } from "@/features/marketing/components/document-heading";
 
 export const metadata: Metadata = {
   title: `Privacy Policy | ${siteConfig.name}`,
@@ -163,11 +163,10 @@ export default function PrivacyPolicyPage() {
       <section className="mb-16">
         <DocumentHeading id="contact">15. Contact Information</DocumentHeading>
         <p className="mb-4">If you have any questions about this Privacy Policy, please contact us:</p>
-        <ul className="not-prose list-none space-y-4 mb-4 bg-gradient-to-br from-muted/50 to-transparent dark:from-white/5 dark:to-transparent p-8 rounded-2xl border border-border/50 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-          {siteConfig.company.name ? <li className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3"><span className="text-muted-foreground w-36">Company:</span> <strong className="text-foreground text-lg">{siteConfig.company.name}</strong></li> : null}
+        <ul className="mb-4 list-none divide-y divide-border rounded-[14px] border border-border bg-card px-6 pl-6 [&>li]:py-3.5 [&>li+li]:mt-0">
+          {siteConfig.company.name ? <li className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3"><span className="text-muted-foreground w-36">Company:</span> <strong className="text-foreground">{siteConfig.company.name}</strong></li> : null}
           {siteConfig.company.registeredAddress ? <li className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3"><span className="text-muted-foreground w-36">Address:</span> <strong className="text-foreground">{siteConfig.company.registeredAddress}</strong></li> : null}
-          {siteConfig.company.privacyEmail ? <li className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3"><span className="text-muted-foreground w-36">Email (Privacy):</span> <a href={`mailto:${siteConfig.company.privacyEmail.replace(/[\[\]]/g, '')}`} className="text-primary hover:underline font-semibold">{siteConfig.company.privacyEmail}</a></li> : null}
+          {siteConfig.company.privacyEmail ? <li className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3"><span className="text-muted-foreground w-36">Email (Privacy):</span> <a href={`mailto:${siteConfig.company.privacyEmail.replace(/[\[\]]/g, '')}`} className="font-medium">{siteConfig.company.privacyEmail}</a></li> : null}
           {siteConfig.company.phone ? <li className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3"><span className="text-muted-foreground w-36">Phone:</span> <strong className="text-foreground">{siteConfig.company.phone}</strong></li> : null}
         </ul>
       </section>

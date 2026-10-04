@@ -2,7 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* `.site-light` (the marketing site) opts its subtree out of the app-wide dark theme. The :where() keeps
+   the added check at zero specificity, so dark: utilities cascade exactly as before everywhere else. */
+@custom-variant dark (&:is(.dark *):not(:where(.site-light, .site-light *)));
 
 @theme inline {
   --color-background: var(--background);
@@ -10,6 +12,39 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-heading);
+  --font-display: var(--font-display);
+  /* Marketing-site tokens — defined only inside .site-light (see below) */
+  --color-sunken: var(--sunken);
+  --color-subtle: var(--subtle);
+  --color-rule-strong: var(--rule-strong);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-tint: var(--brand-tint);
+  --color-positive: var(--positive);
+  --color-positive-fill: var(--positive-fill);
+  --color-positive-tint: var(--positive-tint);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-negative: var(--negative);
+  --color-negative-tint: var(--negative-tint);
+  --color-link: var(--link);
+  --shadow-paper: 0 1px 0 rgb(14 26 51 / 0.04), 0 18px 40px -20px rgb(14 26 51 / 0.22);
+  --shadow-float: 0 1px 2px rgb(14 26 51 / 0.06), 0 24px 48px -24px rgb(14 26 51 / 0.32);
+  --ease-ledger: cubic-bezier(0.22, 1, 0.36, 1);
+  /* CSS (not JS) entrances for above-the-fold content: they run on first paint, before hydration */
+  --animate-rise: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade: fade 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -117,6 +152,88 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* ─── Marketing site: "Ledger" theme ────────────────────────────────────────────────────────────
+   Paper, navy ink, hairline rules. Brand blue follows docs/10-ui-ux-design-system.md (hue ~222°).
+   Every text/background pair below is ≥ 4.5:1 (WCAG AA). See frontend/DESIGN.md. */
+.site-light {
+  color-scheme: light;
+  --background: #f7f6f2;          /* paper */
+  --foreground: #0e1a33;          /* ink — 16:1 on paper */
+  --card: #ffffff;
+  --card-foreground: #0e1a33;
+  --popover: #ffffff;
+  --popover-foreground: #0e1a33;
+  --primary: #1d4fd7;             /* brand — white text 6.7:1 */
+  --primary-foreground: #ffffff;
+  --secondary: #efede6;
+  --secondary-foreground: #0e1a33;
+  --muted: #efede6;
+  --muted-foreground: #44506a;    /* ink-2 — 7.5:1 on paper */
+  --accent: #e8eefc;
+  --accent-foreground: #0e1a33;
+  --destructive: #b42318;
+  --border: #e0dcd1;              /* hairline rule */
+  --input: #cfcabd;
+  --ring: #1d4fd7;
+
+  --sunken: #efede6;
+  --subtle: #5f677b;              /* ink-3 — 5.2:1 on paper, 4.8:1 on sunken */
+  --rule-strong: #c9c4b6;
+  --brand-hover: #1842b8;
+  --brand-tint: #e8eefc;
+  --positive: #0a7068;            /* teal ink (from the logo's "OS") */
+  --positive-fill: #14b8a6;       /* graphics only, never text */
+  --positive-tint: #e3f5f2;
+  --warning: #a45207;
+  --warning-tint: #fcf0dc;
+  --negative: #b42318;
+  --negative-tint: #fdecea;
+
+  --link: #1d4fd7;
+  --radius: 0.625rem;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Ink tone: navy bands and the product screenshots (the app itself is dark). Re-pointing the same
+   semantic tokens means every component works on either tone without a variant. */
+.site-light .tone-inverse {
+  color-scheme: dark;
+  --background: #0e1a33;
+  --foreground: #f7f6f2;
+  --card: #13213f;
+  --card-foreground: #f7f6f2;
+  --muted: #182848;
+  --muted-foreground: #a9b4cc;    /* 8.3:1 */
+  --subtle: #8e9ab5;              /* 6.1:1 */
+  --sunken: #0a1428;
+  --border: rgb(247 246 242 / 0.1);
+  --input: rgb(247 246 242 / 0.18);
+  --rule-strong: rgb(247 246 242 / 0.2);
+  --primary: #f7f6f2;             /* paper button on ink */
+  --primary-foreground: #0e1a33;
+  --brand-hover: #ffffff;
+  --brand-tint: rgb(127 162 255 / 0.14);
+  --link: #7fa2ff;                /* 7.0:1 */
+  --ring: #7fa2ff;
+  --positive: #4ed1c5;
+  --positive-tint: rgb(78 209 197 / 0.12);
+  --warning: #f5b65c;
+  --warning-tint: rgb(245 182 92 / 0.12);
+  --negative: #ff8a80;
+  --negative-tint: rgb(255 138 128 / 0.12);
+}
+
+/* Keep overscroll / rubber-band areas on the marketing pages paper-coloured rather than app-dark */
+body:has(.site-light) {
+  background-color: #f7f6f2;
+}
+
+/* Sticky marketing header is 64px: keep anchored headings and keyboard focus clear of it (WCAG 2.4.11) */
+html:has(.site-light) {
+  scroll-padding-top: 5.5rem;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -130,14 +247,60 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading tracking-tight;
   }
+  /* Marketing headings are Inter unless a component opts into the display serif (font-display) */
+  .site-light :where(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--font-sans);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
 }
 
-@layer utilities {
-  .animate-marquee {
-    animation: marquee 25s linear infinite;
+@layer components {
+  /* Long-form copy on the security and legal pages */
+  .doc-prose {
+    color: var(--muted-foreground);
+    font-size: 1rem;
+    line-height: 1.75;
   }
-  @keyframes marquee {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(-50%); }
+  .doc-prose p,
+  .doc-prose ul,
+  .doc-prose ol {
+    margin-bottom: 1rem;
+  }
+  .doc-prose ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .doc-prose ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  .doc-prose li + li {
+    margin-top: 0.5rem;
+  }
+  .doc-prose li::marker {
+    color: var(--subtle);
+  }
+  .doc-prose strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+  .doc-prose h3 {
+    color: var(--foreground);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.5rem;
+  }
+  .doc-prose a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .doc-prose a:hover {
+    color: var(--brand-hover);
   }
 }
