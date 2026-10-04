@@ -54,6 +54,10 @@ public class PurchaseBillService {
     public PurchaseBillDto createPurchaseBill(PurchaseBillDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
+        if (dto.getLines() == null || dto.getLines().isEmpty()) {
+            throw new BadRequestException("A purchase bill needs at least one line");
+        }
+
         Supplier supplier = supplierRepository
                 .findById(dto.getSupplierId())
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
@@ -62,9 +66,8 @@ public class PurchaseBillService {
                 .findById(orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
-        boolean isInterState = org.getState() != null
-                && supplier.getState() != null
-                && !org.getState().equalsIgnoreCase(supplier.getState());
+        boolean isInterState =
+                GstStates.isInterState(org.getState(), org.getGstin(), supplier.getState(), supplier.getGstin());
 
         PurchaseBill bill = new PurchaseBill();
         bill.setOrganizationId(orgId);
@@ -112,8 +115,8 @@ public class PurchaseBillService {
             line.setProduct(product);
             line.setWarehouse(warehouse);
             line.setTaxRate(taxRate);
-            line.setQuantity(lineDto.getQuantity());
-            line.setUnitPrice(lineDto.getUnitPrice());
+            line.setQuantity(TaxMath.lineQuantity(lineDto.getQuantity()));
+            line.setUnitPrice(TaxMath.unitPrice(lineDto.getUnitPrice()));
 
             // Re-calculate totals
             BigDecimal lineBase = TaxMath.money(line.getQuantity().multiply(line.getUnitPrice()));

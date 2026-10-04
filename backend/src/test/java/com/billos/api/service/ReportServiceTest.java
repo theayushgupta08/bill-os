@@ -1,15 +1,19 @@
 package com.billos.api.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 
+import com.billos.api.dto.Gstr3bDto;
 import com.billos.api.dto.PnlDto;
 import com.billos.api.dto.PurchaseBillDto;
 import com.billos.api.dto.SalesInvoiceDto;
 import com.billos.api.entity.PurchaseBill;
+import com.billos.api.entity.PurchaseBillLine;
 import com.billos.api.entity.PurchaseBillStatus;
 import com.billos.api.entity.SalesInvoice;
+import com.billos.api.entity.SalesInvoiceLine;
 import com.billos.api.entity.SalesInvoiceStatus;
 import com.billos.api.mapper.PurchaseBillMapper;
 import com.billos.api.mapper.SalesInvoiceMapper;
@@ -90,6 +94,101 @@ class ReportServiceTest {
                 0,
                 new BigDecimal("1500.00")
                         .compareTo(reportService.getGstr3b(null, null).getOutwardTaxableValue()));
+    }
+
+    @Test
+    void gstr3b_cgstCreditCantPaySgst_soCashIsDueDespiteEqualTotals() {
+        // Output CGST 100 + SGST 100; credit CGST 150 + SGST 50. Netting totals says 0 is due — but the law keeps
+        // the heads apart: SGST still needs 50 in cash and 50 of CGST credit carries forward.
+        Gstr3bDto dto = gstr3b("0", "100", "100", "0", "150", "50");
+
+        ReportService.applyItcSetOff(dto);
+
+        assertCash(dto, "0", "0", "50");
+        assertCarryForward(dto, "0", "50", "0");
+        assertThat(dto.getTotalCashPayable()).isEqualByComparingTo("50");
+        assertThat(dto.getTotalItcCarryForward()).isEqualByComparingTo("50");
+    }
+
+    @Test
+    void gstr3b_igstCreditCoversIgstFirst_thenTheCgstAndSgstShortfalls() {
+        // IGST credit 300: 100 against IGST, then 50 each to the CGST and SGST that have no credit of their own
+        Gstr3bDto dto = gstr3b("100", "50", "50", "300", "0", "0");
+
+        ReportService.applyItcSetOff(dto);
+
+        assertCash(dto, "0", "0", "0");
+        assertCarryForward(dto, "100", "0", "0");
+    }
+
+    @Test
+    void gstr3b_cgstAndSgstCreditsCanPayIgst() {
+        Gstr3bDto dto = gstr3b("500", "0", "0", "0", "200", "200");
+
+        ReportService.applyItcSetOff(dto);
+
+        assertCash(dto, "100", "0", "0");
+        assertCarryForward(dto, "0", "0", "0");
+    }
+
+    @Test
+    void gstr3b_igstCreditIsUsedUpBeforeOwnHeadCredit() {
+        // Rule 88A: IGST credit left after the shortfalls still goes to CGST/SGST before their own credit is touched,
+        // so the own-head credit is what carries forward
+        Gstr3bDto dto = gstr3b("0", "100", "100", "150", "0", "100");
+
+        ReportService.applyItcSetOff(dto);
+
+        assertCash(dto, "0", "0", "0");
+        assertCarryForward(dto, "0", "0", "50");
+    }
+
+    @Test
+    void gstr3b_reportsTheSetOffForThePeriod() {
+        SalesInvoice sale = invoice(SalesInvoiceStatus.ISSUED, "1000.00", "1180.00");
+        SalesInvoiceLine saleLine = new SalesInvoiceLine();
+        saleLine.setCgstAmount(new BigDecimal("90.00"));
+        saleLine.setSgstAmount(new BigDecimal("90.00"));
+        sale.addLine(saleLine);
+        PurchaseBill purchase = new PurchaseBill();
+        purchase.setStatus(PurchaseBillStatus.UNPAID);
+        purchase.setBillDate(LocalDate.now());
+        purchase.setSubtotal(new BigDecimal("500.00"));
+        purchase.setTaxTotal(new BigDecimal("90.00"));
+        PurchaseBillLine purchaseLine = new PurchaseBillLine();
+        purchaseLine.setIgstAmount(new BigDecimal("90.00")); // bought from another state
+        purchase.addLine(purchaseLine);
+        when(salesInvoiceRepository.findAll()).thenReturn(List.of(sale));
+        when(purchaseBillRepository.findAll()).thenReturn(List.of(purchase));
+
+        Gstr3bDto dto = reportService.getGstr3b(null, null);
+
+        // IGST credit 90 pays CGST 90; SGST 90 is paid in cash
+        assertCash(dto, "0", "0", "90.00");
+        assertThat(dto.getTotalItcCarryForward()).isEqualByComparingTo("0");
+    }
+
+    private static Gstr3bDto gstr3b(String outI, String outC, String outS, String inI, String inC, String inS) {
+        Gstr3bDto dto = new Gstr3bDto();
+        dto.setOutwardIgst(new BigDecimal(outI));
+        dto.setOutwardCgst(new BigDecimal(outC));
+        dto.setOutwardSgst(new BigDecimal(outS));
+        dto.setInwardIgst(new BigDecimal(inI));
+        dto.setInwardCgst(new BigDecimal(inC));
+        dto.setInwardSgst(new BigDecimal(inS));
+        return dto;
+    }
+
+    private static void assertCash(Gstr3bDto dto, String igst, String cgst, String sgst) {
+        assertThat(dto.getCashPayableIgst()).as("IGST cash").isEqualByComparingTo(igst);
+        assertThat(dto.getCashPayableCgst()).as("CGST cash").isEqualByComparingTo(cgst);
+        assertThat(dto.getCashPayableSgst()).as("SGST cash").isEqualByComparingTo(sgst);
+    }
+
+    private static void assertCarryForward(Gstr3bDto dto, String igst, String cgst, String sgst) {
+        assertThat(dto.getItcCarryForwardIgst()).as("IGST credit left").isEqualByComparingTo(igst);
+        assertThat(dto.getItcCarryForwardCgst()).as("CGST credit left").isEqualByComparingTo(cgst);
+        assertThat(dto.getItcCarryForwardSgst()).as("SGST credit left").isEqualByComparingTo(sgst);
     }
 
     private SalesInvoice invoice(SalesInvoiceStatus status, String subtotal, String total) {

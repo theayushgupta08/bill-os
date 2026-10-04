@@ -1,5 +1,7 @@
 package com.billos.api.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -106,5 +108,63 @@ class JournalEntryServiceTest {
 
         assertNotNull(exception);
         verify(journalEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void createJournalEntry_rejectsNegativeAmountsThatHappenToBalance() {
+        // Regression: a -100 debit and a -100 credit "balanced" and were posted
+        JournalEntryDto dto = entry(line("-100.00", "0"), line("0", "-100.00"));
+
+        assertThatThrownBy(() -> journalEntryService.createJournalEntry(dto))
+                .isInstanceOf(com.billos.api.exception.BadRequestException.class)
+                .hasMessageContaining("can't be negative");
+        verify(journalEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void createJournalEntry_rejectsALineWithBothADebitAndACredit() {
+        JournalEntryDto dto = entry(line("100.00", "100.00"), line("50.00", "0"), line("0", "50.00"));
+
+        assertThatThrownBy(() -> journalEntryService.createJournalEntry(dto))
+                .hasMessageContaining("either a debit or a credit");
+    }
+
+    @Test
+    void createJournalEntry_rejectsAnAllZeroEntry() {
+        JournalEntryDto dto = entry(line("0", "0"), line("0", "0"));
+
+        assertThatThrownBy(() -> journalEntryService.createJournalEntry(dto))
+                .hasMessageContaining("either a debit or a credit");
+    }
+
+    @Test
+    void createJournalEntry_comparesTotalsInPaise() {
+        // 0.1 + 0.2 debits against a 0.3 credit balance (a float sum would be 0.30000000000000004)
+        JournalEntryDto dto = entry(line("0.1", "0"), line("0.2", "0"), line("0", "0.3"));
+        when(journalEntryMapper.toEntity(any(JournalEntryDto.class))).thenReturn(new JournalEntry());
+        when(journalEntryMapper.lineToEntity(any(JournalEntryLineDto.class))).thenReturn(new JournalEntryLine());
+        when(accountRepository.findById(any(UUID.class))).thenReturn(Optional.of(new Account()));
+        when(journalEntryRepository.save(any(JournalEntry.class))).thenReturn(new JournalEntry());
+        when(journalEntryMapper.toDto(any(JournalEntry.class))).thenReturn(new JournalEntryDto());
+
+        journalEntryService.createJournalEntry(dto);
+
+        verify(journalEntryRepository).save(any(JournalEntry.class));
+        assertThat(dto.getLines().get(2).getCreditAmount()).isEqualByComparingTo("0.30");
+    }
+
+    private static JournalEntryDto entry(JournalEntryLineDto... lines) {
+        JournalEntryDto dto = new JournalEntryDto();
+        dto.setEntryDate(LocalDate.now());
+        dto.setLines(new ArrayList<>(java.util.List.of(lines)));
+        return dto;
+    }
+
+    private static JournalEntryLineDto line(String debit, String credit) {
+        JournalEntryLineDto line = new JournalEntryLineDto();
+        line.setAccountId(UUID.randomUUID());
+        line.setDebitAmount(new BigDecimal(debit));
+        line.setCreditAmount(new BigDecimal(credit));
+        return line;
     }
 }

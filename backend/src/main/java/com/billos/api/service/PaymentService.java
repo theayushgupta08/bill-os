@@ -52,20 +52,18 @@ public class PaymentService {
     private PaymentDto processPayment(PaymentDto dto, PaymentType type) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
-        if (dto.getAmount() == null || dto.getAmount().signum() <= 0) {
-            throw new BadRequestException("Payment amount must be greater than zero");
-        }
+        // Amounts are compared in paise, as they are stored: an unrounded 99.996 would leave a fully paid invoice
+        // PARTIAL once the column rounds amount_paid to 100.00
+        BigDecimal paymentAmount = TaxMath.positiveAmount(dto.getAmount(), "Payment amount");
+        List<PaymentAllocationDto> allocations = dto.getAllocations() != null ? dto.getAllocations() : List.of();
 
         // Validate before touching any document so a rejected payment leaves no partial side effects
         BigDecimal totalAllocated = BigDecimal.ZERO;
-        for (PaymentAllocationDto allocDto : dto.getAllocations()) {
-            if (allocDto.getAllocatedAmount() == null
-                    || allocDto.getAllocatedAmount().signum() <= 0) {
-                throw new BadRequestException("Allocated amount must be greater than zero");
-            }
-            totalAllocated = totalAllocated.add(allocDto.getAllocatedAmount());
+        for (PaymentAllocationDto allocDto : allocations) {
+            totalAllocated =
+                    totalAllocated.add(TaxMath.positiveAmount(allocDto.getAllocatedAmount(), "Allocated amount"));
         }
-        if (totalAllocated.compareTo(dto.getAmount()) > 0) {
+        if (totalAllocated.compareTo(paymentAmount) > 0) {
             throw new BadRequestException("Total allocated amount exceeds payment amount");
         }
 
@@ -74,12 +72,12 @@ public class PaymentService {
         payment.setPaymentDate(dto.getPaymentDate());
         payment.setPaymentType(type);
         payment.setReferenceNumber(dto.getReferenceNumber());
-        payment.setAmount(dto.getAmount());
+        payment.setAmount(paymentAmount);
         payment.setNotes(dto.getNotes());
 
-        for (PaymentAllocationDto allocDto : dto.getAllocations()) {
+        for (PaymentAllocationDto allocDto : allocations) {
             PaymentAllocation allocation = new PaymentAllocation();
-            BigDecimal amount = allocDto.getAllocatedAmount();
+            BigDecimal amount = TaxMath.money(allocDto.getAllocatedAmount());
             allocation.setAllocatedAmount(amount);
 
             if (type == PaymentType.RECEIPT && allocDto.getSalesInvoiceId() != null) {

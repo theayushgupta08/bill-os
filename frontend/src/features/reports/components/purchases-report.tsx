@@ -2,6 +2,7 @@
 
 
 import { useFormat } from "@/lib/use-format";
+import { roundToPaise } from "@/lib/document-totals";
 import { api } from "@/lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,12 @@ export function PurchasesReport() {
     }
   };
 
-  const totalAmount = bills.reduce((sum: number, bill: PurchaseBill) => sum + (bill.totalAmount || 0), 0);
+  // A voided document stays listed but no longer counts
+  const totalAmount = roundToPaise(
+    bills
+      .filter((bill: PurchaseBill) => bill.status !== "VOID")
+      .reduce((sum: number, bill: PurchaseBill) => sum + Number(bill.totalAmount || 0), 0)
+  );
 
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-6xl mx-auto">

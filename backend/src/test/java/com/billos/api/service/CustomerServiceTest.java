@@ -2,8 +2,12 @@ package com.billos.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import com.billos.api.dto.ConsolidatedCustomerLedgerDto;
+import com.billos.api.dto.ConsolidatedLedgerEntryDto;
 import com.billos.api.dto.CustomerDto;
 import com.billos.api.entity.Customer;
 import com.billos.api.mapper.CustomerMapper;
@@ -11,6 +15,7 @@ import com.billos.api.repository.CustomerRepository;
 import com.billos.api.tenant.TenantContext;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -139,6 +144,53 @@ class CustomerServiceTest {
 
         assertThat(ledgerQueryParameters())
                 .containsExactly(customerId, parentId, true, parentId, customerId, parentId, true, parentId);
+    }
+
+    @Test
+    @DisplayName("getConsolidatedLedger - only issued invoices are debits; drafts and voids owe nothing")
+    void getConsolidatedLedger_shouldLeaveOutDraftAndVoidInvoices() {
+        UUID customerId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        stubLedger(customerId, orgId, orgId);
+
+        customerService.getConsolidatedLedger(customerId);
+
+        String sql = (String)
+                mockingDetails(jdbcTemplate).getInvocations().iterator().next().getArguments()[0];
+        assertThat(sql).contains("si.status IN ('ISSUED', 'PARTIAL', 'PAID')");
+        // Same-day invoice before its payment, so the running balance never dips below zero mid-day
+        assertThat(sql).contains("ORDER BY tx_date ASC, tx_type ASC");
+    }
+
+    @Test
+    @DisplayName("getConsolidatedLedger - totals and running balance follow the entries")
+    void getConsolidatedLedger_shouldRunTheBalance() {
+        UUID customerId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        stubLedger(customerId, orgId, orgId);
+        when(jdbcTemplate.query(
+                        anyString(),
+                        org.mockito.ArgumentMatchers
+                                .<org.springframework.jdbc.core.RowMapper<ConsolidatedLedgerEntryDto>>any(),
+                        any(Object[].class)))
+                .thenReturn(List.of(entry("1180.00", "0.00"), entry("0.00", "500.00"), entry("590.00", "0.00")));
+
+        ConsolidatedCustomerLedgerDto ledger = customerService.getConsolidatedLedger(customerId);
+
+        assertThat(ledger.getTotalInvoiced()).isEqualByComparingTo("1770.00");
+        assertThat(ledger.getTotalPaid()).isEqualByComparingTo("500.00");
+        assertThat(ledger.getNetOutstandingBalance()).isEqualByComparingTo("1270.00");
+        assertThat(ledger.getEntries())
+                .extracting(ConsolidatedLedgerEntryDto::getRunningBalance)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(new BigDecimal("1180.00"), new BigDecimal("680.00"), new BigDecimal("1270.00"));
+    }
+
+    private static ConsolidatedLedgerEntryDto entry(String debit, String credit) {
+        return ConsolidatedLedgerEntryDto.builder()
+                .debit(new BigDecimal(debit))
+                .credit(new BigDecimal(credit))
+                .build();
     }
 
     private void stubLedger(UUID customerId, UUID currentOrg, UUID primaryOrg) {

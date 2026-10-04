@@ -152,10 +152,12 @@
     <thead>
         <tr>
             <th style="width: 5%;">#</th>
-            <th style="width: 45%;">Item & Description</th>
-            <th class="text-right" style="width: 15%;">Qty</th>
-            <th class="text-right" style="width: 15%;">Rate</th>
-            <th class="text-right" style="width: 20%;">Amount</th>
+            <th style="width: 31%;">Item &amp; Description</th>
+            <th class="text-right" style="width: 10%;">Qty</th>
+            <th class="text-right" style="width: 13%;">Rate</th>
+            <th class="text-right" style="width: 14%;">Taxable Value</th>
+            <th class="text-right" style="width: 12%;">GST</th>
+            <th class="text-right" style="width: 15%;">Amount</th>
         </tr>
     </thead>
     <tbody>
@@ -165,8 +167,10 @@
                 <strong th:text="${line.productName}">Product Name</strong>
             </td>
             <td class="text-right" th:text="${line.quantity}">1</td>
-            <td class="text-right" th:text="${'$' + line.unitPrice}">$100.00</td>
-            <td class="text-right" th:text="${'$' + line.lineTotal}">$100.00</td>
+            <td class="text-right" th:text="${line.unitPrice}">100.00</td>
+            <td class="text-right" th:text="${line.lineTotal.subtract(line.taxAmount)}">100.00</td>
+            <td class="text-right" th:text="${line.taxAmount}">18.00</td>
+            <td class="text-right" th:text="${line.lineTotal}">118.00</td>
         </tr>
     </tbody>
 </table>
@@ -179,16 +183,32 @@
     
     <table class="totals-table">
         <tr>
-            <td>Subtotal</td>
-            <td class="text-right" th:text="${'$' + invoice.totalAmount}">$100.00</td>
+            <td>Taxable Value</td>
+            <td class="text-right" th:text="${'Rs. ' + invoice.subtotal}">Rs. 100.00</td>
         </tr>
-        <tr>
-            <td>Tax (0%)</td>
-            <td class="text-right">$0.00</td>
+        <tr th:if="${gst['cgst'].signum() != 0}">
+            <td>CGST</td>
+            <td class="text-right" th:text="${'Rs. ' + gst['cgst']}">Rs. 9.00</td>
+        </tr>
+        <tr th:if="${gst['sgst'].signum() != 0}">
+            <td>SGST</td>
+            <td class="text-right" th:text="${'Rs. ' + gst['sgst']}">Rs. 9.00</td>
+        </tr>
+        <tr th:if="${gst['igst'].signum() != 0}">
+            <td>IGST</td>
+            <td class="text-right" th:text="${'Rs. ' + gst['igst']}">Rs. 0.00</td>
         </tr>
         <tr class="total-row">
             <td>Total</td>
-            <td class="text-right" th:text="${'$' + invoice.totalAmount}">$100.00</td>
+            <td class="text-right" th:text="${'Rs. ' + invoice.totalAmount}">Rs. 118.00</td>
+        </tr>
+        <tr th:if="${invoice.amountPaid != null and invoice.amountPaid.signum() != 0}">
+            <td>Amount Paid</td>
+            <td class="text-right" th:text="${'Rs. ' + invoice.amountPaid}">Rs. 0.00</td>
+        </tr>
+        <tr th:if="${invoice.amountPaid != null and invoice.amountPaid.signum() != 0}" class="total-row">
+            <td>Balance Due</td>
+            <td class="text-right" th:text="${'Rs. ' + invoice.totalAmount.subtract(invoice.amountPaid)}">Rs. 118.00</td>
         </tr>
     </table>
 </div>

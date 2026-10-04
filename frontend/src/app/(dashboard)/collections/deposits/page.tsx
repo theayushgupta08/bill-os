@@ -46,7 +46,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function DepositsPage() {
-  const { formatDate, formatMoney } = useFormat();
+  const { formatDate, formatMoney, today } = useFormat();
   const { data: deposits, isLoading } = useSettlementDeposits();
   const recordMutation = useRecordDeposit();
   const approveMutation = useApproveDeposit();
@@ -54,7 +54,7 @@ export default function DepositsPage() {
 
   const [form, setForm] = useState({
     amount: "",
-    depositDate: new Date().toISOString().split("T")[0],
+    depositDate: today(),
     referenceNumber: "",
     notes: "",
   });
@@ -66,7 +66,7 @@ export default function DepositsPage() {
       amount: parseFloat(form.amount),
     });
     setOpen(false);
-    setForm({ amount: "", depositDate: new Date().toISOString().split("T")[0], referenceNumber: "", notes: "" });
+    setForm({ amount: "", depositDate: today(), referenceNumber: "", notes: "" });
   };
 
   const handleApprove = async (id: string, approve: boolean) => {

@@ -12,35 +12,27 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from 'nuqs';
 
 interface GSTR3BData {
-  totalSales: number;
   outwardTaxableValue?: number;
   outwardCgst?: number;
   outwardSgst?: number;
   outwardIgst?: number;
   outwardTotalTax?: number;
-  
-  totalPurchases: number;
+
   inwardTaxableValue?: number;
   inwardCgst?: number;
   inwardSgst?: number;
   inwardIgst?: number;
   inwardTotalTax?: number;
-  
-  outputTax: {
-    cgst: number;
-    sgst: number;
-    igst: number;
-  };
-  inputTaxCredit: {
-    cgst: number;
-    sgst: number;
-    igst: number;
-  };
-  taxPayable: {
-    cgst: number;
-    sgst: number;
-    igst: number;
-  };
+
+  // After setting input tax credit off against output tax, head by head (computed by the backend per the GST rules)
+  cashPayableCgst?: number;
+  cashPayableSgst?: number;
+  cashPayableIgst?: number;
+  totalCashPayable?: number;
+  itcCarryForwardCgst?: number;
+  itcCarryForwardSgst?: number;
+  itcCarryForwardIgst?: number;
+  totalItcCarryForward?: number;
 }
 
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
@@ -62,7 +54,9 @@ export function Gstr3bReport() {
     }
   });
 
-  const netGstPayable = data ? (data.outwardTotalTax || 0) - (data.inwardTotalTax || 0) : 0;
+  // Not output tax minus input tax: CGST credit can't pay SGST (or vice versa), so the heads are set off separately
+  const cashPayable = Number(data?.totalCashPayable || 0);
+  const carryForward = Number(data?.totalItcCarryForward || 0);
 
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-6xl mx-auto">
@@ -108,15 +102,18 @@ export function Gstr3bReport() {
 
         {/* Final Net Tax Payable summary box */}
         {data && (
-          <div className={`p-3 border rounded-lg flex items-center gap-3 mt-4 md:mt-0 ${netGstPayable >= 0 ? "bg-amber-500/5 border-amber-500/15" : "bg-emerald-500/5 border-emerald-500/15"}`}>
-            <div className={`p-2 rounded-lg ${netGstPayable >= 0 ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-400"}`}>
+          <div className={`p-3 border rounded-lg flex items-center gap-3 mt-4 md:mt-0 ${cashPayable > 0 ? "bg-amber-500/5 border-amber-500/15" : "bg-emerald-500/5 border-emerald-500/15"}`}>
+            <div className={`p-2 rounded-lg ${cashPayable > 0 ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-400"}`}>
               <IndianRupee className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs text-slate-400 font-medium">{netGstPayable >= 0 ? "Net GST Liability" : "Net ITC Carryforward"}</p>
-              <p className={`text-lg font-bold ${netGstPayable >= 0 ? "text-amber-400" : "text-emerald-400"}`}>
-                {formatMoney(Math.abs(netGstPayable))}
+              <p className="text-xs text-slate-400 font-medium">GST Payable in Cash</p>
+              <p className={`text-lg font-bold ${cashPayable > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                {formatMoney(cashPayable)}
               </p>
+              {carryForward > 0 && (
+                <p className="text-[11px] text-emerald-400">ITC carried forward: {formatMoney(carryForward)}</p>
+              )}
             </div>
           </div>
         )}
@@ -196,6 +193,47 @@ export function Gstr3bReport() {
                   <span>Total Input Tax Credit</span>
                   <span className="font-mono text-base">{formatMoney(data.inwardTotalTax)}</span>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Set-off of input tax credit against output tax, per head */}
+          <Card className="md:col-span-2 border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm shadow-xl">
+            <CardHeader className="pb-3 border-b border-slate-800/60">
+              <CardTitle className="text-base font-bold text-amber-400">Tax Payable after ITC Set-off</CardTitle>
+              <p className="text-xs text-slate-400">
+                IGST credit is used first (against IGST, then CGST and SGST); CGST credit pays CGST then IGST, SGST credit
+                pays SGST then IGST. CGST and SGST credit can&apos;t pay each other.
+              </p>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-4 gap-2 text-xs">
+                <span className="text-slate-500 font-semibold uppercase tracking-wider">Head</span>
+                <span className="text-right text-slate-500 font-semibold uppercase tracking-wider">Output Tax</span>
+                <span className="text-right text-slate-500 font-semibold uppercase tracking-wider">Payable in Cash</span>
+                <span className="text-right text-slate-500 font-semibold uppercase tracking-wider">ITC Carried Forward</span>
+                {([
+                  ["IGST", data.outwardIgst, data.cashPayableIgst, data.itcCarryForwardIgst],
+                  ["CGST", data.outwardCgst, data.cashPayableCgst, data.itcCarryForwardCgst],
+                  ["SGST", data.outwardSgst, data.cashPayableSgst, data.itcCarryForwardSgst],
+                ] as const).map(([head, output, cash, carry]) => (
+                  <div key={head} className="contents">
+                    <span className="text-slate-300">{head}</span>
+                    <span className="text-right font-mono text-slate-300">{formatMoney(output)}</span>
+                    <span className="text-right font-mono text-amber-400">{formatMoney(cash)}</span>
+                    <span className="text-right font-mono text-emerald-400">{formatMoney(carry)}</span>
+                  </div>
+                ))}
+                <span className="pt-2 border-t border-slate-800/60 font-bold text-white">Total</span>
+                <span className="pt-2 border-t border-slate-800/60 text-right font-mono font-bold text-white">
+                  {formatMoney(data.outwardTotalTax)}
+                </span>
+                <span className="pt-2 border-t border-slate-800/60 text-right font-mono font-bold text-amber-400">
+                  {formatMoney(data.totalCashPayable)}
+                </span>
+                <span className="pt-2 border-t border-slate-800/60 text-right font-mono font-bold text-emerald-400">
+                  {formatMoney(data.totalItcCarryForward)}
+                </span>
               </div>
             </CardContent>
           </Card>

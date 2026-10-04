@@ -2,6 +2,7 @@
 
 
 import { useFormat } from "@/lib/use-format";
+import { documentTotals, lineAmounts } from "@/lib/document-totals";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
@@ -41,14 +42,14 @@ interface LineItem {
 }
 
 export function OrderForm() {
-  const { formatMoney } = useFormat();
+  const { formatMoney, today } = useFormat();
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState(() => ({
     customerId: "",
     soNumber: "SO-" + Math.floor(Math.random() * 100000),
-    orderDate: new Date().toISOString().split("T")[0],
+    orderDate: today(),
     notes: "",
   }));
 
@@ -114,25 +115,12 @@ export function OrderForm() {
     }));
   };
 
-  const calculateTotals = () => {
-    let subtotal = 0;
-    let taxTotal = 0;
-
-    lines.forEach(line => {
-      const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
-      subtotal += lineSub;
-      if (line.taxRateId) {
-        const tax = taxes.find((t) => t.id === line.taxRateId);
-        if (tax) {
-          taxTotal += (lineSub * (tax.rate || 0)) / 100;
-        }
-      }
-    });
-
-    return { subtotal, taxTotal, total: subtotal + taxTotal };
-  };
-
-  const totals = calculateTotals();
+  // Rounded per line exactly as the saved document will be
+  const lineTaxRate = (line: LineItem) => taxes.find((t) => t.id === line.taxRateId)?.rate ?? 0;
+  const totals = documentTotals(
+    lines.map((line) => ({ quantity: line.quantity, unitPrice: line.unitPrice, taxRate: lineTaxRate(line) })),
+    false
+  );
 
   const createMutation = useMutation({
     mutationFn: (payload: unknown) => api.post("/sales-orders", payload),
@@ -236,13 +224,11 @@ export function OrderForm() {
                 </TableHeader>
                 <TableBody>
                   {lines.map((line: LineItem) => {
-                    const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
-                    let lineTax = 0;
-                    if (line.taxRateId) {
-                      const tax = taxes.find((t) => t.id === line.taxRateId);
-                      if (tax) lineTax = (lineSub * (tax.rate || 0)) / 100;
-                    }
-                    const lineTotal = lineSub + lineTax;
+                    const lineTotal = lineAmounts({
+                      quantity: line.quantity,
+                      unitPrice: line.unitPrice,
+                      taxRate: lineTaxRate(line),
+                    }).total;
 
                     return (
                       <TableRow key={line.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">

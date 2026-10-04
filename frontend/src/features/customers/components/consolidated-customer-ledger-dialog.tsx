@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormat } from "@/lib/use-format";
+import { roundToPaise } from "@/lib/document-totals";
 import React, { useState } from "react";
 import {
   Dialog,
@@ -83,10 +84,31 @@ export function ConsolidatedCustomerLedgerDialog({
     new Set(entries.map((e) => e.branchName).filter(Boolean))
   );
 
+  // One branch's statement runs its own balance; the group-wide running balance would be meaningless here
   const filteredEntries =
     selectedBranch === "ALL"
       ? entries
-      : entries.filter((e) => e.branchName === selectedBranch);
+      : entries
+          .filter((e) => e.branchName === selectedBranch)
+          .reduce<LedgerEntry[]>((rows, e) => {
+            const previous = rows.length > 0 ? Number(rows[rows.length - 1].runningBalance) : 0;
+            const runningBalance = roundToPaise(previous + Number(e.debit || 0) - Number(e.credit || 0));
+            return [...rows, { ...e, runningBalance }];
+          }, []);
+
+  // The summary cards follow the branch filter too
+  const summary =
+    selectedBranch === "ALL"
+      ? {
+          invoiced: data?.totalInvoiced || 0,
+          paid: data?.totalPaid || 0,
+          outstanding: data?.netOutstandingBalance || 0,
+        }
+      : {
+          invoiced: roundToPaise(filteredEntries.reduce((sum, e) => sum + Number(e.debit || 0), 0)),
+          paid: roundToPaise(filteredEntries.reduce((sum, e) => sum + Number(e.credit || 0), 0)),
+          outstanding: filteredEntries.length > 0 ? filteredEntries[filteredEntries.length - 1].runningBalance : 0,
+        };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,7 +166,7 @@ export function ConsolidatedCustomerLedgerDialog({
                   Total Invoiced
                 </span>
                 <p className="text-base font-bold text-white mt-0.5">
-                  {formatMoney((data?.totalInvoiced || 0))}
+                  {formatMoney(summary.invoiced)}
                 </p>
               </div>
 
@@ -153,16 +175,16 @@ export function ConsolidatedCustomerLedgerDialog({
                   Total Collected / Paid
                 </span>
                 <p className="text-base font-bold text-emerald-400 mt-0.5">
-                  {formatMoney((data?.totalPaid || 0))}
+                  {formatMoney(summary.paid)}
                 </p>
               </div>
 
               <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                  Net Group Outstanding
+                  {selectedBranch === "ALL" ? "Net Group Outstanding" : "Net Branch Outstanding"}
                 </span>
                 <p className="text-base font-bold text-amber-400 mt-0.5">
-                  {formatMoney((data?.netOutstandingBalance || 0))}
+                  {formatMoney(summary.outstanding)}
                 </p>
               </div>
             </div>

@@ -13,6 +13,7 @@ import com.billos.api.tenant.TenantContext;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class CollectionService {
     private final NotificationService notificationService;
     private final OrganizationService organizationService;
     private final SharedEntityResolver sharedEntityResolver;
+    private final OrganizationClock organizationClock;
 
     // --- QR Code Management ---
 
@@ -135,6 +137,7 @@ public class CollectionService {
     public CollectionPaymentDto recordPayment(CollectionPaymentDto dto) {
         UUID currentOrgId = UUID.fromString(TenantContext.getCurrentTenant());
         UUID primaryOrgId = organizationService.resolvePrimaryOrgId(currentOrgId);
+        BigDecimal amount = TaxMath.positiveAmount(dto.getAmount(), "Collected amount");
 
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -158,7 +161,7 @@ public class CollectionService {
         payment.setQrCode(qr);
         payment.setRecordedBy(recorder);
         payment.setQrOwner(qr.getUser());
-        payment.setAmount(dto.getAmount());
+        payment.setAmount(amount);
         payment.setPlace(dto.getPlace());
         payment.setRecordedAt(OffsetDateTime.now());
         payment.setUtrNumber(dto.getUtrNumber());
@@ -173,7 +176,7 @@ public class CollectionService {
                 qr.getUser().getId(),
                 "INFO",
                 "New Collection Payment Recorded",
-                "A payment of ₹" + dto.getAmount() + " has been recorded using your QR (" + qr.getNickname()
+                "A payment of ₹" + amount + " has been recorded using your QR (" + qr.getNickname()
                         + "). Please verify.",
                 "COLLECTION",
                 saved.getId());
@@ -276,6 +279,8 @@ public class CollectionService {
     @Audited(entity = "Collection", action = "RECORD_EXPENSE")
     public CollectionExpenseDto recordExpense(CollectionExpenseDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        // A negative expense would add to the employee's cash in hand instead of deducting from it
+        BigDecimal amount = TaxMath.positiveAmount(dto.getAmount(), "Expense amount");
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User employee = userRepository.findById(principal.getId()).orElseThrow();
@@ -285,7 +290,7 @@ public class CollectionService {
         expense.setUser(employee);
         expense.setCategory(dto.getCategory());
         expense.setVendor(dto.getVendor());
-        expense.setAmount(dto.getAmount());
+        expense.setAmount(amount);
         expense.setExpenseDate(dto.getExpenseDate());
         expense.setNotes(dto.getNotes());
         expense.setAttachmentUrl(dto.getAttachmentUrl());
@@ -304,7 +309,7 @@ public class CollectionService {
             ledger.setOrganizationId(orgId);
             ledger.setUser(employee);
             ledger.setType("EXPENSE");
-            ledger.setAmount(dto.getAmount().negate());
+            ledger.setAmount(amount.negate());
             ledger.setReferenceId(saved.getId());
             ledger.setNotes("Approved expense: " + dto.getCategory() + " at " + dto.getVendor());
             ledgerRepository.save(ledger);
@@ -326,7 +331,7 @@ public class CollectionService {
                             r.getUser().getId(),
                             "INFO",
                             "New Expense Pending Approval",
-                            employee.getEmail() + " submitted an expense of ₹" + dto.getAmount() + " for category "
+                            employee.getEmail() + " submitted an expense of ₹" + amount + " for category "
                                     + dto.getCategory(),
                             "EXPENSE",
                             saved.getId());
@@ -413,6 +418,7 @@ public class CollectionService {
     @Audited(entity = "Collection", action = "RECORD_DEPOSIT")
     public SettlementDepositDto recordDeposit(SettlementDepositDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
+        BigDecimal amount = TaxMath.positiveAmount(dto.getAmount(), "Deposit amount");
         UserPrincipal principal = (UserPrincipal)
                 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User employee = userRepository.findById(principal.getId()).orElseThrow();
@@ -420,7 +426,7 @@ public class CollectionService {
         SettlementDeposit deposit = new SettlementDeposit();
         deposit.setOrganizationId(orgId);
         deposit.setUser(employee);
-        deposit.setAmount(dto.getAmount());
+        deposit.setAmount(amount);
         deposit.setDepositDate(dto.getDepositDate());
         deposit.setReferenceNumber(dto.getReferenceNumber());
         deposit.setNotes(dto.getNotes());
@@ -439,7 +445,7 @@ public class CollectionService {
                         r.getUser().getId(),
                         "INFO",
                         "New Settlement Deposit Submitted",
-                        employee.getEmail() + " logged a settlement deposit of ₹" + dto.getAmount() + ".",
+                        employee.getEmail() + " logged a settlement deposit of ₹" + amount + ".",
                         "DEPOSIT",
                         saved.getId());
             }
@@ -556,12 +562,13 @@ public class CollectionService {
                 .map(CollectionPayment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        LocalDate today = LocalDate.now();
+        ZoneId zone = organizationClock.zoneOf(orgId);
+        LocalDate today = LocalDate.now(zone);
 
         BigDecimal collectionsToday = payments.stream()
                 .filter(p -> "VERIFIED".equals(p.getStatus())
                         && p.getVerifiedAt() != null
-                        && p.getVerifiedAt().toLocalDate().isEqual(today))
+                        && OrganizationClock.dayOf(p.getVerifiedAt(), zone).isEqual(today))
                 .map(CollectionPayment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -569,7 +576,7 @@ public class CollectionService {
                 .filter(d -> d.getOrganizationId().equals(orgId)
                         && "APPROVED".equals(d.getStatus())
                         && d.getApprovedAt() != null
-                        && d.getApprovedAt().toLocalDate().isEqual(today))
+                        && OrganizationClock.dayOf(d.getApprovedAt(), zone).isEqual(today))
                 .map(SettlementDeposit::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -577,7 +584,7 @@ public class CollectionService {
                 .filter(e -> e.getOrganizationId().equals(orgId)
                         && "APPROVED".equals(e.getStatus())
                         && e.getApprovedAt() != null
-                        && e.getApprovedAt().toLocalDate().isEqual(today))
+                        && OrganizationClock.dayOf(e.getApprovedAt(), zone).isEqual(today))
                 .map(CollectionExpense::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -648,12 +655,13 @@ public class CollectionService {
                 .filter(p -> "PENDING_VERIFICATION".equals(p.getStatus()))
                 .count();
 
-        LocalDate today = LocalDate.now();
+        ZoneId zone = organizationClock.zoneOf(orgId);
+        LocalDate today = LocalDate.now(zone);
 
         BigDecimal todayCollections = payments.stream()
                 .filter(p -> "VERIFIED".equals(p.getStatus())
                         && p.getVerifiedAt() != null
-                        && p.getVerifiedAt().toLocalDate().isEqual(today))
+                        && OrganizationClock.dayOf(p.getVerifiedAt(), zone).isEqual(today))
                 .map(CollectionPayment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -662,7 +670,7 @@ public class CollectionService {
                         && e.getUser().getId().equals(userId)
                         && "APPROVED".equals(e.getStatus())
                         && e.getApprovedAt() != null
-                        && e.getApprovedAt().toLocalDate().isEqual(today))
+                        && OrganizationClock.dayOf(e.getApprovedAt(), zone).isEqual(today))
                 .map(CollectionExpense::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -671,7 +679,7 @@ public class CollectionService {
                         && d.getUser().getId().equals(userId)
                         && "APPROVED".equals(d.getStatus())
                         && d.getApprovedAt() != null
-                        && d.getApprovedAt().toLocalDate().isEqual(today))
+                        && OrganizationClock.dayOf(d.getApprovedAt(), zone).isEqual(today))
                 .map(SettlementDeposit::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 

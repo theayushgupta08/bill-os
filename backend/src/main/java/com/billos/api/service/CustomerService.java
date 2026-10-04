@@ -72,6 +72,7 @@ public class CustomerService {
             WHERE si.customer_id = ?
               AND (org.id = ? OR (? AND org.parent_organization_id = ?))
               AND si.deleted_at IS NULL
+              AND si.status IN ('ISSUED', 'PARTIAL', 'PAID')
             UNION ALL
             SELECT p.id, p.payment_date AS tx_date, 'PAYMENT' AS tx_type, p.payment_number AS doc_num,
                    p.organization_id, org.name AS branch_name, org.gstin AS branch_gstin, org.branch_code,
@@ -83,7 +84,7 @@ public class CustomerService {
             WHERE si.customer_id = ?
               AND (org.id = ? OR (? AND org.parent_organization_id = ?))
               AND p.deleted_at IS NULL
-            ORDER BY tx_date ASC
+            ORDER BY tx_date ASC, tx_type ASC, doc_num ASC
             """;
 
         List<ConsolidatedLedgerEntryDto> entries = jdbcTemplate.query(

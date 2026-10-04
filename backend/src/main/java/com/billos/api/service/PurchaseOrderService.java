@@ -4,6 +4,7 @@ import com.billos.api.audit.Audited;
 import com.billos.api.dto.PurchaseOrderDto;
 import com.billos.api.dto.PurchaseOrderLineDto;
 import com.billos.api.entity.*;
+import com.billos.api.exception.BadRequestException;
 import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.PurchaseOrderMapper;
 import com.billos.api.repository.PurchaseOrderRepository;
@@ -49,6 +50,10 @@ public class PurchaseOrderService {
     public PurchaseOrderDto createPurchaseOrder(PurchaseOrderDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
+        if (dto.getLines() == null || dto.getLines().isEmpty()) {
+            throw new BadRequestException("A purchase order needs at least one line");
+        }
+
         Supplier supplier = supplierRepository
                 .findById(dto.getSupplierId())
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
@@ -78,8 +83,8 @@ public class PurchaseOrderService {
             PurchaseOrderLine line = new PurchaseOrderLine();
             line.setProduct(product);
             line.setTaxRate(taxRate);
-            line.setQuantity(lineDto.getQuantity());
-            line.setUnitPrice(lineDto.getUnitPrice());
+            line.setQuantity(TaxMath.lineQuantity(lineDto.getQuantity()));
+            line.setUnitPrice(TaxMath.unitPrice(lineDto.getUnitPrice()));
 
             // Re-calculate totals on backend for safety
             BigDecimal lineBase = TaxMath.money(line.getQuantity().multiply(line.getUnitPrice()));

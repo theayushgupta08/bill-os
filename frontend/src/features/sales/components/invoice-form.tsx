@@ -1,6 +1,9 @@
 "use client";
 
 import { useFormat } from "@/lib/use-format";
+import { addDays } from "@/lib/format";
+import { documentTotals, lineAmounts } from "@/lib/document-totals";
+import { isInterState as crossesStateBorder } from "@/lib/gst-states";
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
@@ -84,7 +87,7 @@ function parseTerms(raw: string | undefined | null): string[] {
 }
 
 export function InvoiceForm() {
-  const { formatMoney } = useFormat();
+  const { formatMoney, today } = useFormat();
   const router = useRouter();
   const searchParams = useSearchParams();
   const soId = searchParams.get("soId");
@@ -97,8 +100,8 @@ export function InvoiceForm() {
   const [formData, setFormData] = useState(() => ({
     customerId: "",
     soId: soId || "",
-    invoiceDate: new Date().toISOString().split("T")[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    invoiceDate: today(),
+    dueDate: addDays(today(), 30),
   }));
 
   const [lines, setLines] = useState<LineItem[]>([
@@ -300,52 +303,32 @@ export function InvoiceForm() {
     }
   };
 
-  // Check interstate status
+  // Intra- vs inter-state by GST state (name, abbreviation, code or GSTIN), as the backend decides on save
   const selectedCustomer = customers.find((c) => c.id === formData.customerId);
-  const isInterState = useMemo(() => {
-    if (!currentOrg?.state || !selectedCustomer?.billingState) return false;
-    return currentOrg.state.trim().toLowerCase() !== selectedCustomer.billingState.trim().toLowerCase();
-  }, [currentOrg, selectedCustomer]);
+  const isInterState = crossesStateBorder(
+    { state: currentOrg?.state, gstin: currentOrg?.gstin },
+    { state: selectedCustomer?.billingState, gstin: selectedCustomer?.gstin }
+  );
 
-  // Calculate Totals & GST breakdown
-  const totals = useMemo(() => {
-    let subtotal = 0;
-    let taxTotal = 0;
+  // The tax rate (percent) a line is charged at in the current tax mode
+  const lineTaxRate = (line: LineItem) => {
+    const activeTaxRateId = isConsolidatedTax ? consolidatedTaxRateId : line.taxRateId;
+    return taxes.find((t) => t.id === activeTaxRateId)?.rate ?? 0;
+  };
 
-    lines.forEach((line) => {
-      const lineSub = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0);
-      subtotal += lineSub;
-
-      const activeTaxRateId = isConsolidatedTax ? consolidatedTaxRateId : line.taxRateId;
-      if (activeTaxRateId) {
-        const tax = taxes.find((t) => t.id === activeTaxRateId);
-        if (tax) {
-          taxTotal += (lineSub * (Number(tax.rate) || 0)) / 100;
-        }
-      }
-    });
-
-    // Division into CGST, SGST, IGST
-    let cgstAmount = 0;
-    let sgstAmount = 0;
-    let igstAmount = 0;
-
-    if (isInterState) {
-      igstAmount = taxTotal;
-    } else {
-      cgstAmount = taxTotal / 2;
-      sgstAmount = taxTotal / 2;
-    }
-
-    return {
-      subtotal,
-      taxTotal,
-      cgstAmount,
-      sgstAmount,
-      igstAmount,
-      total: subtotal + taxTotal,
-    };
-  }, [lines, isConsolidatedTax, consolidatedTaxRateId, taxes, isInterState]);
+  // Totals & GST breakdown, rounded per line exactly as the saved invoice will be
+  const docTotals = documentTotals(
+    lines.map((line) => ({ quantity: line.quantity, unitPrice: line.unitPrice, taxRate: lineTaxRate(line) })),
+    isInterState
+  );
+  const totals = {
+    subtotal: docTotals.subtotal,
+    taxTotal: docTotals.taxTotal,
+    cgstAmount: docTotals.cgst,
+    sgstAmount: docTotals.sgst,
+    igstAmount: docTotals.igst,
+    total: docTotals.total,
+  };
 
   // Product count & quantity count
   const productCount = useMemo(() => {
@@ -552,22 +535,22 @@ export function InvoiceForm() {
                     {!isConsolidatedTax && (
                       <TableHead className="w-[14%] text-slate-300 font-semibold text-xs py-3">Tax Rate</TableHead>
                     )}
-                    <TableHead className="w-[16%] text-right text-slate-300 font-semibold text-xs py-3">Line Total</TableHead>
+                    <TableHead className="w-[16%] text-right text-slate-300 font-semibold text-xs py-3">
+                      {/* Consolidated mode applies one rate below the table, so lines show their taxable value */}
+                      {isConsolidatedTax ? "Taxable Value" : "Line Total"}
+                    </TableHead>
                     <TableHead className="w-[4%] py-3"></TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody className="overflow-visible">
                   {lines.map((line: LineItem) => {
-                    const lineSub = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0);
-                    let lineTax = 0;
-
-                    const activeTaxId = isConsolidatedTax ? consolidatedTaxRateId : line.taxRateId;
-                    if (activeTaxId) {
-                      const tax = taxes.find((t) => t.id === activeTaxId);
-                      if (tax) lineTax = (lineSub * (Number(tax.rate) || 0)) / 100;
-                    }
-                    const lineTotal = isConsolidatedTax ? lineSub : lineSub + lineTax;
+                    const amounts = lineAmounts({
+                      quantity: line.quantity,
+                      unitPrice: line.unitPrice,
+                      taxRate: lineTaxRate(line),
+                    });
+                    const lineTotal = isConsolidatedTax ? amounts.taxable : amounts.total;
 
                     return (
                       <TableRow

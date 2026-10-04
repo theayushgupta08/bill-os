@@ -266,13 +266,21 @@ which reads/creates a per-org `NumberingSequence` and formats `prefix + zero-pad
 
 ### 4.6 GST / tax logic
 
-Intra-state vs inter-state is decided by comparing `organization.state` to the counterparty's billing
-state (case-insensitive). Intra-state splits tax into equal `cgstAmount` + `sgstAmount`; inter-state
-puts the whole amount in `igstAmount`. Line totals, `subtotal`, `taxTotal`, `totalAmount` are all
-computed server-side in the service — never trust client-supplied totals. All amounts go through
-`TaxMath` (2 dp, HALF_UP; SGST = tax − CGST so the halves always sum exactly). See
+Intra-state vs inter-state is decided by `GstStates.isInterState`, which resolves each side to a GST state
+code — from the state text (name, abbreviation or code: "Maharashtra", "MH", "27") or else the GSTIN's first two
+digits — so differently spelled states don't flip a sale to IGST. Never compare state strings yourself; the
+frontend preview mirrors the table in `src/lib/gst-states.ts` (keep both in step). Intra-state splits tax into
+`cgstAmount` + `sgstAmount`; inter-state puts the whole amount in `igstAmount`. Line totals, `subtotal`,
+`taxTotal`, `totalAmount` are all computed server-side in the service — never trust client-supplied totals. All
+amounts go through `TaxMath` (2 dp, HALF_UP; SGST = tax − CGST so the halves always sum exactly): line quantity
+and rate via `TaxMath.lineQuantity` / `unitPrice` (positive quantity, non-negative rate, stored at 2 dp so qty ×
+rate reconciles with the saved line), user-entered amounts via `TaxMath.positiveAmount`. See
 `SalesInvoiceService.createSalesInvoice` as the reference implementation, and `generateEInvoiceJson`
 for the IRP e-invoice payload shape.
+
+GSTR-3B's net tax is **not** output minus input tax: `ReportService.applyItcSetOff` sets credit off head by head
+(s.49 / rule 88A — IGST credit first; CGST credit never pays SGST and vice versa) and returns cash payable and
+credit carried forward per head.
 
 ### 4.6.1 Invoice / payment lifecycle
 
@@ -280,15 +288,21 @@ for the IRP e-invoice payload shape.
   `postIssuedInvoice`: deduct stock per line and add the total to `customer.outstandingBalance`.
 - `sales_invoices.amount_paid` / `purchase_bills.amount_paid` (V024) accumulate allocations. `PaymentService`
   accepts payments only against ISSUED/PARTIAL invoices and UNPAID/PARTIAL bills, rejects allocations above
-  the remaining balance or the payment amount, and sets PARTIAL/PAID from the running total.
+  the remaining balance or the payment amount, and sets PARTIAL/PAID from the running total. Amounts are rounded
+  to paise first — an unrounded 99.996 used to leave a fully paid invoice PARTIAL once the column rounded it.
 - A purchase order can be billed once: BILLED/CANCELLED POs are refused, and the bill's supplier must match.
 - **Stock movements carry their direction in the type**: `IN` adds and `OUT` removes the absolute quantity;
   `ADJUSTMENT`/`TRANSFER` are signed (see `InventoryService.signedDelta`). Negative stock is allowed.
 - **`products.base_price` is the selling price and is only changed by users.** Weighted average purchase cost
   lives in `products.cost_price` (V025), updated from valuation movements (purchase bills, opening stock) and
   averaged over stock in all of the org's warehouses. Clients can't set it (`ProductMapper` ignores it).
-- GST returns (GSTR-1/3B, HSN summary), the sales register and P&L count only issued invoices — never DRAFT or
-  VOID (`ReportService.isReportableInvoice`). P&L is on taxable value (subtotal), excluding GST.
+- GST returns (GSTR-1/3B, HSN summary), the sales register, P&L, the dashboard's MTD revenue and the customer
+  statement count only issued invoices — never DRAFT or VOID (`ReportService.isReportableInvoice`). P&L and the
+  dashboard's MTD revenue/purchases are on taxable value (subtotal), excluding GST. Dashboard receivables/payables
+  sum positive balances only, matching the receivables/payables reports.
+- "Today" and month boundaries come from `OrganizationClock` (the org's Settings → Preferences time zone, default
+  Asia/Kolkata), never `LocalDate.now()` — the server runs in UTC. On the frontend, default date inputs with
+  `useFormat().today()`, never `new Date().toISOString().split("T")[0]` (the UTC date).
 - Document numbers come from `SequenceGeneratorService.getNextDocumentNumber`, which row-locks the sequence
   (`NumberingSequenceRepository.findForUpdate`) so concurrent documents never share a number.
 - Tax rates in use on any document can be renamed or deactivated but not re-priced or deleted
@@ -517,6 +531,12 @@ export function useCreateCustomer() {
   format en-IN/en-US, time zone, date format; `FormatPreferencesProvider` in the dashboard layout). Never
   hard-code `toFixed(2)`, `toLocaleString("en-IN")` or render raw ISO dates. Calendar dates (`invoiceDate`) are
   never time-zone shifted; timestamps are. PDFs apply the date format via `DocumentGenerationService`.
+  `useFormat().today()` is today's date in the org's time zone — use it (and `addDays` from `@/lib/format`) for
+  date-input defaults.
+- **Money arithmetic in the browser goes through `@/lib/document-totals`**: `documentTotals` / `lineAmounts` for
+  document previews (integer paise, rounded per line exactly like `TaxMath`, so the preview equals the saved
+  document) and `roundToPaise` before comparing or sending any computed amount (`0.3 - 0.1` is
+  `0.19999999999999998`). Don't sum floats and compare with `===`.
 - The signed-in user's display details come from `useCurrentUser()` (`@/lib/use-current-user`).
 
 ### 6.9 Frontend styling
@@ -566,7 +586,7 @@ The public website has its own light "Ledger" theme; the spec is `design-system/
 
 | Suite | Status |
 |---|---|
-| Backend (JUnit 5 + Mockito + AssertJ) | **32 test classes / 167 tests**, services + tenant + security + exception handling + auditing + an authorization architecture test. This is the enforced suite. |
+| Backend (JUnit 5 + Mockito + AssertJ) | **37 test classes / 246 tests**, services + tenant + security + exception handling + auditing + an authorization architecture test, plus `DocumentTemplateRenderingTest`, which renders the real PDF templates and reads the amounts back from the PDF. This is the enforced suite. |
 | AI service (pytest) | `tests/test_main.py` only — health endpoint. |
 | Frontend | **No test runner installed.** `pnpm test` does not exist. |
 
@@ -690,9 +710,21 @@ change and update this list.
 - **Legacy route**: `settings/tax` only redirects to `settings/taxes`. (`reports/gst` is the HSN summary.)
 - **Accounting is not posted from documents** — invoices, bills and payments don't create journal entries;
   the chart of accounts/journal is manual and P&L is computed from invoices/bills, not the ledger.
+- **P&L is sales minus purchases, not sales minus cost of goods sold** — stock bought but not yet sold counts as
+  a cost of the period. Sales `OUT` movements record the selling price as `unit_cost`, so there is no historical
+  cost to build COGS from yet; that would need the product's `cost_price` captured on each sale.
+- **GSTR-3B treats all purchase GST as eligible input tax credit** — no blocked credits, reverse charge or
+  unregistered-supplier handling.
+- **A payment without an allocation moves no balance** — it isn't linked to a customer/supplier, so an advance
+  doesn't show on any ledger.
+- **PDF headers are placeholders** — the templates print "billOS Inc." instead of the organization's name,
+  GSTIN and address, and amounts use "Rs." because the PDF's built-in fonts have no ₹ glyph.
+- **Purchase order numbers come from the client** (a random `PO-nnnnn` from the form), not
+  `SequenceGeneratorService`, so they can collide.
 - **Selling prices may have been overwritten before V025** — purchase bills used to write average cost into
   `base_price`; V025 separated `cost_price` but can't restore lost selling prices. Worth a data review.
-- **e-invoice payload (`generateEInvoiceJson`) is partial** — e.g. state names instead of GST state codes.
+- **e-invoice payload (`generateEInvoiceJson`) is partial** — state codes, item serials and amounts are right, but
+  `Unit` is hard-coded "NOS", `IsServc` is always "N" and HSN codes aren't validated.
 - **`organization_invitations` table is unused** (the invitation code was removed; the table was kept to
   avoid dropping data).
 - **The app is dark-only** (`<html class="dark">`, ~700 hard-coded `slate-*` classes); the no-op theme selector

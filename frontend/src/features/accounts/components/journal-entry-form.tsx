@@ -2,6 +2,7 @@
 
 
 import { useFormat } from "@/lib/use-format";
+import { roundToPaise } from "@/lib/document-totals";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
@@ -43,12 +44,12 @@ interface JournalLine {
 }
 
 export function JournalEntryForm() {
-  const { formatMoney } = useFormat();
+  const { formatMoney, today } = useFormat();
   const router = useRouter();
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
-    entryDate: new Date().toISOString().split("T")[0],
+    entryDate: today(),
     referenceNumber: "",
     description: "",
   });
@@ -66,8 +67,9 @@ export function JournalEntryForm() {
     }
   });
 
-  const totalDebits = lines.reduce((sum, line) => sum + (Number(line.debitAmount) || 0), 0);
-  const totalCredits = lines.reduce((sum, line) => sum + (Number(line.creditAmount) || 0), 0);
+  // Compared in paise: 0.1 + 0.2 debits must balance a 0.3 credit (as floats they sum to 0.30000000000000004)
+  const totalDebits = roundToPaise(lines.reduce((sum, line) => sum + (Number(line.debitAmount) || 0), 0));
+  const totalCredits = roundToPaise(lines.reduce((sum, line) => sum + (Number(line.creditAmount) || 0), 0));
   const isBalanced = totalDebits === totalCredits && totalDebits > 0;
 
   const createMutation = useMutation({

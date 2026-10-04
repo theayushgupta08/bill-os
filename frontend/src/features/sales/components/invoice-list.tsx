@@ -35,7 +35,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export function InvoiceList() {
-  const { formatMoney, formatDate } = useFormat();
+  const { formatMoney, formatDate, today } = useFormat();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -60,7 +60,7 @@ export function InvoiceList() {
       // Settle only what is still owed — a partly-paid invoice must not be charged its full total again
       const due = balanceDue(inv);
       const payload = {
-        paymentDate: new Date().toISOString().split('T')[0],
+        paymentDate: today(),
         amount: due,
         notes: "Recorded balance payment",
         allocations: [{ salesInvoiceId: inv.id, allocatedAmount: due }],

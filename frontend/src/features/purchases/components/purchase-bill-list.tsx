@@ -27,7 +27,7 @@ import { PurchaseBill, balanceDue } from "@/types";
 import { PageHelpTooltip } from "@/components/ui/page-help-tooltip";
 
 export function PurchaseBillList() {
-  const { formatMoney, formatDate } = useFormat();
+  const { formatMoney, formatDate, today } = useFormat();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -44,7 +44,7 @@ export function PurchaseBillList() {
       // Settle only what is still owed — a partly-paid bill must not be paid its full total again
       const due = balanceDue(bill);
       const payload = {
-        paymentDate: new Date().toISOString().split('T')[0],
+        paymentDate: today(),
         amount: due,
         notes: "Recorded balance payment to supplier",
         allocations: [{ purchaseBillId: bill.id, allocatedAmount: due }],
