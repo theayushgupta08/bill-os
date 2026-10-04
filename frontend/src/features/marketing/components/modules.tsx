@@ -93,6 +93,7 @@ export const productModules: ProductModule[] = [
     ],
     details: [
       "GSTR-1, GSTR-3B and HSN summary for any date range",
+      "GSTR-3B sets input tax credit off head by head, showing the cash to pay and the credit carried forward",
       "Sales and purchase registers",
       "Profit & loss on taxable value",
       "Receivables and payables by customer and supplier",

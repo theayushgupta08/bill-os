@@ -92,7 +92,9 @@ Inputs are 16px so iOS never zooms on focus. Headings use `text-balance`, body `
 Logo, Reveal, StatusPill · `site-header` · `site-footer` · `page-intro` · `product-panels`
 (role="img" app screens) · `modules` (single source for tour + /features) · `plan-cards` +
 `content/plans.ts` (single source for prices) · `comparison-table` · `faq-list` (Base UI
-Accordion) · `contact-form` · `document-layout` + `document-heading` · `cta-band` · `home/testimonials`
+Accordion) · `contact-form` · `document-layout` + `document-heading` · `cta-band` · `home/hero` (centered:
+`CenteredHero` + `HeroAnnouncement` from `components/ui/saa-s-template`, the interactive invoice as preview; the
+announcement names something that has shipped and links to where it's described) · `home/testimonials`
 (scrolling `TestimonialsColumn` from `components/ui/testimonials-columns-1`, fed by `content/testimonials.ts`).
 
 Testimonials are real customer quotes only, used with permission. Until there are any, the section shows the
