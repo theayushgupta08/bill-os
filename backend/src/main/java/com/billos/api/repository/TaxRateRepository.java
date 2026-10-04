@@ -11,8 +11,7 @@ import org.springframework.stereotype.Repository;
 public interface TaxRateRepository extends JpaRepository<TaxRate, UUID> {
 
     /** True when any sales or purchase document line references the tax rate. */
-    @Query(
-            """
+    @Query("""
             SELECT CASE WHEN
                 EXISTS (SELECT 1 FROM SalesInvoiceLine l WHERE l.taxRate.id = :id)
                 OR EXISTS (SELECT 1 FROM SalesOrderLine l WHERE l.taxRate.id = :id)

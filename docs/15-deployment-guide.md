@@ -26,7 +26,7 @@
 | Tool | Version | Installation |
 |------|---------|-------------|
 | Node.js | 20 LTS | `nvm install 20` |
-| Java | 21 | `sdkman install java 21-tem` |
+| Java | 25 LTS | `sdkman install java 25-tem` |
 | Python | 3.12 | `pyenv install 3.12` |
 | Docker | 25+ | Docker Desktop |
 | Maven | 3.9+ | Bundled with backend (`mvnw`) |

@@ -18,7 +18,7 @@
 │  Cloudflare → Nginx (Backend Reverse Proxy)                     │
 ├─────────────────────────────────────────────────────────────────┤
 │                       BACKEND API                               │
-│  Java 21 │ Spring Boot 3.3 │ Spring Security 6                 │
+│  Java 25 │ Spring Boot 3.5 │ Spring Security 6                 │
 │  Spring Data JPA │ Hibernate 6 │ Flyway                        │
 │  Maven │ MapStruct │ Lombok │ OpenAPI/Springdoc                 │
 ├─────────────────────────────────────────────────────────────────┤
@@ -77,7 +77,7 @@
 
 | Technology | Version | Purpose | Rationale |
 |-----------|---------|---------|-----------|
-| **Java** | 21 (LTS) | Language | Virtual threads (Project Loom), pattern matching, records, sealed classes |
+| **Java** | 25 (LTS) | Language | Virtual threads (Project Loom), pattern matching, records, sealed classes |
 | **Spring Boot** | 3.3+ | Framework | Enterprise-grade, massive ecosystem, auto-configuration, production-ready |
 | **Spring Security** | 6+ | Security | JWT validation, RBAC, method-level security, CSRF/CORS |
 | **Spring Data JPA** | 3+ | Data Access | Repository pattern, query methods, pagination, specifications |
