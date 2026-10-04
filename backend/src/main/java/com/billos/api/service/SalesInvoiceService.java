@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,9 +63,8 @@ public class SalesInvoiceService {
                 .findById(orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
-        boolean isInterState = org.getState() != null
-                && customer.getBillingState() != null
-                && !org.getState().equalsIgnoreCase(customer.getBillingState());
+        boolean isInterState =
+                GstStates.isInterState(org.getState(), org.getGstin(), customer.getBillingState(), customer.getGstin());
 
         SalesInvoice invoice = new SalesInvoice();
         invoice.setOrganizationId(orgId);
@@ -119,8 +119,8 @@ public class SalesInvoiceService {
             line.setProduct(product);
             line.setWarehouse(warehouse);
             line.setTaxRate(taxRate);
-            line.setQuantity(lineDto.getQuantity());
-            line.setUnitPrice(lineDto.getUnitPrice());
+            line.setQuantity(TaxMath.lineQuantity(lineDto.getQuantity()));
+            line.setUnitPrice(TaxMath.unitPrice(lineDto.getUnitPrice()));
 
             BigDecimal lineBase = TaxMath.money(line.getQuantity().multiply(line.getUnitPrice()));
             subtotal = subtotal.add(lineBase);
@@ -232,7 +232,7 @@ public class SalesInvoiceService {
         sellerDtls.put("Addr1", org.getAddressLine1());
         sellerDtls.put("Loc", org.getCity());
         sellerDtls.put("Pin", org.getPincode());
-        sellerDtls.put("Stcd", org.getState()); // Needs to be state code in real life
+        sellerDtls.put("Stcd", GstStates.codeOf(org.getState(), org.getGstin()).orElse(null));
         eInvoice.put("SellerDtls", sellerDtls);
 
         // Buyer Details
@@ -242,21 +242,27 @@ public class SalesInvoiceService {
         buyerDtls.put("Addr1", customer.getBillingAddressLine1());
         buyerDtls.put("Loc", customer.getBillingCity());
         buyerDtls.put("Pin", customer.getBillingPincode());
-        buyerDtls.put("Stcd", customer.getBillingState());
+        buyerDtls.put(
+                "Stcd",
+                GstStates.codeOf(customer.getBillingState(), customer.getGstin())
+                        .orElse(null));
         eInvoice.put("BuyerDtls", buyerDtls);
 
         // Item List & HSN Summary
-        List<Map<String, Object>> itemList = invoice.getLines().stream()
-                .map(line -> {
+        List<SalesInvoiceLine> lines = invoice.getLines();
+        List<Map<String, Object>> itemList = IntStream.range(0, lines.size())
+                .mapToObj(i -> {
+                    SalesInvoiceLine line = lines.get(i);
                     Map<String, Object> item = new HashMap<>();
-                    item.put("SlNo", line.getId().toString());
+                    item.put("SlNo", String.valueOf(i + 1));
                     item.put("PrdDesc", line.getProduct().getName());
                     item.put("IsServc", "N");
                     item.put("HsnCd", line.getProduct().getHsnSac());
                     item.put("Qty", line.getQuantity());
                     item.put("Unit", "NOS");
                     item.put("UnitPrice", line.getUnitPrice());
-                    item.put("TotAmt", line.getQuantity().multiply(line.getUnitPrice()));
+                    // The taxable value the line's tax was computed on (quantity × rate, in paise)
+                    item.put("TotAmt", TaxMath.money(line.getQuantity().multiply(line.getUnitPrice())));
                     item.put(
                             "GstRt",
                             line.getTaxRate() != null ? line.getTaxRate().getRate() : 0);

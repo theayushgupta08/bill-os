@@ -3,13 +3,17 @@ package com.billos.api.service;
 import com.billos.api.dto.PurchaseOrderDto;
 import com.billos.api.dto.QuotationDto;
 import com.billos.api.dto.SalesInvoiceDto;
+import com.billos.api.dto.SalesInvoiceLineDto;
 import com.billos.api.entity.OrganizationSettings;
 import com.billos.api.repository.OrganizationSettingsRepository;
 import com.billos.api.tenant.TenantContext;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +34,7 @@ public class DocumentGenerationService {
         SalesInvoiceDto invoice = salesInvoiceService.getSalesInvoiceById(invoiceId);
         Context context = new Context();
         context.setVariable("invoice", invoice);
+        context.setVariable("gst", gstTotals(invoice.getLines()));
         context.setVariable("dates", dateFormatter());
         String html = templateEngine.process("invoice_template", context);
         return generatePdfFromHtml(html);
@@ -51,6 +56,19 @@ public class DocumentGenerationService {
         context.setVariable("dates", dateFormatter());
         String html = templateEngine.process("po_template", context);
         return generatePdfFromHtml(html);
+    }
+
+    /** The invoice's tax per GST head (keys cgst, sgst, igst), summed from its lines as stored. */
+    static Map<String, BigDecimal> gstTotals(List<SalesInvoiceLineDto> lines) {
+        BigDecimal cgst = BigDecimal.ZERO;
+        BigDecimal sgst = BigDecimal.ZERO;
+        BigDecimal igst = BigDecimal.ZERO;
+        for (SalesInvoiceLineDto line : lines != null ? lines : List.<SalesInvoiceLineDto>of()) {
+            if (line.getCgstAmount() != null) cgst = cgst.add(line.getCgstAmount());
+            if (line.getSgstAmount() != null) sgst = sgst.add(line.getSgstAmount());
+            if (line.getIgstAmount() != null) igst = igst.add(line.getIgstAmount());
+        }
+        return Map.of("cgst", cgst, "sgst", sgst, "igst", igst);
     }
 
     /** Date format from the organization's preferences (Settings → Preferences), used by the PDF templates. */

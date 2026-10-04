@@ -124,7 +124,7 @@ class PaymentServiceTest {
         verify(salesInvoiceRepository).save(invoice);
 
         // Verify Customer balance updated
-        assertEquals(new BigDecimal("400"), customer.getOutstandingBalance());
+        assertEquals(0, new BigDecimal("400").compareTo(customer.getOutstandingBalance()));
         verify(customerRepository).save(customer);
     }
 
@@ -195,6 +195,37 @@ class PaymentServiceTest {
         assertThatThrownBy(() -> paymentService.recordReceipt(receipt(invoiceId, "100")))
                 .hasMessageContaining("DRAFT");
         verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void recordReceipt_roundsAmountsToPaise_soAFullyPaidInvoiceIsPaid() {
+        // Regression: a browser-computed balance of 0.30 - 0.10 arrives as 0.19999999999999998; unrounded it left the
+        // invoice PARTIAL although the column then stored amount_paid = 0.30 = total
+        UUID invoiceId = UUID.randomUUID();
+        Customer customer = new Customer();
+        customer.setOutstandingBalance(new BigDecimal("0.20"));
+        SalesInvoice invoice = issuedInvoice(invoiceId, "0.30", customer);
+        invoice.setAmountPaid(new BigDecimal("0.10"));
+        invoice.setStatus(SalesInvoiceStatus.PARTIAL);
+        when(sequenceGeneratorService.getNextDocumentNumber(DocumentType.PAYMENT_RECEIPT))
+                .thenReturn("REC-003");
+        when(salesInvoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(paymentMapper.toDto(any(Payment.class))).thenReturn(new PaymentDto());
+
+        paymentService.recordReceipt(receipt(invoiceId, "0.19999999999999998"));
+
+        assertEquals(SalesInvoiceStatus.PAID, invoice.getStatus());
+        assertEquals(0, new BigDecimal("0.30").compareTo(invoice.getAmountPaid()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(customer.getOutstandingBalance()));
+    }
+
+    @Test
+    void recordReceipt_rejectsAnAmountThatRoundsToZero() {
+        assertThatThrownBy(() -> paymentService.recordReceipt(receipt(UUID.randomUUID(), "0.004")))
+                .isInstanceOf(com.billos.api.exception.BadRequestException.class)
+                .hasMessageContaining("Payment amount must be greater than zero");
+        verifyNoInteractions(salesInvoiceRepository, paymentRepository);
     }
 
     @Test

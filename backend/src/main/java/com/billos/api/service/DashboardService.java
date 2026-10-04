@@ -1,6 +1,7 @@
 package com.billos.api.service;
 
 import com.billos.api.dto.DashboardSummaryDto;
+import com.billos.api.entity.PurchaseBillStatus;
 import com.billos.api.mapper.PurchaseBillMapper;
 import com.billos.api.mapper.SalesInvoiceMapper;
 import com.billos.api.repository.CustomerRepository;
@@ -27,6 +28,7 @@ public class DashboardService {
     private final SupplierRepository supplierRepository;
     private final CustomerBalanceService customerBalanceService;
     private final OrganizationService organizationService;
+    private final OrganizationClock organizationClock;
 
     private final SalesInvoiceMapper salesInvoiceMapper;
     private final PurchaseBillMapper purchaseBillMapper;
@@ -35,7 +37,8 @@ public class DashboardService {
     public DashboardSummaryDto getSummary() {
         DashboardSummaryDto summary = new DashboardSummaryDto();
 
-        // 1. Outstanding Receivables & Payables
+        // 1. Outstanding Receivables & Payables — the same figures the receivables/payables reports total: what is
+        // owed, so a customer's advance or a supplier we overpaid doesn't net it down
         // Customer has no @TenantId (branch sharing), so list the ones this org can see and take what each owes
         // this org (its own ledger for customers it owns, its own invoices for customers its parent shares)
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
@@ -45,28 +48,37 @@ public class DashboardService {
                         .findAccessibleCustomers(orgId, organizationService.resolvePrimaryOrgId(orgId))
                         .stream()
                         .map(balance)
+                        .filter(owed -> owed.signum() > 0)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
         summary.setOutstandingReceivables(totalReceivables);
 
         BigDecimal totalPayables = supplierRepository.findAll().stream()
                 .map(s -> s.getOutstandingBalance() != null ? s.getOutstandingBalance() : BigDecimal.ZERO)
+                .filter(owed -> owed.signum() > 0)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         summary.setOutstandingPayables(totalPayables);
 
-        // 2. MTD Revenue & Expenses
-        LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
+        // 2. MTD revenue & purchases, measured like the P&L: issued invoices and bills only (no drafts or voids),
+        // on taxable value (GST is collected/paid for the government, not income/cost), from the 1st of the
+        // organization's current month up to today (a document dated later isn't "to date")
+        LocalDate today = organizationClock.today(orgId);
+        LocalDate startOfMonth = today.withDayOfMonth(1);
 
         BigDecimal mtdRevenue = salesInvoiceRepository.findAll().stream()
-                .filter(inv -> !inv.getStatus().name().equals("VOID"))
-                .filter(inv -> !inv.getInvoiceDate().isBefore(startOfMonth))
-                .map(inv -> inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO)
+                .filter(ReportService::isReportableInvoice)
+                .filter(inv -> inv.getInvoiceDate() != null
+                        && !inv.getInvoiceDate().isBefore(startOfMonth)
+                        && !inv.getInvoiceDate().isAfter(today))
+                .map(inv -> inv.getSubtotal() != null ? inv.getSubtotal() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         summary.setTotalRevenueMtd(mtdRevenue);
 
         BigDecimal mtdExpenses = purchaseBillRepository.findAll().stream()
-                .filter(bill -> !bill.getStatus().name().equals("VOID"))
-                .filter(bill -> !bill.getBillDate().isBefore(startOfMonth))
-                .map(bill -> bill.getTotalAmount() != null ? bill.getTotalAmount() : BigDecimal.ZERO)
+                .filter(bill -> bill.getStatus() != PurchaseBillStatus.VOID)
+                .filter(bill -> bill.getBillDate() != null
+                        && !bill.getBillDate().isBefore(startOfMonth)
+                        && !bill.getBillDate().isAfter(today))
+                .map(bill -> bill.getSubtotal() != null ? bill.getSubtotal() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         summary.setTotalExpensesMtd(mtdExpenses);
 

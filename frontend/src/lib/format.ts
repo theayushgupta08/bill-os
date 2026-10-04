@@ -153,6 +153,22 @@ export function formatDateTime(value: string | Date | null | undefined, prefs: F
   return `${formatDate(date, prefs)}, ${time}`;
 }
 
+/**
+ * Today's calendar date ("2026-10-04") in the organization's time zone — the default for date inputs.
+ * `new Date().toISOString()` gives the UTC date, which in India is still yesterday until 05:30.
+ */
+export function todayIn(timeZone: string): string {
+  const parts = dateParts(new Date(), timeZone);
+  return parts ? assemble(parts, "YYYY-MM-DD") : new Date().toISOString().slice(0, 10);
+}
+
+/** A calendar date ("2026-10-04") moved by whole days, without any time-zone shift. */
+export function addDays(isoDate: string, days: number): string {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 /** Long, human date for headings, e.g. "Wednesday, 23 September 2026" in the org's locale and time zone. */
 export function formatLongDate(value: Date, prefs: FormatPreferences): string {
   return new Intl.DateTimeFormat(prefs.locale, {

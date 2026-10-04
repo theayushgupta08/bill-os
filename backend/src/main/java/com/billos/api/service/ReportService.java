@@ -197,7 +197,76 @@ public class ReportService {
             }
         }
 
+        applyItcSetOff(dto);
         return dto;
+    }
+
+    /**
+     * Sets the period's input tax credit off against its output tax in the order GST law prescribes (s.49, rule 88A)
+     * and records, per head, the tax left to pay in cash and the credit carried forward:
+     *
+     * <ol>
+     *   <li>IGST credit first against IGST, then against CGST and SGST — it must be used up before any CGST or SGST
+     *       credit is;
+     *   <li>CGST credit against CGST, then IGST — never SGST;
+     *   <li>SGST credit against SGST, then IGST — never CGST.
+     * </ol>
+     *
+     * <p>Remaining IGST credit goes to the CGST/SGST shortfalls (what their own credit can't cover) first, which keeps
+     * the cash outgo at its minimum. Netting total output tax against total credit instead understates the cash due
+     * whenever, say, CGST credit exceeds CGST output while SGST output exceeds SGST credit.
+     */
+    static void applyItcSetOff(Gstr3bDto dto) {
+        TaxHead igst = new TaxHead(dto.getOutwardIgst(), dto.getInwardIgst());
+        TaxHead cgst = new TaxHead(dto.getOutwardCgst(), dto.getInwardCgst());
+        TaxHead sgst = new TaxHead(dto.getOutwardSgst(), dto.getInwardSgst());
+
+        igst.payFrom(igst);
+        cgst.payFrom(igst, cgst.shortfall());
+        sgst.payFrom(igst, sgst.shortfall());
+        cgst.payFrom(igst);
+        sgst.payFrom(igst);
+
+        cgst.payFrom(cgst);
+        igst.payFrom(cgst);
+
+        sgst.payFrom(sgst);
+        igst.payFrom(sgst);
+
+        dto.setCashPayableIgst(igst.due);
+        dto.setCashPayableCgst(cgst.due);
+        dto.setCashPayableSgst(sgst.due);
+        dto.setTotalCashPayable(igst.due.add(cgst.due).add(sgst.due));
+        dto.setItcCarryForwardIgst(igst.credit);
+        dto.setItcCarryForwardCgst(cgst.credit);
+        dto.setItcCarryForwardSgst(sgst.credit);
+        dto.setTotalItcCarryForward(igst.credit.add(cgst.credit).add(sgst.credit));
+    }
+
+    /** One GST head during set-off: output tax still due and input tax credit still unused. */
+    private static final class TaxHead {
+        private BigDecimal due;
+        private BigDecimal credit;
+
+        TaxHead(BigDecimal due, BigDecimal credit) {
+            this.due = due != null ? due : BigDecimal.ZERO;
+            this.credit = credit != null ? credit : BigDecimal.ZERO;
+        }
+
+        BigDecimal shortfall() {
+            return due.subtract(credit).max(BigDecimal.ZERO);
+        }
+
+        void payFrom(TaxHead source) {
+            payFrom(source, due);
+        }
+
+        /** Pays up to {@code limit} of this head's due from {@code source}'s credit. */
+        void payFrom(TaxHead source, BigDecimal limit) {
+            BigDecimal used = limit.min(due).min(source.credit);
+            due = due.subtract(used);
+            source.credit = source.credit.subtract(used);
+        }
     }
 
     /** Invoices that count for GST returns: issued (fully, partly or not yet paid), never drafts or voids. */

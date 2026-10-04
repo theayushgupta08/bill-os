@@ -1,3 +1,5 @@
+import { roundToPaise } from "@/lib/document-totals";
+
 export interface BaseEntity {
   id: string;
   createdAt?: string;
@@ -240,7 +242,8 @@ export interface PurchaseBill extends BaseEntity {
 
 /** Amount still owed on an invoice or bill. */
 export function balanceDue(doc: { totalAmount: number; amountPaid?: number }): number {
-  return Math.max(0, Number(doc.totalAmount || 0) - Number(doc.amountPaid || 0));
+  // In paise: 0.30 - 0.10 is 0.19999999999999998 in floating point
+  return Math.max(0, roundToPaise(Number(doc.totalAmount || 0) - Number(doc.amountPaid || 0)));
 }
 
 export interface PurchaseOrder extends BaseEntity {

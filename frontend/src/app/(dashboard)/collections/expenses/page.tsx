@@ -56,7 +56,7 @@ function StatusBadge({ status }: { status: string }) {
 const CATEGORIES = ["FUEL", "PACKING", "TRAVEL", "FOOD", "COURIER", "MISC"];
 
 export default function ExpensesPage() {
-  const { formatDate, formatMoney } = useFormat();
+  const { formatDate, formatMoney, today } = useFormat();
   const { data: expenses, isLoading } = useCollectionExpenses();
   const recordMutation = useRecordExpense();
   const approveMutation = useApproveExpense();
@@ -66,7 +66,7 @@ export default function ExpensesPage() {
     category: "FUEL",
     vendor: "",
     amount: "",
-    expenseDate: new Date().toISOString().split("T")[0],
+    expenseDate: today(),
     notes: "",
   });
 
@@ -76,7 +76,7 @@ export default function ExpensesPage() {
       amount: parseFloat(form.amount),
     });
     setOpen(false);
-    setForm({ category: "FUEL", vendor: "", amount: "", expenseDate: new Date().toISOString().split("T")[0], notes: "" });
+    setForm({ category: "FUEL", vendor: "", amount: "", expenseDate: today(), notes: "" });
   };
 
   const handleApprove = async (id: string, approve: boolean) => {

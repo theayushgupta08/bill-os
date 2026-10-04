@@ -4,6 +4,7 @@ import com.billos.api.audit.Audited;
 import com.billos.api.dto.SalesOrderDto;
 import com.billos.api.dto.SalesOrderLineDto;
 import com.billos.api.entity.*;
+import com.billos.api.exception.BadRequestException;
 import com.billos.api.exception.ResourceNotFoundException;
 import com.billos.api.mapper.SalesOrderMapper;
 import com.billos.api.repository.SalesOrderRepository;
@@ -48,6 +49,10 @@ public class SalesOrderService {
     public SalesOrderDto createSalesOrder(SalesOrderDto dto) {
         UUID orgId = UUID.fromString(TenantContext.getCurrentTenant());
 
+        if (dto.getLines() == null || dto.getLines().isEmpty()) {
+            throw new BadRequestException("A sales order needs at least one line");
+        }
+
         Customer customer = sharedEntityResolver.accessibleCustomer(dto.getCustomerId());
 
         SalesOrder so = new SalesOrder();
@@ -74,8 +79,8 @@ public class SalesOrderService {
             SalesOrderLine line = new SalesOrderLine();
             line.setProduct(product);
             line.setTaxRate(taxRate);
-            line.setQuantity(lineDto.getQuantity());
-            line.setUnitPrice(lineDto.getUnitPrice());
+            line.setQuantity(TaxMath.lineQuantity(lineDto.getQuantity()));
+            line.setUnitPrice(TaxMath.unitPrice(lineDto.getUnitPrice()));
 
             BigDecimal lineBase = TaxMath.money(line.getQuantity().multiply(line.getUnitPrice()));
             subtotal = subtotal.add(lineBase);

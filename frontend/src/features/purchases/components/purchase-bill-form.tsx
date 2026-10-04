@@ -4,6 +4,7 @@
 
 import { Product, Supplier, TaxRate, Warehouse } from "@/types";
 import { useFormat } from "@/lib/use-format";
+import { documentTotals, lineAmounts } from "@/lib/document-totals";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
@@ -43,7 +44,7 @@ interface LineItem {
 }
 
 export function PurchaseBillForm() {
-  const { formatMoney } = useFormat();
+  const { formatMoney, today } = useFormat();
   const router = useRouter();
   const searchParams = useSearchParams();
   const poId = searchParams.get('poId');
@@ -53,7 +54,7 @@ export function PurchaseBillForm() {
     supplierId: "",
     poId: poId || "",
     billNumber: "BILL-" + Math.floor(Math.random() * 100000),
-    billDate: new Date().toISOString().split("T")[0],
+    billDate: today(),
     dueDate: "",
     notes: "",
   }));
@@ -113,7 +114,8 @@ export function PurchaseBillForm() {
         if (field === "productId") {
           const product = products.find((p) => p.id === value);
           if (product) {
-            updatedLine.unitPrice = product.basePrice || 0;
+            // A purchase is priced at what the product costs (its average purchase cost), not its selling price
+            updatedLine.unitPrice = product.costPrice || product.basePrice || 0;
             if (product.taxRate) {
               const matchedTax = taxes.find((t) => Number(t.rate) === Number(product.taxRate));
               if (matchedTax) {
@@ -128,25 +130,12 @@ export function PurchaseBillForm() {
     }));
   };
 
-  const calculateTotals = () => {
-    let subtotal = 0;
-    let taxTotal = 0;
-
-    lines.forEach(line => {
-      const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
-      subtotal += lineSub;
-      if (line.taxRateId) {
-        const tax = taxes.find((t) => t.id === line.taxRateId);
-        if (tax) {
-          taxTotal += (lineSub * (tax.rate || 0)) / 100;
-        }
-      }
-    });
-
-    return { subtotal, taxTotal, total: subtotal + taxTotal };
-  };
-
-  const totals = calculateTotals();
+  // Rounded per line exactly as the saved document will be
+  const lineTaxRate = (line: LineItem) => taxes.find((t) => t.id === line.taxRateId)?.rate ?? 0;
+  const totals = documentTotals(
+    lines.map((line) => ({ quantity: line.quantity, unitPrice: line.unitPrice, taxRate: lineTaxRate(line) })),
+    false
+  );
 
   const createMutation = useMutation({
     mutationFn: (payload: unknown) => api.post("/purchase-bills", payload),
@@ -261,13 +250,11 @@ export function PurchaseBillForm() {
                 </TableHeader>
                 <TableBody>
                   {lines.map((line: LineItem) => {
-                    const lineSub = (line.quantity || 0) * (line.unitPrice || 0);
-                    let lineTax = 0;
-                    if (line.taxRateId) {
-                      const tax = taxes.find((t) => t.id === line.taxRateId);
-                      if (tax) lineTax = (lineSub * (tax.rate || 0)) / 100;
-                    }
-                    const lineTotal = lineSub + lineTax;
+                    const lineTotal = lineAmounts({
+                      quantity: line.quantity,
+                      unitPrice: line.unitPrice,
+                      taxRate: lineTaxRate(line),
+                    }).total;
 
                     return (
                       <TableRow key={line.id} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">

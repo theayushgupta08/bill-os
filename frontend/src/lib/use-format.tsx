@@ -12,6 +12,7 @@ import {
   formatMoney,
   formatMoneyCompact,
   formatNumber,
+  todayIn,
   toFormatPreferences,
   type FormatPreferences,
   type StoredPreferences,
@@ -28,6 +29,8 @@ export interface Formatter {
   formatDate: (value: string | Date | null | undefined) => string;
   formatDateTime: (value: string | Date | null | undefined) => string;
   formatLongDate: (value: Date) => string;
+  /** Today's date ("2026-10-04") in the organization's time zone, for date inputs */
+  today: () => string;
 }
 
 function makeFormatter(prefs: FormatPreferences): Formatter {
@@ -39,6 +42,7 @@ function makeFormatter(prefs: FormatPreferences): Formatter {
     formatDate: (v) => formatDate(v, prefs),
     formatDateTime: (v) => formatDateTime(v, prefs),
     formatLongDate: (v) => formatLongDate(v, prefs),
+    today: () => todayIn(prefs.timeZone),
   };
 }
 

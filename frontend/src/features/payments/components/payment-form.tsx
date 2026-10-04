@@ -25,13 +25,13 @@ import { Invoice, PurchaseBill, balanceDue } from "@/types";
 import { PageLoader } from "@/components/ui/loader";
 
 export function PaymentForm() {
-  const { formatMoney } = useFormat();
+  const { formatMoney, today } = useFormat();
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     paymentType: "RECEIPT", // RECEIPT or PAYMENT
-    paymentDate: new Date().toISOString().split("T")[0],
+    paymentDate: today(),
     amount: "",
     referenceNumber: "",
     notes: "",

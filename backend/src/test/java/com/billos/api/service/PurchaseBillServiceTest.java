@@ -124,11 +124,56 @@ class PurchaseBillServiceTest {
         PurchaseBillDto dto = new PurchaseBillDto();
         dto.setSupplierId(supplierId);
         dto.setPoId(poId);
-        dto.setLines(new java.util.ArrayList<>());
+        PurchaseBillLineDto line = new PurchaseBillLineDto();
+        line.setQuantity(BigDecimal.ONE);
+        line.setUnitPrice(BigDecimal.TEN);
+        dto.setLines(List.of(line));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> purchaseBillService.createPurchaseBill(dto))
                 .isInstanceOf(com.billos.api.exception.ConflictException.class)
                 .hasMessageContaining("BILLED");
         verify(purchaseBillRepository, never()).save(any());
+    }
+
+    @Test
+    void createPurchaseBill_rejectsZeroQuantity_beforeStockOrPayablesMove() {
+        UUID supplierId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        UUID warehouseId = UUID.randomUUID();
+        PurchaseBillDto requestDto = new PurchaseBillDto();
+        requestDto.setSupplierId(supplierId);
+        PurchaseBillLineDto lineDto = new PurchaseBillLineDto();
+        lineDto.setProductId(productId);
+        lineDto.setWarehouseId(warehouseId);
+        lineDto.setQuantity(BigDecimal.ZERO);
+        lineDto.setUnitPrice(new BigDecimal("100"));
+        requestDto.setLines(List.of(lineDto));
+        Supplier supplier = new Supplier();
+        supplier.setId(supplierId);
+        Product product = new Product();
+        product.setId(productId);
+        Warehouse warehouse = new Warehouse();
+        warehouse.setId(warehouseId);
+        when(organizationRepository.findById(any())).thenReturn(Optional.of(new Organization()));
+        when(supplierRepository.findById(supplierId)).thenReturn(Optional.of(supplier));
+        when(sharedEntityResolver.accessibleProduct(productId)).thenReturn(product);
+        when(warehouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> purchaseBillService.createPurchaseBill(requestDto))
+                .isInstanceOf(com.billos.api.exception.BadRequestException.class)
+                .hasMessageContaining("quantity greater than zero");
+        org.mockito.Mockito.verifyNoInteractions(inventoryService);
+        org.assertj.core.api.Assertions.assertThat(supplier.getOutstandingBalance())
+                .isEqualByComparingTo("0");
+    }
+
+    @Test
+    void createPurchaseBill_rejectsABillWithoutLines() {
+        PurchaseBillDto requestDto = new PurchaseBillDto();
+        requestDto.setSupplierId(UUID.randomUUID());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> purchaseBillService.createPurchaseBill(requestDto))
+                .hasMessageContaining("at least one line");
+        org.mockito.Mockito.verifyNoInteractions(inventoryService, supplierRepository);
     }
 }

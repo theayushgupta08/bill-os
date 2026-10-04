@@ -47,13 +47,29 @@ public class JournalEntryService {
     @Transactional
     @Audited(entity = "JournalEntry", action = "CREATE")
     public JournalEntryDto createJournalEntry(JournalEntryDto dto) {
-        // Validate Debits == Credits
+        if (dto.getLines() == null || dto.getLines().size() < 2) {
+            throw new BadRequestException("A journal entry needs at least two lines");
+        }
+
+        // Validate Debits == Credits, in paise as stored. A line is a debit or a credit, never negative and never
+        // both — otherwise a -100 debit could "balance" a -100 credit and post nonsense to both accounts.
         BigDecimal totalDebits = BigDecimal.ZERO;
         BigDecimal totalCredits = BigDecimal.ZERO;
 
         for (JournalEntryLineDto line : dto.getLines()) {
-            if (line.getDebitAmount() != null) totalDebits = totalDebits.add(line.getDebitAmount());
-            if (line.getCreditAmount() != null) totalCredits = totalCredits.add(line.getCreditAmount());
+            BigDecimal debit = TaxMath.money(line.getDebitAmount() != null ? line.getDebitAmount() : BigDecimal.ZERO);
+            BigDecimal credit =
+                    TaxMath.money(line.getCreditAmount() != null ? line.getCreditAmount() : BigDecimal.ZERO);
+            if (debit.signum() < 0 || credit.signum() < 0) {
+                throw new BadRequestException("Journal amounts can't be negative");
+            }
+            if ((debit.signum() > 0) == (credit.signum() > 0)) {
+                throw new BadRequestException("Each journal line needs either a debit or a credit amount, not both");
+            }
+            line.setDebitAmount(debit);
+            line.setCreditAmount(credit);
+            totalDebits = totalDebits.add(debit);
+            totalCredits = totalCredits.add(credit);
         }
 
         if (totalDebits.compareTo(totalCredits) != 0) {
