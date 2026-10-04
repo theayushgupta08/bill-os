@@ -7,6 +7,7 @@ import { Hero } from "@/features/marketing/components/home/hero";
 import { HomeFaq } from "@/features/marketing/components/home/home-faq";
 import { PricingPreview } from "@/features/marketing/components/home/pricing-preview";
 import { ProductTour } from "@/features/marketing/components/home/product-tour";
+import { Testimonials } from "@/features/marketing/components/home/testimonials";
 import { Trust } from "@/features/marketing/components/home/trust";
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function Home() {
       <ProductTour />
       <GstDetails />
       <Trust />
+      <Testimonials />
       <PricingPreview />
       <HomeFaq />
       <CtaBand />

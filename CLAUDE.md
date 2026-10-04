@@ -567,6 +567,8 @@ The public website has its own light "Ledger" theme; the spec is `design-system/
   captures, crawlers, unsupported browsers, reduced motion).
 - **Copy must match the product.** `modules.tsx` (tour + /features), `content/plans.ts` (every price) and
   `content/faqs.ts` are single sources; don't list a capability until it ships, and no invented social proof.
+  `content/testimonials.ts` holds real customer quotes only (with permission); its `sampleTestimonials` are
+  invented placeholders that `home/testimonials.tsx` shows in development only — never wire them into production.
 - Server components by default; client islands only for interaction (invoice demo, tabs, plans, FAQ, form).
 - The contact form composes a `mailto:` (there's no contact endpoint) and says so on the button.
 
