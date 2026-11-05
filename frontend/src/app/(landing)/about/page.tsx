@@ -33,7 +33,7 @@ export default function AboutPage() {
   const { company } = siteConfig;
   const facts = [
     { label: "Company", value: company.name },
-    { label: "Based in", value: company.registeredAddress },
+    { label: "Based in", value: `${company.city}, ${company.state}` },
     { label: "Email", value: company.businessEmail, href: `mailto:${company.businessEmail}` },
     { label: "Hours", value: company.businessHours },
   ].filter((fact) => fact.value);
@@ -43,7 +43,7 @@ export default function AboutPage() {
       <PageIntro
         eyebrow="About"
         title="We're building the back office Indian businesses deserve."
-        lead={`${siteConfig.name} is made by ${company.name}, a team in ${company.registeredAddress.split(",")[0]} that believes running the books shouldn't take over running the business.`}
+        lead={`${siteConfig.name} is made by ${company.name}, a team in ${company.city} that believes running the books shouldn't take over running the business.`}
       />
 
       <Section aria-labelledby="story-title">

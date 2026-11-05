@@ -13,7 +13,7 @@ reality and the PRDs in `/docs` disagree, this file records reality and flags th
 ## 1. Project Overview
 
 billOS is a **multi-tenant, GST-compliant billing / inventory / accounting SaaS** for Indian SMBs,
-built by Shrialok AI Labs Pvt. Ltd. Three services plus supporting infrastructure.
+built by SHRIALOK AI LABS (OPC) Private Limited Three services plus supporting infrastructure.
 
 ```
 ┌──────────────┐    ┌──────────────────┐    ┌──────────────┐

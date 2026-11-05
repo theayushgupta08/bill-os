@@ -61,9 +61,9 @@ export function SiteFooter() {
       <div className="border-t border-border">
         <Container className="flex flex-col gap-2 py-6 text-xs text-subtle sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {new Date().getFullYear()} {company.name} All rights reserved.
+            © {new Date().getFullYear()} {company.name}. All rights reserved.
           </p>
-          <p>Made in {company.registeredAddress.split(",")[0]}, India</p>
+          <p>Made in {company.city}, India</p>
         </Container>
       </div>
     </footer>
